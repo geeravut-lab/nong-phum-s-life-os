@@ -1,0 +1,291 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+export type Lang = "th" | "en";
+
+const dict = {
+  th: {
+    appName: "น้องภูมิ",
+    appTagline: "ผู้ช่วยดูแลเรื่องรอบตัวคุณ",
+    heroTitle: "ให้น้องภูมิดูแลเรื่องจุกจิกในชีวิตแทนคุณ",
+    heroSub:
+      "ถ่ายรูปเอกสารแล้วน้องภูมิอ่านให้ สร้างเตือนความจำ จัดหมวดค่าใช้จ่าย แชร์เรื่องสำคัญกับครอบครัว และสรุปให้ฟังทุกเช้า",
+    heroCta: "เริ่มใช้งานฟรี",
+    heroCta2: "ดูว่าน้องภูมิทำอะไรได้บ้าง",
+    features: "น้องภูมิช่วยอะไรได้บ้าง",
+    openApp: "เข้าใช้งาน",
+    // nav
+    navToday: "วันนี้",
+    navChat: "คุยกับน้องภูมิ",
+    navDocs: "เอกสาร",
+    navTasks: "ต้องทำ",
+    navMoney: "ค่าใช้จ่าย",
+    navFamily: "ครอบครัว",
+    navSettings: "ตั้งค่า",
+    signOut: "ออกจากระบบ",
+    // auth
+    signIn: "เข้าสู่ระบบ",
+    signUp: "สมัครสมาชิก",
+    email: "อีเมล",
+    password: "รหัสผ่าน",
+    displayName: "ชื่อที่ให้น้องภูมิเรียก",
+    continueGoogle: "เข้าสู่ระบบด้วย Google",
+    noAccount: "ยังไม่มีบัญชี?",
+    haveAccount: "มีบัญชีแล้ว?",
+    // today
+    todayTitle: "สวัสดีครับ",
+    todayCount: (n: number) => `วันนี้มี ${n} เรื่องที่พี่ควรรู้`,
+    todayNone: "วันนี้ยังไม่มีเรื่องเร่งด่วนครับ สบายใจได้เลย",
+    briefFromPhum: "สรุปจากน้องภูมิ",
+    generateBrief: "ให้น้องภูมิสรุปให้",
+    upcoming: "ใกล้ถึงกำหนด",
+    monthSpend: "ค่าใช้จ่ายเดือนนี้",
+    docsCount: "เอกสารในคลัง",
+    openTasks: "งานค้าง",
+    quickAdd: "เพิ่มด่วน",
+    // docs
+    docsTitle: "คลังเอกสาร",
+    docsSub: "อัปโหลดรูปหรือ PDF แล้วน้องภูมิจะอ่าน สรุป และจัดหมวดให้",
+    upload: "อัปโหลดเอกสาร",
+    analyzing: "น้องภูมิกำลังอ่านเอกสาร...",
+    docsEmpty: "ยังไม่มีเอกสาร ลองอัปโหลดใบเสร็จหรือกรมธรรม์ดูครับ",
+    summary: "สรุป",
+    dueDate: "ครบกำหนด",
+    amount: "จำนวนเงิน",
+    counterparty: "เกี่ยวข้องกับ",
+    category: "หมวด",
+    createReminderFromDoc: "สร้างเตือนความจำจากเอกสารนี้",
+    download: "เปิดไฟล์",
+    delete: "ลบ",
+    // tasks
+    tasksTitle: "เรื่องที่ต้องทำ",
+    tasksSub: "พิมพ์เป็นภาษาคนได้เลย เช่น “จ่ายค่าไฟวันศุกร์หน้า”",
+    addTask: "เพิ่มเรื่องที่ต้องทำ",
+    taskTitle: "เรื่องอะไร",
+    dueAt: "กำหนดเมื่อไหร่",
+    priority: "ความสำคัญ",
+    high: "สำคัญมาก",
+    normal: "ปกติ",
+    low: "ไว้ก่อนได้",
+    done: "เสร็จแล้ว",
+    markDone: "ทำเสร็จแล้ว",
+    reopen: "ยังไม่เสร็จ",
+    tasksEmpty: "ยังไม่มีเรื่องต้องทำครับ",
+    recurrence: "เกิดซ้ำ",
+    none: "ไม่ซ้ำ",
+    monthly: "ทุกเดือน",
+    yearly: "ทุกปี",
+    // money
+    moneyTitle: "บิลและค่าใช้จ่าย",
+    moneySub: "บันทึกรายจ่าย น้องภูมิจัดหมวดและสรุปให้",
+    addExpense: "บันทึกค่าใช้จ่าย",
+    expenseTitle: "รายการ",
+    spentOn: "วันที่",
+    note: "บันทึกเพิ่มเติม",
+    total: "รวม",
+    byCategory: "แยกตามหมวด",
+    moneyEmpty: "ยังไม่มีรายการค่าใช้จ่าย",
+    // family
+    familyTitle: "ครอบครัว",
+    familySub: "แชร์เรื่องสำคัญกับคนที่บ้าน โดยคุณเลือกเองว่าจะแชร์อะไร",
+    createFamily: "สร้างครอบครัว",
+    familyName: "ชื่อครอบครัว",
+    joinFamily: "เข้าร่วมด้วยรหัส",
+    inviteCode: "รหัสเชิญ",
+    members: "สมาชิก",
+    shared: "แชร์กับครอบครัว",
+    sharedItems: "รายการที่แชร์กัน",
+    noFamily: "คุณยังไม่ได้อยู่ในครอบครัวใด",
+    leave: "ออกจากครอบครัว",
+    // settings
+    settingsTitle: "ตั้งค่า",
+    language: "ภาษา",
+    thai: "ไทย",
+    english: "English",
+    theme: "ธีม",
+    light: "สว่าง",
+    dark: "มืด",
+    privacy: "ความเป็นส่วนตัว",
+    privacyText:
+      "ข้อมูลทั้งหมดเป็นของคุณคนเดียว น้องภูมิจะแชร์เฉพาะรายการที่คุณกดแชร์ให้ครอบครัวเท่านั้น",
+    save: "บันทึก",
+    saved: "บันทึกแล้ว",
+    // chat
+    chatTitle: "คุยกับน้องภูมิ",
+    chatPlaceholder: "พิมพ์บอกน้องภูมิได้เลย เช่น “เตือนต่อประกันรถ 12 พ.ย.”",
+    send: "ส่ง",
+    thinking: "น้องภูมิกำลังคิด...",
+    confirmAction: "ยืนยันให้น้องภูมิทำรายการนี้ไหมครับ",
+    confirm: "ยืนยัน",
+    cancel: "ยกเลิก",
+    chatEmpty: "สวัสดีครับพี่ 👋 มีอะไรให้น้องภูมิช่วยจัดการไหมครับ",
+    // common
+    cancelBtn: "ยกเลิก",
+    add: "เพิ่ม",
+    loading: "กำลังโหลด...",
+    error: "เกิดข้อผิดพลาด",
+    baht: "บาท",
+    all: "ทั้งหมด",
+  },
+  en: {
+    appName: "Nong Phum",
+    appTagline: "Your always-on life assistant",
+    heroTitle: "Let Nong Phum handle life's little things",
+    heroSub:
+      "Snap a document and it reads it for you, sets reminders, sorts expenses, shares what matters with family, and briefs you every morning.",
+    heroCta: "Get started free",
+    heroCta2: "See what it can do",
+    features: "What Nong Phum does",
+    openApp: "Open app",
+    navToday: "Today",
+    navChat: "Chat",
+    navDocs: "Documents",
+    navTasks: "To-do",
+    navMoney: "Expenses",
+    navFamily: "Family",
+    navSettings: "Settings",
+    signOut: "Sign out",
+    signIn: "Sign in",
+    signUp: "Sign up",
+    email: "Email",
+    password: "Password",
+    displayName: "What should we call you?",
+    continueGoogle: "Continue with Google",
+    noAccount: "No account yet?",
+    haveAccount: "Already have an account?",
+    todayTitle: "Hello",
+    todayCount: (n: number) => `${n} things you should know today`,
+    todayNone: "Nothing urgent today. Relax.",
+    briefFromPhum: "Daily brief",
+    generateBrief: "Generate brief",
+    upcoming: "Coming up",
+    monthSpend: "Spent this month",
+    docsCount: "Documents",
+    openTasks: "Open tasks",
+    quickAdd: "Quick add",
+    docsTitle: "Document vault",
+    docsSub: "Upload an image or PDF and Nong Phum reads, summarizes and files it.",
+    upload: "Upload document",
+    analyzing: "Reading your document...",
+    docsEmpty: "No documents yet. Try a receipt or an insurance policy.",
+    summary: "Summary",
+    dueDate: "Due date",
+    amount: "Amount",
+    counterparty: "Related to",
+    category: "Category",
+    createReminderFromDoc: "Create a reminder from this",
+    download: "Open file",
+    delete: "Delete",
+    tasksTitle: "To-do & reminders",
+    tasksSub: "Write it like you speak: “pay electricity next Friday”.",
+    addTask: "Add a task",
+    taskTitle: "What is it?",
+    dueAt: "When",
+    priority: "Priority",
+    high: "High",
+    normal: "Normal",
+    low: "Low",
+    done: "Done",
+    markDone: "Mark done",
+    reopen: "Reopen",
+    tasksEmpty: "Nothing to do yet.",
+    recurrence: "Repeats",
+    none: "Never",
+    monthly: "Monthly",
+    yearly: "Yearly",
+    moneyTitle: "Bills & expenses",
+    moneySub: "Log spending, Nong Phum categorizes and summarizes it.",
+    addExpense: "Add expense",
+    expenseTitle: "Item",
+    spentOn: "Date",
+    note: "Note",
+    total: "Total",
+    byCategory: "By category",
+    moneyEmpty: "No expenses yet.",
+    familyTitle: "Family",
+    familySub: "Share what matters with the people at home — you choose what.",
+    createFamily: "Create a family",
+    familyName: "Family name",
+    joinFamily: "Join with code",
+    inviteCode: "Invite code",
+    members: "Members",
+    shared: "Shared with family",
+    sharedItems: "Shared with you",
+    noFamily: "You are not in a family yet.",
+    leave: "Leave family",
+    settingsTitle: "Settings",
+    language: "Language",
+    thai: "ไทย",
+    english: "English",
+    theme: "Theme",
+    light: "Light",
+    dark: "Dark",
+    privacy: "Privacy",
+    privacyText:
+      "Your data is yours. Nong Phum only shares the items you explicitly share with your family.",
+    save: "Save",
+    saved: "Saved",
+    chatTitle: "Chat with Nong Phum",
+    chatPlaceholder: "Try: “remind me to renew car insurance on Nov 12”",
+    send: "Send",
+    thinking: "Thinking...",
+    confirmAction: "Shall I go ahead with this?",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    chatEmpty: "Hi there 👋 What can I take off your plate today?",
+    cancelBtn: "Cancel",
+    add: "Add",
+    loading: "Loading...",
+    error: "Something went wrong",
+    baht: "THB",
+    all: "All",
+  },
+} as const;
+
+export type Dict = (typeof dict)["th"];
+
+type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: Dict };
+
+const I18nContext = createContext<Ctx>({ lang: "th", setLang: () => {}, t: dict.th });
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("th");
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem("phum-lang");
+    if (stored === "en" || stored === "th") setLangState(stored);
+  }, []);
+
+  const setLang = useCallback((l: Lang) => {
+    setLangState(l);
+    window.localStorage.setItem("phum-lang", l);
+    document.documentElement.lang = l;
+  }, []);
+
+  const value = useMemo(() => ({ lang, setLang, t: dict[lang] as Dict }), [lang, setLang]);
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n() {
+  return useContext(I18nContext);
+}
+
+export const categoryLabels: Record<string, { th: string; en: string }> = {
+  bill: { th: "บิล/ค่าสาธารณูปโภค", en: "Bills & utilities" },
+  insurance: { th: "ประกัน", en: "Insurance" },
+  vehicle: { th: "รถ", en: "Vehicle" },
+  home: { th: "บ้าน", en: "Home" },
+  health: { th: "สุขภาพ", en: "Health" },
+  education: { th: "การเรียน", en: "Education" },
+  finance: { th: "การเงิน", en: "Finance" },
+  government: { th: "ราชการ", en: "Government" },
+  food: { th: "อาหาร", en: "Food" },
+  transport: { th: "เดินทาง", en: "Transport" },
+  shopping: { th: "ช้อปปิ้ง", en: "Shopping" },
+  family: { th: "ครอบครัว", en: "Family" },
+  other: { th: "อื่น ๆ", en: "Other" },
+};
+
+export function catLabel(key: string | null | undefined, lang: Lang) {
+  const k = key ?? "other";
+  return categoryLabels[k]?.[lang] ?? k;
+}
