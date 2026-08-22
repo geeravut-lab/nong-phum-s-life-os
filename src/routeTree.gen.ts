@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
+import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
 
@@ -41,6 +42,11 @@ const AuthenticatedDocsRoute = AuthenticatedDocsRouteImport.update({
   path: '/docs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
+  id: '/money',
+  path: '/money',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
+  '/money': typeof AuthenticatedMoneyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
 }
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
+  '/money': typeof AuthenticatedMoneyRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
 }
@@ -75,14 +83,15 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
+  '/_authenticated/money': typeof AuthenticatedMoneyRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/chat' | '/docs' | '/tasks' | '/today'
+  fullPaths: '/' | '/auth' | '/chat' | '/docs' | '/money' | '/tasks' | '/today'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/chat' | '/docs' | '/tasks' | '/today'
+  to: '/' | '/auth' | '/chat' | '/docs' | '/money' | '/tasks' | '/today'
   id:
     | '__root__'
     | '/'
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/chat'
     | '/_authenticated/docs'
+    | '/_authenticated/money'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
   fileRoutesById: FileRoutesById
@@ -137,6 +147,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDocsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/money': {
+      id: '/_authenticated/money'
+      path: '/money'
+      fullPath: '/money'
+      preLoaderRoute: typeof AuthenticatedMoneyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -157,6 +174,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
+  AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
 }
@@ -164,6 +182,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
+  AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
 }
