@@ -84,7 +84,7 @@ function DocsPage() {
         counterparty: result.counterparty,
         storage_path: path,
         mime_type: file.type,
-        extracted: result as unknown as Record<string, unknown>,
+        extracted: JSON.parse(JSON.stringify(result)),
       });
       if (error) throw error;
 
@@ -134,7 +134,7 @@ function DocsPage() {
   const toggleShare = async (id: string, next: boolean) => {
     const { error } = await supabase
       .from("documents")
-      .update({ is_shared: next, family_id: next ? family : null })
+      .update({ is_shared: next, family_id: next ? (family ?? null) : null })
       .eq("id", id);
     if (error) toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["documents"] });
