@@ -39,3 +39,26 @@ export const generateDailyBrief = createServerFn({ method: "POST" })
     const { runDailyBrief } = await import("./phum.server");
     return runDailyBrief(data.lang, context.supabase, context.userId);
   });
+
+export const joinFamilyByCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ code: z.string().trim().min(4).max(32) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: family } = await supabaseAdmin
+      .from("families")
+      .select("id, name")
+      .eq("invite_code", data.code.toUpperCase())
+      .maybeSingle();
+    if (!family) return { ok: false as const, error: "not_found" };
+
+    const { error } = await context.supabase
+      .from("family_members")
+      .insert({ family_id: family.id, user_id: context.userId });
+    if (error && !error.message.includes("duplicate")) {
+      return { ok: false as const, error: error.message };
+    }
+    return { ok: true as const, familyId: family.id, name: family.name };
+  });

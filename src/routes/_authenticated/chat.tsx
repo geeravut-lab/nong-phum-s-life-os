@@ -12,6 +12,16 @@ import { useI18n } from "@/lib/i18n";
 import { chatWithPhum } from "@/lib/lifeos.functions";
 
 export const Route = createFileRoute("/_authenticated/chat")({
+  head: () => ({
+    meta: [
+      { title: "คุยกับน้องภูมิ | Life OS" },
+      { name: "description", content: "พิมพ์บอกน้องภูมิเป็นภาษาคน แล้วให้ช่วยสร้างเตือนความจำ บันทึกค่าใช้จ่าย หรือค้นเอกสาร" },
+      { property: "og:title", content: "คุยกับน้องภูมิ | Life OS" },
+      { property: "og:description", content: "พิมพ์บอกน้องภูมิเป็นภาษาคน แล้วให้ช่วยสร้างเตือนความจำ บันทึกค่าใช้จ่าย หรือค้นเอกสาร" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: ChatPage,
 });
 

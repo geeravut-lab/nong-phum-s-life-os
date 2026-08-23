@@ -21,6 +21,16 @@ import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
+  head: () => ({
+    meta: [
+      { title: "เรื่องที่ต้องทำ | น้องภูมิ" },
+      { name: "description", content: "จัดการเตือนความจำ งานที่เกิดซ้ำ และลำดับความสำคัญของเรื่องรอบตัวคุณ" },
+      { property: "og:title", content: "เรื่องที่ต้องทำ | น้องภูมิ" },
+      { property: "og:description", content: "จัดการเตือนความจำ งานที่เกิดซ้ำ และลำดับความสำคัญของเรื่องรอบตัวคุณ" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: TasksPage,
 });
 
@@ -63,7 +73,10 @@ function TasksPage() {
       priority,
       recurrence,
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setTitle("");
     setDueAt("");
     setOpen(false);
