@@ -63,7 +63,10 @@ function TasksPage() {
       priority,
       recurrence,
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setTitle("");
     setDueAt("");
     setOpen(false);

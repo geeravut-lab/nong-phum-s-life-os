@@ -16,6 +16,7 @@ import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/c
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
 
@@ -53,6 +54,11 @@ const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
   path: '/money',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/family'
     | '/money'
+    | '/settings'
     | '/tasks'
     | '/today'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/family'
     | '/money'
+    | '/settings'
     | '/tasks'
     | '/today'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/docs'
     | '/_authenticated/family'
     | '/_authenticated/money'
+    | '/_authenticated/settings'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
   fileRoutesById: FileRoutesById
@@ -187,6 +199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMoneyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -209,6 +228,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
 }
@@ -218,6 +238,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
 }

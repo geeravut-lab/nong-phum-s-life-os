@@ -76,11 +76,17 @@ function FamilyPage() {
       .insert({ name: familyName, owner_id: uid })
       .select("id")
       .single();
-    if (error || !fam) return toast.error(error?.message ?? t.error);
+    if (error || !fam) {
+      toast.error(error?.message ?? t.error);
+      return;
+    }
     const { error: memberError } = await supabase
       .from("family_members")
       .insert({ family_id: fam.id, user_id: uid, member_role: "owner" });
-    if (memberError) return toast.error(memberError.message);
+    if (memberError) {
+      toast.error(memberError.message);
+      return;
+    }
     setFamilyName("");
     qc.invalidateQueries();
   };
@@ -88,7 +94,10 @@ function FamilyPage() {
   const joinFamily = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await join({ data: { code } });
-    if (!res.ok) return toast.error(t.error);
+    if (!res.ok) {
+      toast.error(t.error);
+      return;
+    }
     setCode("");
     toast.success(res.name);
     qc.invalidateQueries();
