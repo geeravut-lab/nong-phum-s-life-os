@@ -17,6 +17,16 @@ import { analyzeDocument } from "@/lib/lifeos.functions";
 import { formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/docs")({
+  head: () => ({
+    meta: [
+      { title: "คลังเอกสาร | น้องภูมิ" },
+      { name: "description", content: "อัปโหลดรูปหรือ PDF แล้วน้องภูมิอ่าน สรุป จัดหมวด และดึงวันครบกำหนดให้" },
+      { property: "og:title", content: "คลังเอกสาร | น้องภูมิ" },
+      { property: "og:description", content: "อัปโหลดรูปหรือ PDF แล้วน้องภูมิอ่าน สรุป จัดหมวด และดึงวันครบกำหนดให้" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: DocsPage,
 });
 

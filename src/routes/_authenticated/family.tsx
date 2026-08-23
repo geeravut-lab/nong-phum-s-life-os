@@ -15,6 +15,16 @@ import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/family")({
+  head: () => ({
+    meta: [
+      { title: "ครอบครัว | น้องภูมิ" },
+      { name: "description", content: "สร้างกลุ่มครอบครัว เชิญสมาชิกด้วยรหัส และแชร์เฉพาะเรื่องที่คุณเลือก" },
+      { property: "og:title", content: "ครอบครัว | น้องภูมิ" },
+      { property: "og:description", content: "สร้างกลุ่มครอบครัว เชิญสมาชิกด้วยรหัส และแชร์เฉพาะเรื่องที่คุณเลือก" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: FamilyPage,
 });
 

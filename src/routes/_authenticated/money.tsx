@@ -21,6 +21,16 @@ import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
 import { formatMoney, toDateInput } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/money")({
+  head: () => ({
+    meta: [
+      { title: "บิลและค่าใช้จ่าย | น้องภูมิ" },
+      { name: "description", content: "บันทึกรายจ่าย จัดหมวดอัตโนมัติ และดูสรุปยอดรายเดือน" },
+      { property: "og:title", content: "บิลและค่าใช้จ่าย | น้องภูมิ" },
+      { property: "og:description", content: "บันทึกรายจ่าย จัดหมวดอัตโนมัติ และดูสรุปยอดรายเดือน" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: MoneyPage,
 });
 

@@ -13,6 +13,16 @@ import { generateDailyBrief } from "@/lib/lifeos.functions";
 import { formatDay, formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/today")({
+  head: () => ({
+    meta: [
+      { title: "วันนี้ | น้องภูมิ" },
+      { name: "description", content: "สรุปเรื่องสำคัญของวันนี้ ทั้งงานค้าง บิลใกล้ครบกำหนด และเอกสารที่ต้องดู" },
+      { property: "og:title", content: "วันนี้ | น้องภูมิ" },
+      { property: "og:description", content: "สรุปเรื่องสำคัญของวันนี้ ทั้งงานค้าง บิลใกล้ครบกำหนด และเอกสารที่ต้องดู" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: TodayPage,
 });
 

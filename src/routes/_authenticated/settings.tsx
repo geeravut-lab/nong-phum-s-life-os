@@ -11,6 +11,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n, type Lang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings")({
+  head: () => ({
+    meta: [
+      { title: "ตั้งค่า | น้องภูมิ" },
+      { name: "description", content: "ตั้งค่าโปรไฟล์ ภาษา ธีม และดูนโยบายความเป็นส่วนตัวของน้องภูมิ" },
+      { property: "og:title", content: "ตั้งค่า | น้องภูมิ" },
+      { property: "og:description", content: "ตั้งค่าโปรไฟล์ ภาษา ธีม และดูนโยบายความเป็นส่วนตัวของน้องภูมิ" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: SettingsPage,
 });
 
