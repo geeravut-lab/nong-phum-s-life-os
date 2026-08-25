@@ -32,7 +32,14 @@ const DocSchema = z.object({
   keyFacts: z.array(z.string()).max(6).describe("Short bullet facts"),
   suggestedReminderTitle: z.string().nullable(),
   isExpense: z.boolean().describe("True when this looks like a bill or receipt with a paid amount"),
+  isIncome: z
+    .boolean()
+    .describe("True when this is money received: payslip, salary slip, transfer-in, sales invoice paid to the user"),
+  needsAction: z
+    .boolean()
+    .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
 });
+
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
 
