@@ -148,7 +148,7 @@ async function loadContext(supabase: Db, userId: string) {
 
 
 export async function runChatRouter(
-  input: { message: string; lang: "th" | "en" },
+  input: { message: string; lang: "th" | "en"; focus?: "tasks" | "expenses" | "incomes" | null },
   supabase: Db,
   userId: string,
 ) {
@@ -164,23 +164,36 @@ export async function runChatRouter(
     .order("created_at", { ascending: true })
     .limit(20);
 
+  const focusLine =
+    input.focus === "tasks"
+      ? "The user is on the To-do page: strongly prefer create_reminder."
+      : input.focus === "expenses"
+        ? "The user is on the Expenses page: strongly prefer add_expense."
+        : input.focus === "incomes"
+          ? "The user is on the Income page: strongly prefer add_income."
+          : "";
+
   const result = await generateText({
     model: gateway(MODEL),
     system: `${persona(input.lang)}
 Today is ${today}. Reply in ${langName}.
 You route the user's request to exactly one action in their Life OS:
-- create_reminder: the user wants to remember or be reminded of something
-- add_expense: the user reports spending money
+- create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
+- add_expense: the user reports spending money (fill title, amount, category, spentOn)
+- add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
 - search_documents: the user asks about something in their stored documents
 - daily_brief: the user asks what's going on today / what's coming up
 - none: casual conversation or a question you can answer from the context below
+${focusLine}
 
 Answer questions using ONLY this data about the user; if it isn't there, say you don't have it yet.
 REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
+INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}
 
-When you propose create_reminder or add_expense, fill the fields and tell the user you'll save it once they confirm.`,
+The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.`,
+
     output: Output.object({ schema: ActionSchema }),
     messages: [
       ...(history.data ?? []).map((m) => ({
