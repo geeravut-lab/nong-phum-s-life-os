@@ -221,6 +221,7 @@ Format: one warm opening line, then a short numbered list (max 5) of the things 
 Use markdown. Keep it under 140 words. Never invent items that are not in the data.`,
     prompt: `REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
+INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}`,
   });
 
