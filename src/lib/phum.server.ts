@@ -148,7 +148,11 @@ async function loadContext(supabase: Db, userId: string) {
 
 
 export async function runChatRouter(
-  input: { message: string; lang: "th" | "en"; focus?: "tasks" | "expenses" | "incomes" | null },
+  input: {
+    message: string;
+    lang: "th" | "en";
+    focus?: "tasks" | "expenses" | "incomes" | null | undefined;
+  },
   supabase: Db,
   userId: string,
 ) {
