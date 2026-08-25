@@ -231,6 +231,66 @@ export type Database = {
           },
         ]
       }
+      incomes: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          family_id: string | null
+          id: string
+          is_shared: boolean
+          note: string | null
+          received_on: string
+          source_document_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          is_shared?: boolean
+          note?: string | null
+          received_on?: string
+          source_document_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          is_shared?: boolean
+          note?: string | null
+          received_on?: string
+          source_document_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incomes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incomes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
