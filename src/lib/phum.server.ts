@@ -32,7 +32,14 @@ const DocSchema = z.object({
   keyFacts: z.array(z.string()).max(6).describe("Short bullet facts"),
   suggestedReminderTitle: z.string().nullable(),
   isExpense: z.boolean().describe("True when this looks like a bill or receipt with a paid amount"),
+  isIncome: z
+    .boolean()
+    .describe("True when this is money received: payslip, salary slip, transfer-in, sales invoice paid to the user"),
+  needsAction: z
+    .boolean()
+    .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
 });
+
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
 
@@ -77,16 +84,25 @@ const ActionSchema = z.object({
   reply: z.string().describe("Nong Phum's reply to the user"),
   action: z
     .object({
-      type: z.enum(["create_reminder", "add_expense", "search_documents", "daily_brief", "none"]),
+      type: z.enum([
+        "create_reminder",
+        "add_expense",
+        "add_income",
+        "search_documents",
+        "daily_brief",
+        "none",
+      ]),
       title: z.string().nullable(),
       dueAt: z.string().nullable().describe("ISO datetime for reminders"),
       priority: z.enum(["high", "normal", "low"]).nullable(),
+      recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
       amount: z.number().nullable(),
       category: z.enum(CATEGORIES).nullable(),
-      spentOn: z.string().nullable().describe("YYYY-MM-DD"),
+      spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
+      receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
       query: z.string().nullable().describe("Search text for documents"),
     })
-    .describe("The single action Nong Phum proposes; use type 'none' when only chatting"),
+    .describe("The single action Nong Phum takes; use type 'none' when only chatting"),
 });
 
 export type PhumAction = z.infer<typeof ActionSchema>["action"];
@@ -94,7 +110,7 @@ export type PhumAction = z.infer<typeof ActionSchema>["action"];
 type Db = SupabaseClient<any, "public", any>;
 
 async function loadContext(supabase: Db, userId: string) {
-  const [reminders, expenses, documents] = await Promise.all([
+  const [reminders, expenses, incomes, documents] = await Promise.all([
     supabase
       .from("reminders")
       .select("title, due_at, priority, status")
@@ -109,6 +125,12 @@ async function loadContext(supabase: Db, userId: string) {
       .order("spent_on", { ascending: false })
       .limit(15),
     supabase
+      .from("incomes")
+      .select("title, amount, category, received_on")
+      .eq("user_id", userId)
+      .order("received_on", { ascending: false })
+      .limit(15),
+    supabase
       .from("documents")
       .select("title, category, summary, due_date, amount, counterparty")
       .eq("user_id", userId)
@@ -119,12 +141,18 @@ async function loadContext(supabase: Db, userId: string) {
   return {
     reminders: reminders.data ?? [],
     expenses: expenses.data ?? [],
+    incomes: incomes.data ?? [],
     documents: documents.data ?? [],
   };
 }
 
+
 export async function runChatRouter(
-  input: { message: string; lang: "th" | "en" },
+  input: {
+    message: string;
+    lang: "th" | "en";
+    focus?: "tasks" | "expenses" | "incomes" | null | undefined;
+  },
   supabase: Db,
   userId: string,
 ) {
@@ -140,23 +168,36 @@ export async function runChatRouter(
     .order("created_at", { ascending: true })
     .limit(20);
 
+  const focusLine =
+    input.focus === "tasks"
+      ? "The user is on the To-do page: strongly prefer create_reminder."
+      : input.focus === "expenses"
+        ? "The user is on the Expenses page: strongly prefer add_expense."
+        : input.focus === "incomes"
+          ? "The user is on the Income page: strongly prefer add_income."
+          : "";
+
   const result = await generateText({
     model: gateway(MODEL),
     system: `${persona(input.lang)}
 Today is ${today}. Reply in ${langName}.
 You route the user's request to exactly one action in their Life OS:
-- create_reminder: the user wants to remember or be reminded of something
-- add_expense: the user reports spending money
+- create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
+- add_expense: the user reports spending money (fill title, amount, category, spentOn)
+- add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
 - search_documents: the user asks about something in their stored documents
 - daily_brief: the user asks what's going on today / what's coming up
 - none: casual conversation or a question you can answer from the context below
+${focusLine}
 
 Answer questions using ONLY this data about the user; if it isn't there, say you don't have it yet.
 REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
+INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}
 
-When you propose create_reminder or add_expense, fill the fields and tell the user you'll save it once they confirm.`,
+The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.`,
+
     output: Output.object({ schema: ActionSchema }),
     messages: [
       ...(history.data ?? []).map((m) => ({
@@ -184,6 +225,7 @@ Format: one warm opening line, then a short numbered list (max 5) of the things 
 Use markdown. Keep it under 140 words. Never invent items that are not in the data.`,
     prompt: `REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
+INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}`,
   });
 
