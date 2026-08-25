@@ -12,6 +12,7 @@ const AnalyzeInput = z.object({
 const ChatInput = z.object({
   message: z.string().min(1).max(4000),
   lang: z.enum(["th", "en"]).default("th"),
+  focus: z.enum(["tasks", "expenses", "incomes"]).nullish(),
 });
 
 const BriefInput = z.object({ lang: z.enum(["th", "en"]).default("th") });
