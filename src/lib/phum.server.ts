@@ -84,16 +84,25 @@ const ActionSchema = z.object({
   reply: z.string().describe("Nong Phum's reply to the user"),
   action: z
     .object({
-      type: z.enum(["create_reminder", "add_expense", "search_documents", "daily_brief", "none"]),
+      type: z.enum([
+        "create_reminder",
+        "add_expense",
+        "add_income",
+        "search_documents",
+        "daily_brief",
+        "none",
+      ]),
       title: z.string().nullable(),
       dueAt: z.string().nullable().describe("ISO datetime for reminders"),
       priority: z.enum(["high", "normal", "low"]).nullable(),
+      recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
       amount: z.number().nullable(),
       category: z.enum(CATEGORIES).nullable(),
-      spentOn: z.string().nullable().describe("YYYY-MM-DD"),
+      spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
+      receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
       query: z.string().nullable().describe("Search text for documents"),
     })
-    .describe("The single action Nong Phum proposes; use type 'none' when only chatting"),
+    .describe("The single action Nong Phum takes; use type 'none' when only chatting"),
 });
 
 export type PhumAction = z.infer<typeof ActionSchema>["action"];
@@ -101,7 +110,7 @@ export type PhumAction = z.infer<typeof ActionSchema>["action"];
 type Db = SupabaseClient<any, "public", any>;
 
 async function loadContext(supabase: Db, userId: string) {
-  const [reminders, expenses, documents] = await Promise.all([
+  const [reminders, expenses, incomes, documents] = await Promise.all([
     supabase
       .from("reminders")
       .select("title, due_at, priority, status")
@@ -116,6 +125,12 @@ async function loadContext(supabase: Db, userId: string) {
       .order("spent_on", { ascending: false })
       .limit(15),
     supabase
+      .from("incomes")
+      .select("title, amount, category, received_on")
+      .eq("user_id", userId)
+      .order("received_on", { ascending: false })
+      .limit(15),
+    supabase
       .from("documents")
       .select("title, category, summary, due_date, amount, counterparty")
       .eq("user_id", userId)
@@ -126,9 +141,11 @@ async function loadContext(supabase: Db, userId: string) {
   return {
     reminders: reminders.data ?? [],
     expenses: expenses.data ?? [],
+    incomes: incomes.data ?? [],
     documents: documents.data ?? [],
   };
 }
+
 
 export async function runChatRouter(
   input: { message: string; lang: "th" | "en" },
