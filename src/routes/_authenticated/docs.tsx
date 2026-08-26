@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
+import { intakeDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/docs")({
