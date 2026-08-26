@@ -113,6 +113,8 @@ function TasksPage() {
         </Button>
       </header>
 
+      <PhumQuickBar focus="tasks" />
+
       {open && (
         <form
           onSubmit={add}
