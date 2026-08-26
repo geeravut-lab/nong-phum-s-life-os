@@ -2,14 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { Send } from "lucide-react";
+import { Paperclip, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell, PhumMark } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { chatWithPhum } from "@/lib/lifeos.functions";
+import { analyzeDocument, chatWithPhum } from "@/lib/lifeos.functions";
+import { applyPhumAction } from "@/lib/phum-actions";
+import { intakeDocument } from "@/lib/doc-intake";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({
@@ -25,24 +27,15 @@ export const Route = createFileRoute("/_authenticated/chat")({
   component: ChatPage,
 });
 
-type Pending = {
-  type: string;
-  title: string | null;
-  dueAt: string | null;
-  priority: string | null;
-  amount: number | null;
-  category: string | null;
-  spentOn: string | null;
-  query: string | null;
-};
-
 function ChatPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const ask = useServerFn(chatWithPhum);
+  const analyze = useServerFn(analyzeDocument);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [pending, setPending] = useState<Pending | null>(null);
+  const [fileBusy, setFileBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   const { data: messages } = useQuery({
@@ -59,7 +52,12 @@ function ChatPage() {
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, busy]);
+  }, [messages, busy, fileBusy]);
+
+  const post = async (uid: string, role: "user" | "assistant", content: string) => {
+    await supabase.from("chat_messages").insert({ user_id: uid, role, content });
+    qc.invalidateQueries({ queryKey: ["chat"] });
+  };
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,25 +65,23 @@ function ChatPage() {
     if (!text || busy) return;
     setInput("");
     setBusy(true);
-    setPending(null);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user!.id;
-      await supabase.from("chat_messages").insert({ user_id: uid, role: "user", content: text });
-      qc.invalidateQueries({ queryKey: ["chat"] });
+      await post(uid, "user", text);
 
       const out = await ask({ data: { message: text, lang } });
-      await supabase.from("chat_messages").insert({
-        user_id: uid,
-        role: "assistant",
-        content: out.reply,
-        action: out.action,
-      });
-      qc.invalidateQueries({ queryKey: ["chat"] });
-      if (out.action && out.action.type !== "none" && out.action.type !== "daily_brief") {
-        if (out.action.type === "create_reminder" || out.action.type === "add_expense") {
-          setPending(out.action as Pending);
-        }
+      const applied = await applyPhumAction(out.action, uid);
+      await post(uid, "assistant", out.reply);
+      if (applied) {
+        const label =
+          applied.kind === "reminder"
+            ? t.routedToTasks
+            : applied.kind === "expense"
+              ? t.routedToExpense
+              : t.routedToIncome;
+        toast.success(`${t.phumSaved} — ${label}`);
+        qc.invalidateQueries();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.error);
@@ -94,34 +90,34 @@ function ChatPage() {
     }
   };
 
-  const confirm = async () => {
-    if (!pending) return;
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user!.id;
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || fileBusy) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error(t.error);
+      return;
+    }
+    setFileBusy(true);
     try {
-      if (pending.type === "create_reminder") {
-        const { error } = await supabase.from("reminders").insert({
-          user_id: uid,
-          title: pending.title ?? "-",
-          due_at: pending.dueAt,
-          priority: pending.priority ?? "normal",
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("expenses").insert({
-          user_id: uid,
-          title: pending.title ?? "-",
-          amount: pending.amount ?? 0,
-          category: pending.category ?? "other",
-          spent_on: pending.spentOn ?? new Date().toISOString().slice(0, 10),
-        });
-        if (error) throw error;
-      }
-      toast.success(t.saved);
-      setPending(null);
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user!.id;
+      await post(uid, "user", `📎 ${file.name}`);
+
+      const { analysis, routed } = await intakeDocument(file, analyze, lang, uid);
+
+      const notes: string[] = [t.savedToDocs];
+      if (routed.includes("expense")) notes.push(t.routedToExpense);
+      if (routed.includes("income")) notes.push(t.routedToIncome);
+      if (routed.includes("reminder")) notes.push(t.routedToTasks);
+
+      await post(uid, "assistant", `${analysis.summary}\n\n✅ ${notes.join(" · ")}`);
+      toast.success(t.phumSaved);
       qc.invalidateQueries();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.error);
+    } finally {
+      setFileBusy(false);
     }
   };
 
@@ -156,38 +152,38 @@ function ChatPage() {
           </div>
         ))}
         {busy && <p className="pl-10 text-sm text-muted-foreground">{t.thinking}</p>}
+        {fileBusy && <p className="pl-10 text-sm text-muted-foreground">{t.analyzing}</p>}
         <div ref={bottom} />
       </div>
-
-      {pending && (
-        <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-medium">{t.confirmAction}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {pending.title}
-            {pending.amount ? ` · ${pending.amount} ${t.baht}` : ""}
-            {pending.dueAt ? ` · ${new Date(pending.dueAt).toLocaleString()}` : ""}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" onClick={confirm}>
-              {t.confirm}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
-              {t.cancel}
-            </Button>
-          </div>
-        </div>
-      )}
 
       <form
         onSubmit={send}
         className="fixed inset-x-0 bottom-14 z-10 mx-auto flex max-w-4xl gap-2 bg-background/95 p-3 backdrop-blur md:sticky md:bottom-0 md:p-0 md:pt-4"
       >
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*,application/pdf"
+          className="hidden"
+          onChange={onFile}
+        />
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          disabled={busy || fileBusy}
+          onClick={() => fileRef.current?.click()}
+          aria-label={t.attachFile}
+          title={t.attachFile}
+        >
+          <Paperclip className="size-4" />
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t.chatPlaceholder}
         />
-        <Button type="submit" size="icon" disabled={busy} aria-label={t.send}>
+        <Button type="submit" size="icon" disabled={busy || fileBusy} aria-label={t.send}>
           <Send className="size-4" />
         </Button>
       </form>

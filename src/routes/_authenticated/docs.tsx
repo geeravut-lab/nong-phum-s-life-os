@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
+import { intakeDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/docs")({
@@ -29,15 +30,6 @@ export const Route = createFileRoute("/_authenticated/docs")({
   }),
   component: DocsPage,
 });
-
-function fileToBase64(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 function DocsPage() {
   const { t, lang } = useI18n();
@@ -72,43 +64,14 @@ function DocsPage() {
     setBusy(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user!.id;
-      const base64 = await fileToBase64(file);
-      const path = `${uid}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
+      const { analysis, routed } = await intakeDocument(file, analyze, lang, userData.user!.id);
 
-      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
-      if (upErr) throw upErr;
-
-      const result = await analyze({
-        data: { base64, mimeType: file.type || "application/pdf", fileName: file.name, lang },
-      });
-
-      const { error } = await supabase.from("documents").insert({
-        user_id: uid,
-        title: result.title,
-        category: result.category,
-        summary: result.summary,
-        doc_date: result.docDate,
-        due_date: result.dueDate,
-        amount: result.amount,
-        counterparty: result.counterparty,
-        storage_path: path,
-        mime_type: file.type,
-        extracted: JSON.parse(JSON.stringify(result)),
-      });
-      if (error) throw error;
-
-      if (result.isExpense && result.amount) {
-        await supabase.from("expenses").insert({
-          user_id: uid,
-          title: result.title,
-          amount: result.amount,
-          category: result.category,
-          spent_on: result.docDate ?? new Date().toISOString().slice(0, 10),
-        });
-      }
+      const notes: string[] = [t.savedToDocs];
+      if (routed.includes("expense")) notes.push(t.routedToExpense);
+      if (routed.includes("income")) notes.push(t.routedToIncome);
+      if (routed.includes("reminder")) notes.push(t.routedToTasks);
+      toast.success(`${analysis.title} — ${notes.join(" · ")}`);
       qc.invalidateQueries();
-      toast.success(result.title);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.error);
     } finally {
