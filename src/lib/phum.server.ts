@@ -122,7 +122,7 @@ const ActionSchema = z.object({
       priority: z.enum(["high", "normal", "low"]).nullable(),
       recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
       amount: z.number().nullable(),
-      category: z.enum(CATEGORIES).nullish().transform((v) => v ?? null),
+      category: z.enum(CATEGORIES).nullable(),
       spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
       receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
       query: z.string().nullable().describe("Search text for documents"),
