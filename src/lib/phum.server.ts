@@ -1,9 +1,21 @@
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { persona, requireGateway } from "./ai-gateway.server";
 
 const MODEL = "google/gemini-3.7-flash";
+
+
+/** Pull the first JSON object out of a model reply and parse it with the schema. */
+function parseJsonOutput<T>(schema: z.ZodType<T>, text: string): T {
+  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end <= start) throw new Error("AI did not return JSON");
+  return schema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+}
+
+const JSON_ONLY = "Reply with ONE JSON object only — no markdown fence, no commentary.";
 
 const CATEGORIES = [
   "bill",
@@ -25,12 +37,12 @@ const DocSchema = z.object({
   title: z.string().describe("Short title for the document"),
   category: z.enum(CATEGORIES),
   summary: z.string().describe("2-4 sentence summary in the requested language"),
-  docDate: z.string().nullable().describe("Document date as YYYY-MM-DD or null"),
-  dueDate: z.string().nullable().describe("Due/expiry date as YYYY-MM-DD or null"),
-  amount: z.number().nullable().describe("Total amount in THB or null"),
-  counterparty: z.string().nullable().describe("Company / person / agency involved"),
+  docDate: z.string().nullish().transform((v) => v ?? null).describe("Document date as YYYY-MM-DD or null"),
+  dueDate: z.string().nullish().transform((v) => v ?? null).describe("Due/expiry date as YYYY-MM-DD or null"),
+  amount: z.number().nullish().transform((v) => v ?? null).describe("Total amount in THB or null"),
+  counterparty: z.string().nullish().transform((v) => v ?? null).describe("Company / person / agency involved"),
   keyFacts: z.array(z.string()).max(6).describe("Short bullet facts"),
-  suggestedReminderTitle: z.string().nullable(),
+  suggestedReminderTitle: z.string().nullish().transform((v) => v ?? null),
   isExpense: z.boolean().describe("True when this looks like a bill or receipt with a paid amount"),
   isIncome: z
     .boolean()
@@ -54,8 +66,9 @@ export async function runDocumentAnalysis(input: {
 
   const result = await generateText({
     model: gateway(MODEL),
-    system: `${persona(input.lang)}\nYou are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.`,
-    output: Output.object({ schema: DocSchema }),
+    system: `${persona(input.lang)}\nYou are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.
+${JSON_ONLY}
+Shape: {"title":string,"category":one of ${CATEGORIES.join("|")},"summary":string,"docDate":string|null,"dueDate":string|null,"amount":number|null,"counterparty":string|null,"keyFacts":string[],"suggestedReminderTitle":string|null,"isExpense":boolean,"isIncome":boolean,"needsAction":boolean}`,
     messages: [
       {
         role: "user",
@@ -77,7 +90,7 @@ export async function runDocumentAnalysis(input: {
     ],
   });
 
-  return await result.output;
+  return parseJsonOutput(DocSchema, result.text);
 }
 
 const ActionSchema = z.object({
@@ -92,15 +105,15 @@ const ActionSchema = z.object({
         "daily_brief",
         "none",
       ]),
-      title: z.string().nullable(),
-      dueAt: z.string().nullable().describe("ISO datetime for reminders"),
-      priority: z.enum(["high", "normal", "low"]).nullable(),
-      recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
-      amount: z.number().nullable(),
-      category: z.enum(CATEGORIES).nullable(),
-      spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
-      receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
-      query: z.string().nullable().describe("Search text for documents"),
+      title: z.string().nullish().transform((v) => v ?? null),
+      dueAt: z.string().nullish().transform((v) => v ?? null).describe("ISO datetime for reminders"),
+      priority: z.enum(["high", "normal", "low"]).nullish().transform((v) => v ?? null),
+      recurrence: z.enum(["none", "monthly", "yearly"]).nullish().transform((v) => v ?? null),
+      amount: z.number().nullish().transform((v) => v ?? null),
+      category: z.enum(CATEGORIES).nullish().transform((v) => v ?? null),
+      spentOn: z.string().nullish().transform((v) => v ?? null).describe("YYYY-MM-DD for expenses"),
+      receivedOn: z.string().nullish().transform((v) => v ?? null).describe("YYYY-MM-DD for income"),
+      query: z.string().nullish().transform((v) => v ?? null).describe("Search text for documents"),
     })
     .describe("The single action Nong Phum takes; use type 'none' when only chatting"),
 });
@@ -196,9 +209,10 @@ EXPENSES: ${JSON.stringify(ctx.expenses)}
 INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}
 
-The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.`,
+The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
+${JSON_ONLY}
+Shape: {"reply":string,"action":{"type":"create_reminder|add_expense|add_income|search_documents|daily_brief|none","title":string|null,"dueAt":string|null,"priority":"high|normal|low"|null,"recurrence":"none|monthly|yearly"|null,"amount":number|null,"category":one of ${CATEGORIES.join("|")}|null,"spentOn":string|null,"receivedOn":string|null,"query":string|null}}`,
 
-    output: Output.object({ schema: ActionSchema }),
     messages: [
       ...(history.data ?? []).map((m) => ({
         role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
@@ -208,7 +222,7 @@ The app saves create_reminder, add_expense and add_income automatically as soon 
     ],
   });
 
-  return await result.output;
+  return parseJsonOutput(ActionSchema, result.text);
 }
 
 export async function runDailyBrief(lang: "th" | "en", supabase: Db, userId: string) {
