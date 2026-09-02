@@ -12,7 +12,19 @@ function parseJsonOutput<T>(schema: z.ZodType<T>, text: string): T {
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("AI did not return JSON");
-  return schema.parse(JSON.parse(cleaned.slice(start, end + 1)));
+  const raw = JSON.parse(cleaned.slice(start, end + 1)) as unknown;
+  return schema.parse(nullifyUndefined(raw));
+}
+
+/** Models sometimes omit optional keys; turn every missing/undefined value into null. */
+function nullifyUndefined(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(nullifyUndefined);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, nullifyUndefined(v)]),
+    );
+  }
+  return value === undefined ? null : value;
 }
 
 const JSON_ONLY = "Reply with ONE JSON object only — no markdown fence, no commentary.";
@@ -37,12 +49,12 @@ const DocSchema = z.object({
   title: z.string().describe("Short title for the document"),
   category: z.enum(CATEGORIES),
   summary: z.string().describe("2-4 sentence summary in the requested language"),
-  docDate: z.preprocess((v) => v ?? null, z.string().nullable()).describe("Document date as YYYY-MM-DD or null"),
-  dueDate: z.preprocess((v) => v ?? null, z.string().nullable()).describe("Due/expiry date as YYYY-MM-DD or null"),
-  amount: z.preprocess((v) => v ?? null, z.number().nullable()).describe("Total amount in THB or null"),
-  counterparty: z.preprocess((v) => v ?? null, z.string().nullable()).describe("Company / person / agency involved"),
+  docDate: z.string().nullable().describe("Document date as YYYY-MM-DD or null"),
+  dueDate: z.string().nullable().describe("Due/expiry date as YYYY-MM-DD or null"),
+  amount: z.number().nullable().describe("Total amount in THB or null"),
+  counterparty: z.string().nullable().describe("Company / person / agency involved"),
   keyFacts: z.array(z.string()).max(6).describe("Short bullet facts"),
-  suggestedReminderTitle: z.preprocess((v) => v ?? null, z.string().nullable()),
+  suggestedReminderTitle: z.string().nullable(),
   isExpense: z.boolean().describe("True when this looks like a bill or receipt with a paid amount"),
   isIncome: z
     .boolean()
@@ -105,15 +117,15 @@ const ActionSchema = z.object({
         "daily_brief",
         "none",
       ]),
-      title: z.preprocess((v) => v ?? null, z.string().nullable()),
-      dueAt: z.preprocess((v) => v ?? null, z.string().nullable()).describe("ISO datetime for reminders"),
-      priority: z.preprocess((v) => v ?? null, z.enum(["high", "normal", "low"]).nullable()),
-      recurrence: z.preprocess((v) => v ?? null, z.enum(["none", "monthly", "yearly"]).nullable()),
-      amount: z.preprocess((v) => v ?? null, z.number().nullable()),
+      title: z.string().nullable(),
+      dueAt: z.string().nullable().describe("ISO datetime for reminders"),
+      priority: z.enum(["high", "normal", "low"]).nullable(),
+      recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
+      amount: z.number().nullable(),
       category: z.enum(CATEGORIES).nullish().transform((v) => v ?? null),
-      spentOn: z.preprocess((v) => v ?? null, z.string().nullable()).describe("YYYY-MM-DD for expenses"),
-      receivedOn: z.preprocess((v) => v ?? null, z.string().nullable()).describe("YYYY-MM-DD for income"),
-      query: z.preprocess((v) => v ?? null, z.string().nullable()).describe("Search text for documents"),
+      spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
+      receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
+      query: z.string().nullable().describe("Search text for documents"),
     })
     .describe("The single action Nong Phum takes; use type 'none' when only chatting"),
 });
