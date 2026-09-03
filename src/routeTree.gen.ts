@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
+import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated/helpme'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
@@ -49,6 +50,11 @@ const AuthenticatedFamilyRoute = AuthenticatedFamilyRouteImport.update({
   path: '/family',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHelpmeRoute = AuthenticatedHelpmeRouteImport.update({
+  id: '/helpme',
+  path: '/helpme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
   id: '/money',
   path: '/money',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/helpme': typeof AuthenticatedHelpmeRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/helpme': typeof AuthenticatedHelpmeRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
+  '/_authenticated/helpme': typeof AuthenticatedHelpmeRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/docs'
     | '/family'
+    | '/helpme'
     | '/money'
     | '/settings'
     | '/tasks'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/docs'
     | '/family'
+    | '/helpme'
     | '/money'
     | '/settings'
     | '/tasks'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/docs'
     | '/_authenticated/family'
+    | '/_authenticated/helpme'
     | '/_authenticated/money'
     | '/_authenticated/settings'
     | '/_authenticated/tasks'
@@ -192,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/helpme': {
+      id: '/_authenticated/helpme'
+      path: '/helpme'
+      fullPath: '/helpme'
+      preLoaderRoute: typeof AuthenticatedHelpmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/money': {
       id: '/_authenticated/money'
       path: '/money'
@@ -227,6 +246,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
+  AuthenticatedHelpmeRoute: typeof AuthenticatedHelpmeRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
@@ -237,6 +257,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
+  AuthenticatedHelpmeRoute: AuthenticatedHelpmeRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
