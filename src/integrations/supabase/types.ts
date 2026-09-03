@@ -231,6 +231,66 @@ export type Database = {
           },
         ]
       }
+      helper_profiles: {
+        Row: {
+          area: string | null
+          available_from: string | null
+          available_to: string | null
+          bio: string | null
+          created_at: string
+          display_name: string
+          hourly_rate: number | null
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          jobs_done: number
+          lat: number | null
+          lng: number | null
+          rating: number
+          skills: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area?: string | null
+          available_from?: string | null
+          available_to?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          jobs_done?: number
+          lat?: number | null
+          lng?: number | null
+          rating?: number
+          skills?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area?: string | null
+          available_from?: string | null
+          available_to?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          jobs_done?: number
+          lat?: number | null
+          lng?: number | null
+          rating?: number
+          skills?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       incomes: {
         Row: {
           amount: number
@@ -290,6 +350,203 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_offers: {
+        Row: {
+          created_at: string
+          helper_id: string
+          helper_user_id: string
+          id: string
+          job_id: string
+          match_score: number | null
+          message: string | null
+          price: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          helper_id: string
+          helper_user_id: string
+          id?: string
+          job_id: string
+          match_score?: number | null
+          message?: string | null
+          price?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          helper_id?: string
+          helper_user_id?: string
+          id?: string
+          job_id?: string
+          match_score?: number | null
+          message?: string | null
+          price?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offers_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "helper_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_offers_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          helper_id: string
+          id: string
+          job_id: string
+          rating: number
+          reviewer_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          helper_id: string
+          id?: string
+          job_id: string
+          rating?: number
+          reviewer_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          helper_id?: string
+          id?: string
+          job_id?: string
+          rating?: number
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reviews_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "helper_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          agreed_price: number | null
+          ai_extract: Json
+          assigned_helper_id: string | null
+          budget_max: number | null
+          budget_min: number | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          location_text: string | null
+          platform_fee: number | null
+          scheduled_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agreed_price?: number | null
+          ai_extract?: Json
+          assigned_helper_id?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          location_text?: string | null
+          platform_fee?: number | null
+          scheduled_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agreed_price?: number | null
+          ai_extract?: Json
+          assigned_helper_id?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          location_text?: string | null
+          platform_fee?: number | null
+          scheduled_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_assigned_helper_id_fkey"
+            columns: ["assigned_helper_id"]
+            isOneToOne: false
+            referencedRelation: "helper_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          id: boolean
+          revenue_mode: string
+          service_fee: number
+          updated_at: string
+        }
+        Insert: {
+          commission_rate?: number
+          created_at?: string
+          id?: boolean
+          revenue_mode?: string
+          service_fee?: number
+          updated_at?: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          id?: boolean
+          revenue_mode?: string
+          service_fee?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
