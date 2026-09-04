@@ -20,6 +20,7 @@ const dict = {
     navTasks: "ต้องทำ",
     navMoney: "ค่าใช้จ่าย",
     navFamily: "ครอบครัว",
+    navHelpMe: "ช่วยฉันที",
     navSettings: "ตั้งค่า",
     signOut: "ออกจากระบบ",
     // auth
@@ -218,6 +219,7 @@ const dict = {
     navTasks: "To-do",
     navMoney: "Expenses",
     navFamily: "Family",
+    navHelpMe: "Help Me",
     navSettings: "Settings",
     signOut: "Sign out",
     signIn: "Sign in",
