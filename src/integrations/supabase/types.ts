@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      benefit_profiles: {
+        Row: {
+          birth_year: number | null
+          created_at: string
+          groups: string[]
+          has_social_security: boolean
+          has_welfare_card: boolean
+          household_size: number | null
+          id: string
+          monthly_income: number | null
+          occupation: string | null
+          province: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_year?: number | null
+          created_at?: string
+          groups?: string[]
+          has_social_security?: boolean
+          has_welfare_card?: boolean
+          household_size?: number | null
+          id?: string
+          monthly_income?: number | null
+          occupation?: string | null
+          province?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_year?: number | null
+          created_at?: string
+          groups?: string[]
+          has_social_security?: boolean
+          has_welfare_card?: boolean
+          household_size?: number | null
+          id?: string
+          monthly_income?: number | null
+          occupation?: string | null
+          province?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      benefits: {
+        Row: {
+          category: string
+          created_at: string
+          eligibility: Json
+          est_value: number | null
+          how_to: string
+          id: string
+          is_active: boolean
+          link: string | null
+          provider: string
+          slug: string
+          summary: string
+          title: string
+          title_en: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          eligibility?: Json
+          est_value?: number | null
+          how_to?: string
+          id?: string
+          is_active?: boolean
+          link?: string | null
+          provider?: string
+          slug: string
+          summary?: string
+          title: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          eligibility?: Json
+          est_value?: number | null
+          how_to?: string
+          id?: string
+          is_active?: boolean
+          link?: string | null
+          provider?: string
+          slug?: string
+          summary?: string
+          title?: string
+          title_en?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           action: Json | null
@@ -631,6 +727,44 @@ export type Database = {
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_benefits: {
+        Row: {
+          benefit_id: string
+          created_at: string
+          id: string
+          note: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          benefit_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          benefit_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_benefits_benefit_id_fkey"
+            columns: ["benefit_id"]
+            isOneToOne: false
+            referencedRelation: "benefits"
             referencedColumns: ["id"]
           },
         ]
