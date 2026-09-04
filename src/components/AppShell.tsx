@@ -36,7 +36,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
+    { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
   ] as const;
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
