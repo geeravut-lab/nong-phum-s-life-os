@@ -133,7 +133,7 @@ function RequesterTab() {
       budget_max: draft.budgetMax,
       ai_extract: { neededSkills: draft.neededSkills },
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(t.jobPosted);
     setDraft(null);
     setText("");
@@ -481,7 +481,7 @@ function HelperTab() {
       is_active: current.is_active,
     };
     const { error } = await supabase.from("helper_profiles").upsert(payload, { onConflict: "user_id" });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(t.saved);
     qc.invalidateQueries({ queryKey: ["helper-profile"] });
   };
@@ -495,7 +495,7 @@ function HelperTab() {
       price: offerPrice ? Number(offerPrice) : null,
       message: offerMsg || null,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(t.offerSent);
     setOfferFor(null);
     setOfferPrice("");
