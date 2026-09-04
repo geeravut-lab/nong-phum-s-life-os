@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CalendarCheck,
   FileText,
+  HandHelping,
   Home,
   ListTodo,
   MessageCircleHeart,
@@ -36,7 +37,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
+    { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
   ] as const;
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -91,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-6 border-t border-border bg-background/95 backdrop-blur md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-7 border-t border-border bg-background/95 backdrop-blur md:hidden">
           {nav.map((item) => (
             <Link
               key={item.to}
