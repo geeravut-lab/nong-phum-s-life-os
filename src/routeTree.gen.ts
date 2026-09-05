@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
@@ -34,6 +35,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedBenefitsRoute = AuthenticatedBenefitsRouteImport.update({
+  id: '/benefits',
+  path: '/benefits',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   id: '/chat',
@@ -79,6 +85,7 @@ const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/benefits': typeof AuthenticatedBenefitsRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/benefits': typeof AuthenticatedBenefitsRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/benefits'
     | '/chat'
     | '/docs'
     | '/family'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/benefits'
     | '/chat'
     | '/docs'
     | '/family'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/benefits'
     | '/_authenticated/chat'
     | '/_authenticated/docs'
     | '/_authenticated/family'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/benefits': {
+      id: '/_authenticated/benefits'
+      path: '/benefits'
+      fullPath: '/benefits'
+      preLoaderRoute: typeof AuthenticatedBenefitsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chat': {
       id: '/_authenticated/chat'
@@ -243,6 +262,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
@@ -254,6 +274,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,

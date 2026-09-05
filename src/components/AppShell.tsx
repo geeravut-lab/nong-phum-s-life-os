@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   FileText,
   HandHelping,
+  ShieldCheck,
   Home,
   ListTodo,
   MessageCircleHeart,
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
+    { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
   ] as const;
 
 
@@ -94,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-7 border-t border-border bg-background/95 backdrop-blur md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur md:hidden">
           {nav.map((item) => (
             <Link
               key={item.to}
