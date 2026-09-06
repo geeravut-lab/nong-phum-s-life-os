@@ -1,5 +1,5 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "nong-phum-life-os",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -17,7 +17,6 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.31",
     "@hookform/resolvers": "^5.2.2",
-    "@lovable.dev/cloud-auth-js": "^1.0.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -75,7 +74,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^2.15.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
