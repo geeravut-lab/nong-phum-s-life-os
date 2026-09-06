@@ -9,7 +9,12 @@
 - [x] รายได้ระบบ: Commission (default) หรือ Service Fee ตั้งค่าโดย Admin
 - [x] เมนู "ช่วยฉันที" ใน AppShell + คำแปล TH/EN
 
-## 2. สิทธิฉัน (Benefits)
+## 2. สิทธิฉัน (Benefits) — เสร็จแล้ว
+ - [x] ตาราง benefits (12 สิทธิ), benefit_profiles, user_benefits + RLS
+ - [x] ตัวจับคู่สิทธิ (อายุ/รายได้/กลุ่ม/ประกันสังคม)
+ - [x] หน้า /benefits: ฟอร์มโปรไฟล์ + รายการสิทธิ + สถานะ สนใจ/กำลังดำเนินการ/ได้รับแล้ว
+ - [x] เมนู "สิทธิฉัน" + คำแปล TH/EN
+
 ## 3. ของดีใกล้บ้าน (Local Deals)
 ## 4. Decision Board
 ## 5. Life Legacy (12 หมวดตามเอกสาร)
