@@ -7,14 +7,16 @@ import {
   Home,
   ListTodo,
   MessageCircleHeart,
+  MoreHorizontal,
   Settings,
   Users,
   Wallet,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
@@ -30,6 +32,7 @@ export function PhumMark({ className = "size-9" }: { className?: string }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const nav = [
     { to: "/today", label: t.navToday, icon: Home },
@@ -42,6 +45,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
   ] as const;
 
+  const primaryNav = nav.slice(0, 4);
+  const moreNav = nav.slice(4);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -96,8 +101,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur md:hidden">
-          {nav.map((item) => (
+        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
+          {primaryNav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
@@ -105,10 +110,55 @@ export function AppShell({ children }: { children: ReactNode }) {
               activeProps={{ className: "text-primary" }}
             >
               <item.icon className="size-5" />
-              {item.label}
+              <span className="max-w-full truncate px-0.5">{item.label}</span>
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className="flex flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
+          >
+            <MoreHorizontal className="size-5" />
+            <span className="max-w-full truncate px-0.5">{t.navMore}</span>
+          </button>
         </nav>
+
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="left" className="w-72 p-4">
+            <SheetHeader className="p-0">
+              <SheetTitle className="flex items-center gap-2 text-left">
+                <PhumMark className="size-8" />
+                {t.appName}
+              </SheetTitle>
+            </SheetHeader>
+            <div className="mt-5 flex flex-col gap-1">
+              {moreNav.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+                  activeProps={{ className: "bg-primary/10 text-primary" }}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              ))}
+              <Link
+                to="/settings"
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+                activeProps={{ className: "bg-primary/10 text-primary" }}
+              >
+                <Settings className="size-4" />
+                {t.navSettings}
+              </Link>
+              <Button variant="ghost" size="sm" className="mt-2 justify-start" onClick={signOut}>
+                {t.signOut}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
