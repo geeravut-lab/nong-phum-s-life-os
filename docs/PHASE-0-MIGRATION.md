@@ -109,16 +109,20 @@ export default defineConfig({
 
 ### ขั้น 2.4 — Auth
 
+> **สถานะ: 2.4.1 ทำเสร็จไปแล้วระหว่างขั้น 2.2** (commit `544e9ee`) — ไม่ได้ตั้งใจข้ามขั้น แต่ import ที่ค้างของ `@lovable.dev/cloud-auth-js` (หลังถอด dependency ออกในขั้น 2.1) ทำให้ **dep scan ของ Vite พังตั้งแต่ boot** → ปิด pre-bundling → Vite ไป re-optimize กลางคัน → rename `.vite\deps` ชน `EPERM` บน Windows → deps ค้าง 504 → `client.tsx` โหลดไม่ได้ → **hydration ไม่เกิด** หน้าเว็บเป็น SSR HTML นิ่ง ๆ กดอะไรไม่ได้ พอลบ wrapper ทิ้ง dep scan ผ่าน ลูกโซ่ทั้งเส้นก็หายไป
+>
+> **เหลือในขั้นนี้: 2.4.2 กับส่วน `client.ts` และการตั้งค่าใน Supabase Dashboard ด้านล่าง**
+
 - [ ] `src/integrations/supabase/client.ts` → ใช้ `createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)` — **ชื่อ env นี้ต้องตรงกับที่โค้ดเดิมใช้อยู่แล้ว (`VITE_SUPABASE_PUBLISHABLE_KEY` ฝั่ง client, `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` เป็น fallback ฝั่ง server)** อย่าเปลี่ยนไปใช้ชื่อ `VITE_SUPABASE_ANON_KEY` เพราะไม่มีที่ไหนในโค้ดอ่านชื่อนี้ — ถ้าจะ rename ต้องแก้ทั้ง `client.ts` และ `.env`/`.env.local`/Netlify env ให้ตรงกันทุกที่
 - [ ] หมายเหตุ: Supabase project ใหม่จะได้ key แบบใหม่ (`sb_publishable_...` / `sb_secret_...`) ไม่ใช่ JWT แบบเก่า — `client.ts` มีโค้ด `isNewSupabaseApiKey()` รองรับอยู่แล้ว (ตัด header `Authorization: Bearer` ทิ้งเมื่อ key เป็นแบบใหม่) ไม่ต้องแก้ส่วนนี้
 - [ ] เปิด Email provider + Google OAuth ใน Supabase Dashboard และใส่ redirect URL ของ Netlify
 
-#### 2.4.1 ถอด `@lovable.dev/cloud-auth-js`
+#### 2.4.1 ถอด `@lovable.dev/cloud-auth-js` — ✅ เสร็จแล้ว (commit `544e9ee`)
 
-- [ ] ลบไฟล์ `src/integrations/lovable/index.ts` (wrapper ที่เรียก `createLovableAuth()`)
-- [ ] แก้ `src/routes/auth.tsx` — จุดที่เรียก `lovable.auth.signInWithOAuth("google", ...)` ให้เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: ... } })` ตรงๆ (ลบ import `lovable` จาก `@/integrations/lovable` ออกด้วย)
-- [ ] แทนที่ทุกจุดอื่นที่ใช้ `@lovable.dev/cloud-auth-js` ด้วย `supabase.auth` (`signInWithPassword`, `signUp`, `signOut`, `getUser`)
-- [ ] `src/routes/_authenticated/route.tsx` ใช้ `supabase.auth.getUser()` อยู่แล้ว — ตรวจว่ายังทำงานหลังเปลี่ยน client
+- [x] ลบไฟล์ `src/integrations/lovable/index.ts` (wrapper ที่เรียก `createLovableAuth()`)
+- [x] แก้ `src/routes/auth.tsx` — เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/today\` } })` และตัด `navigate()` หลังเรียกออก เพราะ OAuth redirect เบราว์เซอร์ออกไปเลย
+- [x] แทนที่ทุกจุดอื่นที่ใช้ `@lovable.dev/cloud-auth-js` — ตรวจแล้วว่า**มีไฟล์เดียวเท่านั้น**ที่ import package นี้ จึงไม่มีจุดอื่นให้แก้
+- [x] `src/routes/_authenticated/route.tsx` ใช้ `supabase.auth.getUser()` อยู่แล้ว — ยังไม่ได้ทดสอบ login จริงเพราะ database ยังว่าง (รอขั้น 2.3)
 
 #### 2.4.2 ถอด `previewAuthStorage`
 
@@ -223,6 +227,7 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 - [ ] แก้ meta ใน `__root.tsx`: `author`, `twitter:site`, และเพิ่ม `og:image` ของเราเอง
 - [ ] เขียน `README.md` ใหม่: stack, วิธีรัน local, env ที่ต้องมี, วิธี deploy
 - [ ] ลบโฟลเดอร์ `.lovable/`
+- [ ] ลบ `src/integrations/supabase/cron-auth.ts` — **เป็น dead code ล้วน ๆ จาก template ของ Lovable** (header เขียนว่า auto-generated เหมือน `client.ts`/`previewAuthStorage.ts`) สอบสวนแล้วพบว่า `authenticateCronRequest()` **ไม่เคยถูกเรียกจากที่ไหนเลย แม้แต่ใน git history ทุก commit** และ**ไม่มี API route อยู่ใน repo เลย** (`src/routes/` มีแต่ route ของหน้าเว็บ) ทั้ง migrations, `supabase/config.toml`, และ GitHub Actions ก็ไม่มี scheduler ตั้งไว้ → ไม่มี endpoint ไหนถูกป้องกันด้วย `LOVABLE_CRON_SECRET` ลบได้ปลอดภัย ไม่มีฟีเจอร์ไหนหยุดทำงาน
 - [ ] `grep -ri lovable src/ package.json vite.config.ts` → ต้องไม่เหลืออะไร
 
 ### ขั้น 2.7 — Deploy Netlify
@@ -289,12 +294,24 @@ Phase 0 จบเมื่อ:
 
 | Phase | ขอบเขต |
 |---|---|
-| 1 | Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
+| 1 | Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
 | 2 | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance) |
 | 3 | สิทธิฉัน v2 + Decision Board |
 | 4 | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard) |
 | 5 | Life Legacy A — Asset Inventory, Vault, Final Wishes, Trusted Contacts, Checklist, AI Legacy Assistant |
 | 6 | Life Legacy B — Death Verification, Post-Life Action Plan, Memorial, Digital Wreath, AI Funeral Planner |
+
+### หมายเหตุ: Recurring reminder engine (Phase 1)
+
+พบระหว่างสอบสวน `cron-auth.ts` ในขั้น 2.6 — **`recurrence` (`none` / `monthly` / `yearly`) มี UI ให้ผู้ใช้เลือกจริง** (ฟอร์มใน `src/routes/_authenticated/tasks.tsx` และ chat action schema ใน `phum.server.ts`) **และถูกเก็บลง DB จริง แต่ไม่มีโค้ดตรงไหนอ่านมันไปประมวลผลเลย** → reminder ที่ตั้งเป็น `monthly`/`yearly` จะไม่ถูกเลื่อนไปงวดถัดไปหลังเลยกำหนด
+
+**เป็นช่องโหว่ที่มีอยู่แล้วในแอปเดิมบน Lovable ไม่ใช่ regression จากการย้าย** จึงไม่ต้องแก้ใน Phase 0 (การทำให้มันทำงานคือการเพิ่มของใหม่ ขัดกฎบรรทัด 6)
+
+ต้องทำ**พร้อมกับ LINE Messaging API** เพราะต้องมีครบทั้ง 2 ชิ้นถึงจะมีประโยชน์:
+1. **scheduler** สำหรับเลื่อนงวด/ยิงเตือนตามเวลา
+2. **ตัวส่งการแจ้งเตือน** — ปัจจุบัน codebase **ไม่มีตัวส่งเลยสักตัว** (ไม่มี webpush, nodemailer, resend, twilio, LINE notify, service worker) reminder เป็นแค่ record ที่รอผู้ใช้เปิดมาดูเอง
+
+และต้อง**เพิ่มคอลัมน์ใน `reminders`** ด้วย — ปัจจุบันไม่มี `notified` / `sent_at` / `last_run` เลย จึงไม่มีทางรู้ว่าเตือนไปแล้วหรือยัง (จะยิงซ้ำทุกรอบที่ scheduler ทำงาน)
 
 ### หลักการที่ต้องยึดตั้งแต่ตอนนี้
 
