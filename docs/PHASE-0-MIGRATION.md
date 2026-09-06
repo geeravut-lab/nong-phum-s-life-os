@@ -35,6 +35,8 @@
 | `src/routes/__root.tsx` | meta `author: "Lovable"`, `twitter:site: "@Lovable"` | แก้เป็นของเรา |
 | `README.md` | เนื้อหา Lovable ทั้งไฟล์ | เขียนใหม่ |
 | `src/integrations/supabase/client.ts` | ชี้ Lovable Cloud | ชี้ Supabase project ใหม่ |
+| `src/integrations/lovable/index.ts` | wrapper เรียก `createLovableAuth()` จาก `@lovable.dev/cloud-auth-js` — ใช้จริงใน Google sign-in ที่ `src/routes/auth.tsx` (ไม่ใช่แค่ import เฉยๆ) | ลบไฟล์ทิ้ง แก้ `auth.tsx` ให้เรียก `supabase.auth.signInWithOAuth({ provider: 'google' })` ตรงๆ |
+| `src/integrations/supabase/previewAuthStorage.ts` | auth storage ที่ broker session ผ่าน `postMessage` ไปยัง Lovable editor (เช็ค hostname กับ `lovableproject.com`/`lovable.app`/`gpt-eng.com` ฯลฯ) ถูก wire เข้าไปใน `client.ts` เป็น `auth.storage` | ลบไฟล์ทิ้ง เปลี่ยน `auth.storage` ใน `client.ts` ให้ใช้ `localStorage` ตรงๆ (ค่า default ของ supabase-js) |
 
 ---
 
@@ -46,6 +48,8 @@
 - [ ] เปลี่ยน `package.json` → `"name": "nong-phum-life-os"`
 - [ ] ถอด `@lovable.dev/cloud-auth-js` และ `@lovable.dev/vite-tanstack-config` ออกจาก dependencies
 - [ ] `npm install` → ต้องได้ `package-lock.json` ใหม่ที่ไม่มี URL ของ lovable-core-prod เลย (ตรวจด้วย `grep lovable package-lock.json` ต้องไม่เจอ)
+- [ ] `.env` ปัจจุบัน**ถูก track ใน git อยู่** (ตรวจด้วย `git ls-files | grep '^\.env$'`) และมี `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` ของ Lovable Cloud project เดิมอยู่ในนั้น — รัน `git rm --cached .env` แล้วเพิ่ม `.env` เข้า `.gitignore` (ปัจจุบัน `.gitignore` มีแค่ `*.local` ซึ่งไม่ครอบคลุม `.env` เปล่าๆ)
+- [ ] สร้าง `.env.example` ที่มีชื่อ env ครบตามตารางในขั้น 2.7 (ค่าว่าง ไม่ใส่ค่าจริง) — เป็นเงื่อนไขหนึ่งใน Definition of Done (หัวข้อ 4)
 
 ### ขั้น 2.2 — เขียน `vite.config.ts` ใหม่แบบ explicit
 
@@ -78,32 +82,49 @@ export default defineConfig({
 - [ ] `npm i -D @netlify/vite-plugin-tanstack-start`
 - [ ] ตรวจว่า alias `@/*` ยังทำงาน (มาจาก `tsconfig.json` → `paths` ผ่าน `vite-tsconfig-paths`)
 - [ ] ตรวจว่า `npm run dev` ขึ้นได้และหน้าแรก render
-- [ ] ถ้า nitro preset ชนกัน ให้ยึด plugin ของ Netlify เป็นหลัก และถอด `nitro` ออกจาก devDependencies
+- [ ] `package.json` ปัจจุบันมี `nitro` เป็น **explicit devDependency ปักเวอร์ชัน beta** (`3.0.260603-beta`) อยู่แล้ว ไม่ใช่แค่สิ่งที่ `@lovable.dev/vite-tanstack-config` ดึงมาเฉยๆ — **ให้ลอง `@netlify/vite-plugin-tanstack-start` เป็นตัวหลักก่อนเสมอ** ถ้า build/deploy บน Netlify ใช้ได้ ให้ถอด `nitro` ออกจาก devDependencies ไปเลย ถ้าใช้ไม่ได้ (ยังต้องพึ่ง nitro preset) ให้เช็คเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงก่อนตัดสินใจตั้งค่า preset ห้ามเดา
 
 > หมายเหตุ: TanStack Start เวอร์ชันนี้เปลี่ยนวิธีตั้ง preset มาหลายรอบ (เดิม `app.config.ts` → `server.preset`, ต่อมา `nitro/vite`, ปัจจุบัน Netlify มี plugin เฉพาะ) **ให้ยึดเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงเป็นหลัก อย่ายึดตัวอย่างข้างบนถ้าขัดกัน**
 
 ### ขั้น 2.3 — ย้าย Database
 
 - [ ] `supabase login` แล้ว `supabase link --project-ref <ref-ใหม่>`
-- [ ] ตรวจ migration ทั้งหมดใน `supabase/migrations/` ตามลำดับเวลา:
-  - `20260821174814_*` — profiles, user_roles, has_role(), families, family_members, is_family_member(), documents, reminders, expenses, chat_messages
+- [ ] ตรวจ migration ทั้งหมดใน `supabase/migrations/` — มีทั้งหมด 9 ไฟล์ ตามลำดับเวลา:
+  - `20260821174814_*` — profiles, user_roles, has_role(), families, family_members, is_family_member(), documents, reminders, expenses, chat_messages, trigger `handle_new_user()` / `on_auth_user_created` (สร้าง `profiles` row อัตโนมัติตอน sign up)
+  - `20260821174841_*`
+  - `20260821174913_*`
   - `20260825024438_*` — incomes
-  - `20260903003503_*` — helper_profiles, jobs, job_offers, job_reviews, platform_settings
+  - `20260825024524_*`
+  - `20260826030250_*`
+  - `20260902154646_*`
+  - `20260903003503_*` — helper_profiles, jobs, job_offers, job_reviews, platform_settings (มี seed `INSERT INTO platform_settings (id) VALUES (true)` มาให้แล้ว)
   - `20260904035427_*` — benefits, benefit_profiles, user_benefits
-  - (+ migration อื่นที่มีในโฟลเดอร์ — ตรวจให้ครบ อย่าเดา)
+  - เปิดอ่านเนื้อหาไฟล์ 5 ไฟล์ที่ยังไม่เคยตรวจละเอียด (`174841`, `174913`, `024524`, `030250`, `154646`) ก่อนสรุปว่าตารางไหนอยู่ไฟล์ไหน — อย่าเดาจากชื่อไฟล์
 - [ ] `supabase db push` → รันทั้งชุดขึ้น project ใหม่
 - [ ] ตรวจว่า RLS เปิดครบทุกตาราง: `select relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r';` — ต้องเป็น `true` ทุกแถว
 - [ ] สร้าง storage bucket ชื่อ **`documents`** แบบ private + policy ให้ owner อ่าน/เขียนของตัวเองได้ (โค้ดใน `docs.tsx` ใช้ `createSignedUrl` อยู่แล้ว จึงต้องเป็น private)
 - [ ] ถ้ามีข้อมูลจริงใน Lovable Cloud ที่ต้องเก็บ ให้ `pg_dump --data-only` ออกมาแล้ว restore; ถ้าเป็นข้อมูลทดสอบ ข้ามได้
-- [ ] เขียน seed สำหรับ `benefits` และ `platform_settings` (`platform_settings` ต้องมี 1 แถว `id = true` ไม่งั้นหน้า Help Me จะพัง)
+- [ ] **ไม่ต้องเขียน trigger สร้าง `profiles` หรือ seed `platform_settings` ใหม่** — ทั้งสองอย่างมีอยู่แล้วในไฟล์ migration ด้านบน และจะติดมาอัตโนมัติตอน `supabase db push` แค่ตรวจยืนยันหลัง push ว่ามาจริง (`select * from platform_settings;` ต้องเจอ 1 แถว, sign up ทดสอบแล้วดูว่ามี row ใน `profiles`)
+- [ ] เขียน seed สำหรับ `benefits` เพิ่ม (ไม่มี seed มาให้ในไฟล์ migration)
 
 ### ขั้น 2.4 — Auth
 
-- [ ] `src/integrations/supabase/client.ts` → ใช้ `createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY)`
-- [ ] แทนที่ทุกจุดที่ใช้ `@lovable.dev/cloud-auth-js` ด้วย `supabase.auth` (`signInWithPassword`, `signUp`, `signInWithOAuth({ provider: 'google' })`, `signOut`, `getUser`)
+- [ ] `src/integrations/supabase/client.ts` → ใช้ `createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)` — **ชื่อ env นี้ต้องตรงกับที่โค้ดเดิมใช้อยู่แล้ว (`VITE_SUPABASE_PUBLISHABLE_KEY` ฝั่ง client, `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` เป็น fallback ฝั่ง server)** อย่าเปลี่ยนไปใช้ชื่อ `VITE_SUPABASE_ANON_KEY` เพราะไม่มีที่ไหนในโค้ดอ่านชื่อนี้ — ถ้าจะ rename ต้องแก้ทั้ง `client.ts` และ `.env`/`.env.local`/Netlify env ให้ตรงกันทุกที่
+- [ ] หมายเหตุ: Supabase project ใหม่จะได้ key แบบใหม่ (`sb_publishable_...` / `sb_secret_...`) ไม่ใช่ JWT แบบเก่า — `client.ts` มีโค้ด `isNewSupabaseApiKey()` รองรับอยู่แล้ว (ตัด header `Authorization: Bearer` ทิ้งเมื่อ key เป็นแบบใหม่) ไม่ต้องแก้ส่วนนี้
+
+#### 2.4.1 ถอด `@lovable.dev/cloud-auth-js`
+
+- [ ] ลบไฟล์ `src/integrations/lovable/index.ts` (wrapper ที่เรียก `createLovableAuth()`)
+- [ ] แก้ `src/routes/auth.tsx` — จุดที่เรียก `lovable.auth.signInWithOAuth("google", ...)` ให้เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: ... } })` ตรงๆ (ลบ import `lovable` จาก `@/integrations/lovable` ออกด้วย)
+- [ ] แทนที่ทุกจุดอื่นที่ใช้ `@lovable.dev/cloud-auth-js` ด้วย `supabase.auth` (`signInWithPassword`, `signUp`, `signOut`, `getUser`)
 - [ ] `src/routes/_authenticated/route.tsx` ใช้ `supabase.auth.getUser()` อยู่แล้ว — ตรวจว่ายังทำงานหลังเปลี่ยน client
+
+#### 2.4.2 ถอด `previewAuthStorage`
+
+- [ ] ลบไฟล์ `src/integrations/supabase/previewAuthStorage.ts` (broker session ผ่าน `postMessage` ไปยัง Lovable editor — ไม่มีประโยชน์นอก Lovable preview)
+- [ ] ใน `client.ts` เปลี่ยน `auth: { storage: brokeredPreviewStorage(), ... }` เป็นปล่อยให้ supabase-js ใช้ค่า default (`localStorage`) แทน — ลบ `storage` key ออกจาก options ได้เลย
+
 - [ ] เปิด Email provider + Google OAuth ใน Supabase Dashboard และใส่ redirect URL ของ Netlify
-- [ ] **ตรวจ trigger สร้าง `profiles` row ตอน sign up** — ตาราง `profiles` ใช้ `id` เป็น PK ที่อ้าง `auth.uid()` ถ้าเดิม Lovable จัดการให้ ต้องเขียน trigger `on auth.users insert` เองใน migration ใหม่ ไม่งั้นผู้ใช้ใหม่จะไม่มี profile
 
 ### ขั้น 2.5 — AI Layer แบบสลับ provider ได้ (Anthropic / OpenAI / Gemini)
 
@@ -169,7 +190,7 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 #### 2.5.2 เขียน `src/lib/ai-gateway.server.ts` ใหม่
 
 - [ ] **คง export เดิมไว้ทั้งหมด**: `PHUM_PERSONA_TH`, `PHUM_PERSONA_EN`, `persona(lang)` — เพื่อไม่ต้องแก้ไฟล์อื่น
-- [ ] เปลี่ยน `requireGateway()` → `getModel(task)` จาก `ai-provider.server.ts` แล้วแก้จุดเรียกใน `phum.server.ts`
+- [ ] เปลี่ยน `requireGateway()` → `getModel(task)` จาก `ai-provider.server.ts` แล้วแก้จุดเรียกทั้ง 2 ไฟล์ที่ import `requireGateway` จาก `ai-gateway.server.ts`: `src/lib/phum.server.ts` (3 จุดเรียก) **และ `src/lib/marketplace.server.ts` (2 จุดเรียก — อย่าลืมไฟล์นี้)**
 - [ ] ลบ `createLovableAiGatewayProvider` ทิ้ง
 
 #### 2.5.3 เปลี่ยนวิธีดึง JSON — สำคัญที่สุดของขั้นนี้
@@ -219,7 +240,8 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 | ตัวแปร | ฝั่ง | หมายเหตุ |
 |---|---|---|
 | `VITE_SUPABASE_URL` | client | เปิดเผยได้ |
-| `VITE_SUPABASE_ANON_KEY` | client | เปิดเผยได้ (RLS คุ้มครองอยู่) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | client | เปิดเผยได้ (RLS คุ้มครองอยู่) — ชื่อนี้ต้องตรงกับที่ `client.ts` อ่านจริง (`sb_publishable_...` แบบใหม่ ไม่ใช่ JWT anon key แบบเก่า) ห้ามตั้งชื่อเป็น `VITE_SUPABASE_ANON_KEY` |
+| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | server | fallback ที่ `client.ts` อ่านจาก `process.env` ตอน SSR — ตั้งค่าเดียวกับตัว `VITE_` ด้านบน |
 | `SUPABASE_SERVICE_ROLE_KEY` | server | **ห้ามขึ้นต้น VITE_** |
 | `AI_PROVIDER` | server | `anthropic` \| `openai` \| `google` (ไม่ใส่ = anthropic) |
 | `AI_FALLBACK_PROVIDER` | server | เว้นว่าง = ปิด fallback |
