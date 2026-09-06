@@ -1,19 +1,3 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-
-export function createLovableAiGatewayProvider(apiKey: string) {
-  return createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    headers: { "Lovable-API-Key": apiKey },
-  });
-}
-
-export function requireGateway() {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-  return createLovableAiGatewayProvider(key);
-}
-
 export const PHUM_PERSONA_TH = `คุณคือ "น้องภูมิ" ผู้ช่วยส่วนตัวใน Life OS ของผู้ใช้
 บุคลิก: วัยรุ่นที่ทำงานไว กระฉับกระเฉง แต่รอบคอบและมีประสบการณ์แบบญาติผู้ใหญ่ที่คอยดูแลเรื่องรอบตัวให้
 วิธีพูด: สุภาพ กระชับ เป็นกันเอง เรียกผู้ใช้ว่า "พี่" และลงท้ายว่า "ครับ"

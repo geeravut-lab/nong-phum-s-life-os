@@ -1,33 +1,8 @@
-import { generateText } from "ai";
+import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { persona, requireGateway } from "./ai-gateway.server";
-
-const MODEL = "google/gemini-3.7-flash";
-
-
-/** Pull the first JSON object out of a model reply and parse it with the schema. */
-function parseJsonOutput<T>(schema: z.ZodType<T>, text: string): T {
-  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new Error("AI did not return JSON");
-  const raw = JSON.parse(cleaned.slice(start, end + 1)) as unknown;
-  return schema.parse(nullifyUndefined(raw));
-}
-
-/** Models sometimes omit optional keys; turn every missing/undefined value into null. */
-function nullifyUndefined(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(nullifyUndefined);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, nullifyUndefined(v)]),
-    );
-  }
-  return value === undefined ? null : value;
-}
-
-const JSON_ONLY = "Reply with ONE JSON object only — no markdown fence, no commentary.";
+import { persona } from "./ai-gateway.server";
+import { providerSupportsPdf, resolveProvider, withProviderFallback } from "./ai-provider.server";
 
 const CATEGORIES = [
   "bill",
@@ -73,36 +48,45 @@ export async function runDocumentAnalysis(input: {
   fileName: string;
   lang: "th" | "en";
 }): Promise<DocAnalysis> {
-  const gateway = requireGateway();
   const langName = input.lang === "en" ? "English" : "Thai";
+  const isImage = input.mimeType.startsWith("image/");
 
-  const result = await generateText({
-    model: gateway(MODEL),
-    system: `${persona(input.lang)}\nYou are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.
-${JSON_ONLY}
-Shape: {"title":string,"category":one of ${CATEGORIES.join("|")},"summary":string,"docDate":string|null,"dueDate":string|null,"amount":number|null,"counterparty":string|null,"keyFacts":string[],"suggestedReminderTitle":string|null,"isExpense":boolean,"isIncome":boolean,"needsAction":boolean}`,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `Read this document (file name: ${input.fileName}) and extract its details.`,
-          },
-          input.mimeType.startsWith("image/")
-            ? { type: "image" as const, image: input.base64, mediaType: input.mimeType }
-            : {
-                type: "file" as const,
-                data: input.base64,
-                mediaType: input.mimeType,
-                filename: input.fileName,
-              },
-        ],
-      },
-    ],
-  });
+  if (!isImage && !providerSupportsPdf(resolveProvider())) {
+    throw new Error(
+      input.lang === "en"
+        ? "Nong Phum can't read PDFs right now. Try taking a photo of the document instead."
+        : "ตอนนี้น้องภูมิอ่าน PDF ไม่ได้ครับ ลองถ่ายรูปเอกสารแทนได้ไหมครับ",
+    );
+  }
 
-  return parseJsonOutput(DocSchema, result.text);
+  const { object } = await withProviderFallback("document", (model) =>
+    generateObject({
+      model,
+      schema: DocSchema,
+      system: `${persona(input.lang)}\nYou are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.`,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Read this document (file name: ${input.fileName}) and extract its details.`,
+            },
+            isImage
+              ? { type: "image" as const, image: input.base64, mediaType: input.mimeType }
+              : {
+                  type: "file" as const,
+                  data: input.base64,
+                  mediaType: input.mimeType,
+                  filename: input.fileName,
+                },
+          ],
+        },
+      ],
+    }),
+  );
+
+  return object;
 }
 
 const ActionSchema = z.object({
@@ -189,7 +173,6 @@ export async function runChatRouter(
   supabase: Db,
   userId: string,
 ) {
-  const gateway = requireGateway();
   const ctx = await loadContext(supabase, userId);
   const langName = input.lang === "en" ? "English" : "Thai";
   const today = new Date().toISOString().slice(0, 10);
@@ -210,9 +193,11 @@ export async function runChatRouter(
           ? "The user is on the Income page: strongly prefer add_income."
           : "";
 
-  const result = await generateText({
-    model: gateway(MODEL),
-    system: `${persona(input.lang)}
+  const { object } = await withProviderFallback("chat", (model) =>
+    generateObject({
+      model,
+      schema: ActionSchema,
+      system: `${persona(input.lang)}
 Today is ${today}. Reply in ${langName}.
 You route the user's request to exactly one action in their Life OS:
 - create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
@@ -232,39 +217,38 @@ DOCUMENTS: ${JSON.stringify(ctx.documents)}
 BENEFIT PROFILE: ${JSON.stringify(ctx.benefitProfile)}
 BENEFIT STATUSES: ${JSON.stringify(ctx.myBenefits)}
 
-The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
-${JSON_ONLY}
-Shape: {"reply":string,"action":{"type":"create_reminder|add_expense|add_income|search_documents|daily_brief|list_benefits|none","title":string|null,"dueAt":string|null,"priority":"high|normal|low"|null,"recurrence":"none|monthly|yearly"|null,"amount":number|null,"category":one of ${CATEGORIES.join("|")}|null,"spentOn":string|null,"receivedOn":string|null,"query":string|null}}`,
+The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.`,
+      messages: [
+        ...(history.data ?? []).map((m) => ({
+          role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+          content: m.content as string,
+        })),
+        { role: "user" as const, content: input.message },
+      ],
+    }),
+  );
 
-    messages: [
-      ...(history.data ?? []).map((m) => ({
-        role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
-        content: m.content as string,
-      })),
-      { role: "user" as const, content: input.message },
-    ],
-  });
-
-  return parseJsonOutput(ActionSchema, result.text);
+  return object;
 }
 
 export async function runDailyBrief(lang: "th" | "en", supabase: Db, userId: string) {
-  const gateway = requireGateway();
   const ctx = await loadContext(supabase, userId);
   const langName = lang === "en" ? "English" : "Thai";
   const today = new Date().toISOString().slice(0, 10);
 
-  const result = await generateText({
-    model: gateway(MODEL),
-    system: `${persona(lang)}
+  const result = await withProviderFallback("chat", (model) =>
+    generateText({
+      model,
+      system: `${persona(lang)}
 Today is ${today}. Write the user's daily brief in ${langName}.
 Format: one warm opening line, then a short numbered list (max 5) of the things that matter today — overdue or upcoming reminders, documents expiring soon, unusual spending. End with one practical suggestion.
 Use markdown. Keep it under 140 words. Never invent items that are not in the data.`,
-    prompt: `REMINDERS: ${JSON.stringify(ctx.reminders)}
+      prompt: `REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
 INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}`,
-  });
+    }),
+  );
 
-  return { text: await result.text };
+  return { text: result.text };
 }

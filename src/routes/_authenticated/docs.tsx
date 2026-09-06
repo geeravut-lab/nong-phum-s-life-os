@@ -17,6 +17,9 @@ import { analyzeDocument } from "@/lib/lifeos.functions";
 import { intakeDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 
+const MAX_UPLOAD_MB = 10;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
+
 export const Route = createFileRoute("/_authenticated/docs")({
   head: () => ({
     meta: [
@@ -61,6 +64,17 @@ function DocsPage() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    // Base64 inflates by ~33% on the way to the model, and every provider caps
+    // request size. Reject here so the user gets a clear message instead of a
+    // provider error after a long upload.
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error(
+        lang === "en"
+          ? `That file is too large (max ${MAX_UPLOAD_MB} MB). Try a photo or a smaller scan.`
+          : `ไฟล์ใหญ่เกินไปครับ (ไม่เกิน ${MAX_UPLOAD_MB} MB) ลองถ่ายรูปหรือย่อไฟล์ก่อนนะครับ`,
+      );
+      return;
+    }
     setBusy(true);
     try {
       const { data: userData } = await supabase.auth.getUser();

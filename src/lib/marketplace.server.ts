@@ -1,28 +1,8 @@
-import { generateText } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { persona, requireGateway } from "./ai-gateway.server";
-
-const MODEL = "google/gemini-3.7-flash";
-const JSON_ONLY = "Reply with ONE JSON object only — no markdown fence, no commentary.";
-
-function nullifyUndefined(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(nullifyUndefined);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, nullifyUndefined(v)]),
-    );
-  }
-  return value === undefined ? null : value;
-}
-
-function parseJsonOutput<T>(schema: z.ZodType<T>, text: string): T {
-  const cleaned = text.replace(/```json/gi, "```").split("```").join("\n");
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end <= start) throw new Error("AI did not return JSON");
-  return schema.parse(nullifyUndefined(JSON.parse(cleaned.slice(start, end + 1)) as unknown));
-}
+import { persona } from "./ai-gateway.server";
+import { withProviderFallback } from "./ai-provider.server";
 
 export const JOB_CATEGORIES = [
   "buy_deliver",
@@ -58,23 +38,23 @@ export type JobDraft = z.infer<typeof JobDraftSchema>;
 
 /** Turns a plain-language problem statement into a structured job. */
 export async function draftJobFromText(input: { message: string; lang: "th" | "en" }): Promise<JobDraft> {
-  const gateway = requireGateway();
   const langName = input.lang === "en" ? "English" : "Thai";
   const now = new Date().toISOString();
 
-  const res = await generateText({
-    model: gateway(MODEL),
-    system: `${persona(input.lang)}
+  const { object } = await withProviderFallback("chat", (model) =>
+    generateObject({
+      model,
+      schema: JobDraftSchema,
+      system: `${persona(input.lang)}
 You turn a user's everyday problem into a concrete job request for a local helper marketplace in Thailand.
 The user may not know what service they need — infer it (e.g. "washing machine has no water" -> appliance repair).
 Write all free text in ${langName}. Current time: ${now}. Budget in THB, realistic for Thailand.
-Ask at most 3 short follow-up questions only for details you truly cannot infer.
-${JSON_ONLY}
-Shape: {"title":string,"description":string,"category":one of ${JOB_CATEGORIES.join("|")},"locationText":string|null,"scheduledAt":string|null,"budgetMin":number|null,"budgetMax":number|null,"followUpQuestions":string[],"neededSkills":string[]}`,
-    prompt: input.message,
-  });
+Ask at most 3 short follow-up questions only for details you truly cannot infer.`,
+      prompt: input.message,
+    }),
+  );
 
-  return parseJsonOutput(JobDraftSchema, res.text);
+  return object;
 }
 
 const SkillsSchema = z.object({
@@ -84,18 +64,18 @@ const SkillsSchema = z.object({
 
 /** Builds a helper profile (skill tags + short bio) from a free-text self description. */
 export async function draftHelperSkills(input: { text: string; lang: "th" | "en" }) {
-  const gateway = requireGateway();
   const langName = input.lang === "en" ? "English" : "Thai";
-  const res = await generateText({
-    model: gateway(MODEL),
-    system: `${persona(input.lang)}
+  const { object } = await withProviderFallback("chat", (model) =>
+    generateObject({
+      model,
+      schema: SkillsSchema,
+      system: `${persona(input.lang)}
 You convert a person's description of what they can do into concise skill tags for a local helper marketplace.
-Skill tags: 2-4 words each, in ${langName}. Bio: 1-2 friendly sentences in ${langName}.
-${JSON_ONLY}
-Shape: {"skills":string[],"bio":string}`,
-    prompt: input.text,
-  });
-  return parseJsonOutput(SkillsSchema, res.text);
+Skill tags: 2-4 words each, in ${langName}. Bio: 1-2 friendly sentences in ${langName}.`,
+      prompt: input.text,
+    }),
+  );
+  return object;
 }
 
 type HelperRow = {
