@@ -11,13 +11,13 @@
 
 | # | สิ่งที่ต้องทำ | ได้อะไรกลับมา |
 |---|---|---|
-| 1 | สมัคร/เปิด Supabase project ใหม่ **region: Southeast Asia (Singapore)** | `SUPABASE_URL`, `anon key`, `service_role key`, `DB password` |
-| 2 | สร้าง Supabase Personal Access Token (Account → Access Tokens) | token สำหรับ `supabase login` |
+| 1 | สมัคร/เปิด Supabase project ใหม่ **region: Southeast Asia (Singapore)** | `SUPABASE_URL`, **publishable key** (`sb_publishable_...`), **secret key** (`sb_secret_...`), `DB password` — key แบบใหม่นี้ใช้ตามขั้น 2.4 และตารางใน 2.7 ไม่ใช่ `anon key`/`service_role key` แบบเก่า |
+| 2 | สร้าง Supabase Personal Access Token (Account → Access Tokens) — **ทำเมื่อจำเป็นเท่านั้น** | token สำหรับกรณีรัน CLI ใน CI หรือจะต่อ Supabase MCP เท่านั้น งานในเครื่องปกติใช้ `supabase login` เปิดเบราว์เซอร์ล็อกอินได้เลย ไม่ต้องสร้าง PAT ก่อน |
 | 3 | สมัคร AI provider + เติมเครดิต **อย่างน้อย 1 เจ้า** (ระบบรองรับ 3 เจ้า สลับได้) | `ANTHROPIC_API_KEY` และ/หรือ `OPENAI_API_KEY` และ/หรือ `GOOGLE_GENERATIVE_AI_API_KEY` |
-| 4 | สมัคร Netlify + เชื่อม GitHub repo | site ว่าง ๆ 1 site |
-| 5 | ติดตั้งในเครื่อง: Node 20+, `npm i -g supabase` | CLI พร้อมใช้ |
+| 4 | สมัคร Netlify + เชื่อม GitHub repo — **Add new site → Import from Git → เลือก repo นี้** ตั้ง production branch เป็น `main` แล้วปล่อยให้ branch นี้ (`phase-0/*`) ได้ **Deploy Preview** อัตโนมัติ | site ว่าง ๆ 1 site ผูกกับ repo — หมายเหตุ: build จะพังไปก่อนจนกว่าจะทำขั้น 2.2 เสร็จ เป็นเรื่องปกติ ไม่ต้องแก้อะไรฝั่ง Netlify ตอนนี้ |
+| 5 | ติดตั้งในเครื่อง: **Node 20.19+ หรือ 22.12+** (ข้อกำหนดของ Vite 8), Supabase CLI — **ห้ามใช้ `npm i -g supabase`** (Supabase ไม่รองรับ global install ผ่าน npm) ให้ติดตั้งผ่าน Homebrew/Scoop/standalone binary ตามเอกสารทางการ หรือใช้ `npx supabase <cmd>` แทนแบบไม่ต้องติดตั้ง | CLI พร้อมใช้ — หมายเหตุ: เวอร์ชัน Node/Supabase CLI ในเครื่องไม่เกี่ยวกับการ deploy เพราะ Netlify build บนเครื่องของตัวเองและไม่แตะ database โดยตรง |
 
-**ข้อควรระวังเรื่อง key:** `service_role` key ข้ามผ่าน RLS ได้ทั้งหมด ห้ามใส่ในตัวแปรที่ขึ้นต้นด้วย `VITE_` และห้าม commit ลง git เด็ดขาด ใช้ได้เฉพาะในไฟล์ `*.server.ts` เท่านั้น
+**ข้อควรระวังเรื่อง key:** **secret key** (`sb_secret_...`) แบบใหม่ข้ามผ่าน RLS ได้ทั้งหมดเหมือน `service_role` เดิม ห้ามใส่ในตัวแปรที่ขึ้นต้นด้วย `VITE_` และห้าม commit ลง git เด็ดขาด ใช้ได้เฉพาะในไฟล์ `*.server.ts` เท่านั้น — key แบบใหม่นี้**ไม่ใช่ JWT** ถ้าจะเรียกจาก `pg_net`/Database Webhooks (จะใช้ตอน Phase 1) ต้องส่งบน header `apikey` ไม่ใช่ `Authorization: Bearer` เหมือน JWT แบบเก่า
 
 ---
 
@@ -48,7 +48,7 @@
 - [ ] เปลี่ยน `package.json` → `"name": "nong-phum-life-os"`
 - [ ] ถอด `@lovable.dev/cloud-auth-js` และ `@lovable.dev/vite-tanstack-config` ออกจาก dependencies
 - [ ] `npm install` → ต้องได้ `package-lock.json` ใหม่ที่ไม่มี URL ของ lovable-core-prod เลย (ตรวจด้วย `grep lovable package-lock.json` ต้องไม่เจอ)
-- [ ] `.env` ปัจจุบัน**ถูก track ใน git อยู่** (ตรวจด้วย `git ls-files | grep '^\.env$'`) และมี `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` ของ Lovable Cloud project เดิมอยู่ในนั้น — รัน `git rm --cached .env` แล้วเพิ่ม `.env` เข้า `.gitignore` (ปัจจุบัน `.gitignore` มีแค่ `*.local` ซึ่งไม่ครอบคลุม `.env` เปล่าๆ)
+- [ ] `.env` ปัจจุบัน**ถูก track ใน git อยู่** (ตรวจด้วย `git ls-files | grep '^\.env$'`) และมี `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` ของ Lovable Cloud project เดิมอยู่ในนั้น — รัน `git rm --cached .env` แล้วเพิ่ม `.env` เข้า `.gitignore` (ปัจจุบัน `.gitignore` มีแค่ `*.local` ซึ่งไม่ครอบคลุม `.env` เปล่าๆ) **หมายเหตุ: `git rm --cached` เอาไฟล์ออกจาก commit ถัดไปเท่านั้น ค่าเดิมยังอยู่ใน git history ทุก commit ก่อนหน้า** — เมื่อเลิกใช้ Lovable Cloud project เดิมแล้ว ให้ไป revoke/หมุน key ตัวนั้นฝั่ง Lovable Cloud ด้วย อย่าพึ่งแค่การลบออกจาก working tree
 - [ ] สร้าง `.env.example` ที่มีชื่อ env ครบตามตารางในขั้น 2.7 (ค่าว่าง ไม่ใส่ค่าจริง) — เป็นเงื่อนไขหนึ่งใน Definition of Done (หัวข้อ 4)
 
 ### ขั้น 2.2 — เขียน `vite.config.ts` ใหม่แบบ explicit
@@ -105,12 +105,13 @@ export default defineConfig({
 - [ ] สร้าง storage bucket ชื่อ **`documents`** แบบ private + policy ให้ owner อ่าน/เขียนของตัวเองได้ (โค้ดใน `docs.tsx` ใช้ `createSignedUrl` อยู่แล้ว จึงต้องเป็น private)
 - [ ] ถ้ามีข้อมูลจริงใน Lovable Cloud ที่ต้องเก็บ ให้ `pg_dump --data-only` ออกมาแล้ว restore; ถ้าเป็นข้อมูลทดสอบ ข้ามได้
 - [ ] **ไม่ต้องเขียน trigger สร้าง `profiles` หรือ seed `platform_settings` ใหม่** — ทั้งสองอย่างมีอยู่แล้วในไฟล์ migration ด้านบน และจะติดมาอัตโนมัติตอน `supabase db push` แค่ตรวจยืนยันหลัง push ว่ามาจริง (`select * from platform_settings;` ต้องเจอ 1 แถว, sign up ทดสอบแล้วดูว่ามี row ใน `profiles`)
-- [ ] เขียน seed สำหรับ `benefits` เพิ่ม (ไม่มี seed มาให้ในไฟล์ migration)
+- [ ] ตรวจก่อนว่า Lovable Cloud project เดิมมีข้อมูลในตาราง `benefits` ไหม (ไม่มี seed มาให้ในไฟล์ migration) — **ถ้ามีข้อมูลอยู่แล้วให้ `pg_dump --data-only` ออกมาแล้ว restore เข้า project ใหม่ อย่าเขียนข้อมูลใหม่เอง** เพราะการแต่งข้อมูล `benefits` เองถือเป็นการเพิ่มของใหม่ ขัดกฎห้ามเพิ่มฟีเจอร์ใน Phase นี้ (บรรทัด 6) — ถ้าไม่มีข้อมูลจริงเลยก็ข้ามได้เหมือนข้อมูลทดสอบอื่น ๆ
 
 ### ขั้น 2.4 — Auth
 
 - [ ] `src/integrations/supabase/client.ts` → ใช้ `createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)` — **ชื่อ env นี้ต้องตรงกับที่โค้ดเดิมใช้อยู่แล้ว (`VITE_SUPABASE_PUBLISHABLE_KEY` ฝั่ง client, `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` เป็น fallback ฝั่ง server)** อย่าเปลี่ยนไปใช้ชื่อ `VITE_SUPABASE_ANON_KEY` เพราะไม่มีที่ไหนในโค้ดอ่านชื่อนี้ — ถ้าจะ rename ต้องแก้ทั้ง `client.ts` และ `.env`/`.env.local`/Netlify env ให้ตรงกันทุกที่
 - [ ] หมายเหตุ: Supabase project ใหม่จะได้ key แบบใหม่ (`sb_publishable_...` / `sb_secret_...`) ไม่ใช่ JWT แบบเก่า — `client.ts` มีโค้ด `isNewSupabaseApiKey()` รองรับอยู่แล้ว (ตัด header `Authorization: Bearer` ทิ้งเมื่อ key เป็นแบบใหม่) ไม่ต้องแก้ส่วนนี้
+- [ ] เปิด Email provider + Google OAuth ใน Supabase Dashboard และใส่ redirect URL ของ Netlify
 
 #### 2.4.1 ถอด `@lovable.dev/cloud-auth-js`
 
@@ -123,8 +124,6 @@ export default defineConfig({
 
 - [ ] ลบไฟล์ `src/integrations/supabase/previewAuthStorage.ts` (broker session ผ่าน `postMessage` ไปยัง Lovable editor — ไม่มีประโยชน์นอก Lovable preview)
 - [ ] ใน `client.ts` เปลี่ยน `auth: { storage: brokeredPreviewStorage(), ... }` เป็นปล่อยให้ supabase-js ใช้ค่า default (`localStorage`) แทน — ลบ `storage` key ออกจาก options ได้เลย
-
-- [ ] เปิด Email provider + Google OAuth ใน Supabase Dashboard และใส่ redirect URL ของ Netlify
 
 ### ขั้น 2.5 — AI Layer แบบสลับ provider ได้ (Anthropic / OpenAI / Gemini)
 
@@ -218,12 +217,6 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 - [ ] log ทุกครั้งที่ fallback ทำงาน — จะได้รู้ว่าเจ้าไหนล่มบ่อย
 - [ ] ควบคุมด้วย env `AI_FALLBACK_PROVIDER` (เว้นว่าง = ปิด fallback)
 
-#### 2.5.6 เตรียมทางให้ Admin สลับได้ใน Phase 1 (optional แต่แนะนำ)
-
-- [ ] เพิ่ม migration เล็ก ๆ: `ALTER TABLE public.platform_settings ADD COLUMN ai_provider text;` (nullable = ใช้ค่าจาก env)
-- [ ] ให้ `resolveProvider()` อ่านลำดับ: `platform_settings.ai_provider` → `AI_PROVIDER` → default
-- [ ] **API key ยังคงอยู่ใน env เท่านั้น ห้ามเก็บลง database** DB เก็บได้แค่ว่า "เลือกเจ้าไหน" ไม่ใช่ "key คืออะไร"
-
 ### ขั้น 2.6 — ล้างร่องรอย Lovable
 
 - [ ] ลบ `src/lib/lovable-error-reporting.ts` และการเรียกใน `src/routes/__root.tsx` (แทนด้วย `console.error` ไปก่อน)
@@ -265,7 +258,7 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 - [ ] Docs → กด "สร้างการเตือนจากเอกสารนี้" แล้วไปโผล่ในหน้า Tasks
 - [ ] **Chat** — พิมพ์ "เตือนจ่ายค่าน้ำวันศุกร์" → ได้ action card → กดยืนยัน → เข้า Tasks
 - [ ] Chat — พิมพ์ "จ่ายค่าไฟ 850 เมื่อวาน" → เข้า Money
-- [ ] **ทดสอบครบทั้ง 3 provider** — สลับ `AI_PROVIDER` เป็น `anthropic` / `openai` / `google` แล้วรันซ้ำ 3 ข้อนี้ทุกเจ้า: อ่านรูปเอกสาร, อ่าน PDF, chat router สร้าง reminder
+- [ ] **ทดสอบเฉพาะ provider ที่มี API key จริง** — สลับ `AI_PROVIDER` ไปยังเจ้าที่มีเครดิตแล้วรันซ้ำ 3 ข้อนี้: อ่านรูปเอกสาร, อ่าน PDF, chat router สร้าง reminder (ตามหัวข้อ 0 ข้อ 3 ต้องมีอย่างน้อย 1 เจ้าเท่านั้น) — เจ้าที่ยังไม่มี key ให้ทดสอบชุดนี้ซ้ำเมื่อเปิดใช้จริงในอนาคต
 - [ ] ตั้ง `AI_PROVIDER` เป็นเจ้าที่ไม่มี key → ต้องขึ้น error ชัดเจนตอน start ไม่ใช่ตอน user กดใช้
 - [ ] ตั้ง `AI_FALLBACK_PROVIDER` แล้วทำให้เจ้าหลักพัง (ใส่ key ผิด) → ต้องสลับไปเจ้าสำรองได้และมี log
 - [ ] **Money** — รายรับ/รายจ่าย/ยอดคงเหลือ/สรุปตามหมวด แสดงถูก
@@ -287,7 +280,7 @@ Phase 0 จบเมื่อ:
 1. Production URL บน Netlify ใช้งานได้ครบทุกข้อในหัวข้อ 3
 2. `grep -ri lovable` ใน source ไม่เจออะไร
 3. `package-lock.json` ไม่มี private registry ของ Lovable
-4. ปิด Lovable project แล้วแอปยังทำงานปกติ
+4. Disconnect Lovable (ปิด auto-sync กับ GitHub repo นี้) แล้วแอปยังทำงานปกติ — **อย่าเพิ่งลบ Lovable project ทิ้ง** จนกว่าจะยืนยันแล้วว่าย้ายข้อมูลจาก Lovable Cloud (database, storage) มาครบ เพราะการลบ project จะทำให้ database เดิมหายไปด้วยและกู้คืนไม่ได้
 5. มี `.env.example` ในrepo ที่บอกครบว่าต้องมี env อะไรบ้าง
 
 ---
@@ -296,7 +289,7 @@ Phase 0 จบเมื่อ:
 
 | Phase | ขอบเขต |
 |---|---|
-| 1 | Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · Admin Dashboard โครงหลัก |
+| 1 | Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
 | 2 | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance) |
 | 3 | สิทธิฉัน v2 + Decision Board |
 | 4 | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard) |
