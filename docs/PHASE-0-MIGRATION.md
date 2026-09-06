@@ -91,21 +91,23 @@ export default defineConfig({
 - [ ] `supabase login` แล้ว `supabase link --project-ref <ref-ใหม่>`
 - [ ] ตรวจ migration ทั้งหมดใน `supabase/migrations/` — มีทั้งหมด 9 ไฟล์ ตามลำดับเวลา:
   - `20260821174814_*` — profiles, user_roles, has_role(), families, family_members, is_family_member(), documents, reminders, expenses, chat_messages, trigger `handle_new_user()` / `on_auth_user_created` (สร้าง `profiles` row อัตโนมัติตอน sign up)
-  - `20260821174841_*`
-  - `20260821174913_*`
+  - `20260821174841_*` — REVOKE/GRANT: ปิด `set_updated_at()` + `handle_new_user()` ไม่ให้ user เรียกได้, เปิด `has_role()` + `is_family_member()` ให้ `authenticated`
+  - `20260821174913_*` — RLS policy ของ storage bucket `documents` (`docs_read/insert/update/delete_own`)
   - `20260825024438_*` — incomes
-  - `20260825024524_*`
-  - `20260826030250_*`
-  - `20260902154646_*`
+  - `20260825024524_*` — REVOKE `has_role()` + `is_family_member()` จาก authenticated (ชั่วคราว)
+  - `20260826030250_*` — GRANT กลับคืนให้ `authenticated` แล้ว REVOKE จาก `anon`/`public` (สุทธิแล้ว = authenticated เรียกได้ anon ไม่ได้)
+  - `20260902154646_*` — แก้ policy `family_members_update_self` + เพิ่ม `family_members_update_by_owner`
   - `20260903003503_*` — helper_profiles, jobs, job_offers, job_reviews, platform_settings (มี seed `INSERT INTO platform_settings (id) VALUES (true)` มาให้แล้ว)
   - `20260904035427_*` — benefits, benefit_profiles, user_benefits
   - เปิดอ่านเนื้อหาไฟล์ 5 ไฟล์ที่ยังไม่เคยตรวจละเอียด (`174841`, `174913`, `024524`, `030250`, `154646`) ก่อนสรุปว่าตารางไหนอยู่ไฟล์ไหน — อย่าเดาจากชื่อไฟล์
 - [ ] `supabase db push` → รันทั้งชุดขึ้น project ใหม่
 - [ ] ตรวจว่า RLS เปิดครบทุกตาราง: `select relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r';` — ต้องเป็น `true` ทุกแถว
-- [ ] สร้าง storage bucket ชื่อ **`documents`** แบบ private + policy ให้ owner อ่าน/เขียนของตัวเองได้ (โค้ดใน `docs.tsx` ใช้ `createSignedUrl` อยู่แล้ว จึงต้องเป็น private)
+- [ ] สร้าง storage bucket ชื่อ **`documents`** แบบ private — **ต้องสร้างเองใน Dashboard เพราะไม่มี migration ไหนสร้าง bucket ให้** (ตรวจแล้ว: ไม่มี `insert into storage.buckets` เลยสักไฟล์) โค้ดใน `docs.tsx` ใช้ `createSignedUrl` จึงต้องเป็น private
+  - **ส่วน policy ไม่ต้องเขียนเอง** — migration `20260821174913_*` สร้าง RLS บน `storage.objects` ให้ครบทั้ง 4 ตัวแล้ว (`docs_read/insert/update/delete_own`) โดยล็อกด้วย `bucket_id = 'documents' AND (storage.foldername(name))[1] = auth.uid()::text` คือให้เจ้าของเข้าถึงได้เฉพาะไฟล์ที่อยู่ในโฟลเดอร์ชื่อ UUID ของตัวเอง
+  - ⚠️ ลำดับสำคัญ: ถ้า `db push` รันก่อนที่ bucket จะถูกสร้าง policy จะยังถูกสร้างได้ (เพราะผูกกับ `storage.objects` ไม่ใช่ตัว bucket) แต่ต้องสร้าง bucket ให้ชื่อตรงเป๊ะว่า `documents` ไม่งั้น policy จะไม่แมตช์อะไรเลย
 - [ ] ถ้ามีข้อมูลจริงใน Lovable Cloud ที่ต้องเก็บ ให้ `pg_dump --data-only` ออกมาแล้ว restore; ถ้าเป็นข้อมูลทดสอบ ข้ามได้
 - [ ] **ไม่ต้องเขียน trigger สร้าง `profiles` หรือ seed `platform_settings` ใหม่** — ทั้งสองอย่างมีอยู่แล้วในไฟล์ migration ด้านบน และจะติดมาอัตโนมัติตอน `supabase db push` แค่ตรวจยืนยันหลัง push ว่ามาจริง (`select * from platform_settings;` ต้องเจอ 1 แถว, sign up ทดสอบแล้วดูว่ามี row ใน `profiles`)
-- [ ] ตรวจก่อนว่า Lovable Cloud project เดิมมีข้อมูลในตาราง `benefits` ไหม (ไม่มี seed มาให้ในไฟล์ migration) — **ถ้ามีข้อมูลอยู่แล้วให้ `pg_dump --data-only` ออกมาแล้ว restore เข้า project ใหม่ อย่าเขียนข้อมูลใหม่เอง** เพราะการแต่งข้อมูล `benefits` เองถือเป็นการเพิ่มของใหม่ ขัดกฎห้ามเพิ่มฟีเจอร์ใน Phase นี้ (บรรทัด 6) — ถ้าไม่มีข้อมูลจริงเลยก็ข้ามได้เหมือนข้อมูลทดสอบอื่น ๆ
+- [ ] **ไม่ต้องเขียน seed `benefits` เลย** — ตรวจไฟล์แล้วพบว่า migration `20260904035427_*` มี `INSERT INTO public.benefits` ที่ seed สิทธิของรัฐไทยมาให้ครบ **12 รายการ**อยู่แล้ว (เบี้ยผู้สูงอายุ, เบี้ยความพิการ, บัตรสวัสดิการแห่งรัฐ, เงินอุดหนุนเด็กแรกเกิด, ประกันสังคม ม.33/ม.40, บัตรทอง, ลดหย่อนภาษี, กยศ., ทะเบียนเกษตรกร, เงินว่างงาน, สินเชื่อบ้าน ธอส.) พร้อม `eligibility` เป็น jsonb — จะติดมาเองตอน `db push` แค่ตรวจยืนยันหลัง push ว่าได้ครบ 12 แถว (`select count(*) from benefits;`)
 
 ### ขั้น 2.4 — Auth
 
