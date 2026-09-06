@@ -115,6 +115,7 @@ const ActionSchema = z.object({
         "add_income",
         "search_documents",
         "daily_brief",
+        "list_benefits",
         "none",
       ]),
       title: z.string().nullable(),
@@ -135,7 +136,7 @@ export type PhumAction = z.infer<typeof ActionSchema>["action"];
 type Db = SupabaseClient<any, "public", any>;
 
 async function loadContext(supabase: Db, userId: string) {
-  const [reminders, expenses, incomes, documents] = await Promise.all([
+  const [reminders, expenses, incomes, documents, benefitProfile, myBenefits] = await Promise.all([
     supabase
       .from("reminders")
       .select("title, due_at, priority, status")
@@ -161,6 +162,11 @@ async function loadContext(supabase: Db, userId: string) {
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase.from("benefit_profiles").select("*").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("user_benefits")
+      .select("status, benefits(title, title_en)")
+      .eq("user_id", userId),
   ]);
 
   return {
@@ -168,6 +174,8 @@ async function loadContext(supabase: Db, userId: string) {
     expenses: expenses.data ?? [],
     incomes: incomes.data ?? [],
     documents: documents.data ?? [],
+    benefitProfile: benefitProfile.data ?? null,
+    myBenefits: myBenefits.data ?? [],
   };
 }
 
@@ -211,6 +219,7 @@ You route the user's request to exactly one action in their Life OS:
 - add_expense: the user reports spending money (fill title, amount, category, spentOn)
 - add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
 - search_documents: the user asks about something in their stored documents
+- list_benefits: the user asks about their government benefits / welfare rights ("สิทธิของฉัน", "ได้สิทธิอะไรบ้าง", "เบี้ยผู้สูงอายุ", benefits, welfare). The app then shows interactive benefit cards with status buttons under your reply — so keep the reply short and point at the cards.
 - daily_brief: the user asks what's going on today / what's coming up
 - none: casual conversation or a question you can answer from the context below
 ${focusLine}
@@ -220,10 +229,12 @@ REMINDERS: ${JSON.stringify(ctx.reminders)}
 EXPENSES: ${JSON.stringify(ctx.expenses)}
 INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}
+BENEFIT PROFILE: ${JSON.stringify(ctx.benefitProfile)}
+BENEFIT STATUSES: ${JSON.stringify(ctx.myBenefits)}
 
 The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
 ${JSON_ONLY}
-Shape: {"reply":string,"action":{"type":"create_reminder|add_expense|add_income|search_documents|daily_brief|none","title":string|null,"dueAt":string|null,"priority":"high|normal|low"|null,"recurrence":"none|monthly|yearly"|null,"amount":number|null,"category":one of ${CATEGORIES.join("|")}|null,"spentOn":string|null,"receivedOn":string|null,"query":string|null}}`,
+Shape: {"reply":string,"action":{"type":"create_reminder|add_expense|add_income|search_documents|daily_brief|list_benefits|none","title":string|null,"dueAt":string|null,"priority":"high|normal|low"|null,"recurrence":"none|monthly|yearly"|null,"amount":number|null,"category":one of ${CATEGORIES.join("|")}|null,"spentOn":string|null,"receivedOn":string|null,"query":string|null}}`,
 
     messages: [
       ...(history.data ?? []).map((m) => ({
