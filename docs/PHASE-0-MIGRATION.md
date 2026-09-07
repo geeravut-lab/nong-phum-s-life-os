@@ -296,12 +296,26 @@ Phase 0 จบเมื่อ:
 
 | Phase | ขอบเขต |
 |---|---|
-| 1 | Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
+| 1 | **Data integrity & deletion path** (ดูหมายเหตุใต้ตาราง — เร่งด่วนสุด) · Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
 | 2 | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance) |
 | 3 | สิทธิฉัน v2 + Decision Board |
 | 4 | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard) |
 | 5 | Life Legacy A — Asset Inventory, Vault, Final Wishes, Trusted Contacts, Checklist, AI Legacy Assistant |
 | 6 | Life Legacy B — Death Verification, Post-Life Action Plan, Memorial, Digital Wreath, AI Funeral Planner |
+
+### หมายเหตุ: Data integrity & deletion path (Phase 1 — เร่งด่วนที่สุดในเฟส 1)
+
+**ไม่มีคอลัมน์ไหนในทั้ง schema ที่มี foreign key ไป `auth.users` เลย และไม่มี `ON DELETE CASCADE` ที่ไหน** (`profiles.id` เป็น `UUID PRIMARY KEY` เปล่า ๆ, `user_roles.user_id` / `documents.user_id` / `reminders.user_id` / `expenses.user_id` / `incomes.user_id` / `chat_messages.user_id` เป็น `UUID NOT NULL` เปล่า ๆ ทั้งหมด) ตัวเชื่อมกับ auth มีแค่ trigger `on_auth_user_created` ตอน INSERT เท่านั้น
+
+**ผลคือลบ user ออกจาก `auth.users` แล้วข้อมูลค้างเป็น orphan ทั้งหมด** — ยืนยันด้วยของจริงระหว่างทดสอบขั้น 2.5: หลัง user ถูกลบไป `auth.users` เหลือ 0 แถว แต่ `profiles` 1, `user_roles` 1, `documents` 2, `reminders` 3, `expenses` 2 ยังอยู่ครบ **และไฟล์ใน storage bucket `documents` ก็ยังอยู่ด้วย** (ไม่มีอะไรไปลบให้)
+
+เป็นของเดิมจาก Lovable ไม่ใช่ regression จากการย้าย แต่แปลว่า **ระบบยังลบข้อมูลผู้ใช้ตาม PDPA ไม่ได้จริง** — ผู้ใช้ขอให้ลบบัญชี เราลบได้แค่ auth row ส่วนเอกสาร ค่าใช้จ่าย และไฟล์แนบยังอยู่ในระบบทั้งหมด
+
+**ต้องทำใน Phase 1 ไม่ใช่ช้ากว่านั้น** เพราะยิ่งมีข้อมูลจริงมากขึ้น การเติม FK ย้อนหลังยิ่งเสี่ยง (ต้องล้าง orphan ที่สะสมไว้ก่อนถึงจะ `ADD CONSTRAINT` ผ่าน และถ้ามีผู้ใช้จริงแล้วต้องทำใน migration ที่ล็อกตาราง) ขอบเขตงาน:
+1. ล้าง orphan ที่มีอยู่
+2. เพิ่ม FK `REFERENCES auth.users(id) ON DELETE CASCADE` ทุกตารางที่มี `user_id`
+3. เขียนเส้นทางลบไฟล์ใน storage ด้วย (FK ของ Postgres ไม่ตามไปลบ object ใน storage ให้)
+4. ทำเป็น flow "ลบบัญชี" ที่ผู้ใช้กดเองได้ + audit log ตามหลักการ PDPA ด้านล่าง
 
 ### หมายเหตุ: Recurring reminder engine (Phase 1)
 
