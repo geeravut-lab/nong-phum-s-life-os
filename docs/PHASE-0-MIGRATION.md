@@ -1,0 +1,337 @@
+# Phase 0 — ย้ายออกจาก Lovable → Supabase (ของเราเอง) + Netlify
+
+เอกสารนี้เป็นแผนปฏิบัติสำหรับ repo `nong-phum-s-life-os`
+**เป้าหมาย: หลังจบ Phase 0 ระบบเดิมทั้ง 10 หน้าต้องทำงานได้ครบเหมือนเดิม โดยไม่มี dependency กับ Lovable เหลืออยู่เลย**
+
+ห้ามเพิ่มฟีเจอร์ใหม่ใน Phase นี้ ทุกอย่างที่เพิ่มจะทำให้แยกไม่ออกว่า bug มาจากการย้ายหรือจากของใหม่
+
+---
+
+## 0. สิ่งที่เจ้าของโปรเจกต์ต้องเตรียมเอง (AI ทำแทนไม่ได้)
+
+| # | สิ่งที่ต้องทำ | ได้อะไรกลับมา |
+|---|---|---|
+| 1 | สมัคร/เปิด Supabase project ใหม่ **region: Southeast Asia (Singapore)** | `SUPABASE_URL`, **publishable key** (`sb_publishable_...`), **secret key** (`sb_secret_...`), `DB password` — key แบบใหม่นี้ใช้ตามขั้น 2.4 และตารางใน 2.7 ไม่ใช่ `anon key`/`service_role key` แบบเก่า |
+| 2 | สร้าง Supabase Personal Access Token (Account → Access Tokens) — **ทำเมื่อจำเป็นเท่านั้น** | token สำหรับกรณีรัน CLI ใน CI หรือจะต่อ Supabase MCP เท่านั้น งานในเครื่องปกติใช้ `supabase login` เปิดเบราว์เซอร์ล็อกอินได้เลย ไม่ต้องสร้าง PAT ก่อน |
+| 3 | สมัคร AI provider + เติมเครดิต **อย่างน้อย 1 เจ้า** (ระบบรองรับ 3 เจ้า สลับได้) | `ANTHROPIC_API_KEY` และ/หรือ `OPENAI_API_KEY` และ/หรือ `GOOGLE_GENERATIVE_AI_API_KEY` |
+| 4 | สมัคร Netlify + เชื่อม GitHub repo — **Add new site → Import from Git → เลือก repo นี้** ตั้ง production branch เป็น `main` แล้วปล่อยให้ branch นี้ (`phase-0/*`) ได้ **Deploy Preview** อัตโนมัติ | site ว่าง ๆ 1 site ผูกกับ repo — หมายเหตุ: build จะพังไปก่อนจนกว่าจะทำขั้น 2.2 เสร็จ เป็นเรื่องปกติ ไม่ต้องแก้อะไรฝั่ง Netlify ตอนนี้ |
+| 5 | ติดตั้งในเครื่อง: **Node 20.19+ หรือ 22.12+** (ข้อกำหนดของ Vite 8), Supabase CLI — **ห้ามใช้ `npm i -g supabase`** (Supabase ไม่รองรับ global install ผ่าน npm) ให้ติดตั้งผ่าน Homebrew/Scoop/standalone binary ตามเอกสารทางการ หรือใช้ `npx supabase <cmd>` แทนแบบไม่ต้องติดตั้ง | CLI พร้อมใช้ — หมายเหตุ: เวอร์ชัน Node/Supabase CLI ในเครื่องไม่เกี่ยวกับการ deploy เพราะ Netlify build บนเครื่องของตัวเองและไม่แตะ database โดยตรง |
+
+**ข้อควรระวังเรื่อง key:** **secret key** (`sb_secret_...`) แบบใหม่ข้ามผ่าน RLS ได้ทั้งหมดเหมือน `service_role` เดิม ห้ามใส่ในตัวแปรที่ขึ้นต้นด้วย `VITE_` และห้าม commit ลง git เด็ดขาด ใช้ได้เฉพาะในไฟล์ `*.server.ts` เท่านั้น — key แบบใหม่นี้**ไม่ใช่ JWT** ถ้าจะเรียกจาก `pg_net`/Database Webhooks (จะใช้ตอน Phase 1) ต้องส่งบน header `apikey` ไม่ใช่ `Authorization: Bearer` เหมือน JWT แบบเก่า
+
+---
+
+## 1. สิ่งที่ต้องถอดออก (Lovable dependency ที่ฝังอยู่)
+
+จากการตรวจ repo พบจุดผูกกับ Lovable ดังนี้:
+
+| ตำแหน่ง | ปัญหา | ทำอย่างไร |
+|---|---|---|
+| `vite.config.ts` | ใช้ `@lovable.dev/vite-tanstack-config` ซึ่งห่อ tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (default preset = cloudflare), VITE_ env injection, `@` alias, dedupe, error logger, sandbox detection ไว้ทั้งหมด | เขียน `vite.config.ts` ใหม่แบบ explicit |
+| `package.json` → `@lovable.dev/cloud-auth-js` | ระบบ auth ของ Lovable | ถอดออก ใช้ `supabase.auth` แทน |
+| `bun.lock` | มี URL ชี้ไป private registry `europe-west1-npm.pkg.dev/lovable-core-prod/...` หลายรายการ **จะติดตั้งไม่ผ่านนอก Lovable** | ลบ `bun.lock` ทิ้ง แล้ว generate `package-lock.json` ใหม่ด้วย npm |
+| `src/lib/ai-gateway.server.ts` | ยิงไป `https://ai.gateway.lovable.dev/v1` ด้วย `LOVABLE_API_KEY` | เปลี่ยน provider |
+| `src/lib/lovable-error-reporting.ts` | ส่ง error กลับ Lovable | ถอดออก หรือแทนด้วย console/Sentry |
+| `src/routes/__root.tsx` | meta `author: "Lovable"`, `twitter:site: "@Lovable"` | แก้เป็นของเรา |
+| `README.md` | เนื้อหา Lovable ทั้งไฟล์ | เขียนใหม่ |
+| `src/integrations/supabase/client.ts` | ชี้ Lovable Cloud | ชี้ Supabase project ใหม่ |
+| `src/integrations/lovable/index.ts` | wrapper เรียก `createLovableAuth()` จาก `@lovable.dev/cloud-auth-js` — ใช้จริงใน Google sign-in ที่ `src/routes/auth.tsx` (ไม่ใช่แค่ import เฉยๆ) | ลบไฟล์ทิ้ง แก้ `auth.tsx` ให้เรียก `supabase.auth.signInWithOAuth({ provider: 'google' })` ตรงๆ |
+| `src/integrations/supabase/previewAuthStorage.ts` | auth storage ที่ broker session ผ่าน `postMessage` ไปยัง Lovable editor (เช็ค hostname กับ `lovableproject.com`/`lovable.app`/`gpt-eng.com` ฯลฯ) ถูก wire เข้าไปใน `client.ts` เป็น `auth.storage` | ลบไฟล์ทิ้ง เปลี่ยน `auth.storage` ใน `client.ts` ให้ใช้ `localStorage` ตรงๆ (ค่า default ของ supabase-js) |
+
+---
+
+## 2. ลำดับงาน (ทำทีละขั้น — commit ทุกขั้น อย่ารวบ)
+
+### ขั้น 2.1 — ตั้งฐาน
+- [ ] `git checkout -b phase-0/migrate-off-lovable`
+- [ ] ลบ `bun.lock`, ลบ `node_modules`
+- [ ] เปลี่ยน `package.json` → `"name": "nong-phum-life-os"`
+- [ ] ถอด `@lovable.dev/cloud-auth-js` และ `@lovable.dev/vite-tanstack-config` ออกจาก dependencies
+- [ ] `npm install` → ต้องได้ `package-lock.json` ใหม่ที่ไม่มี URL ของ lovable-core-prod เลย (ตรวจด้วย `grep lovable package-lock.json` ต้องไม่เจอ)
+- [ ] `.env` ปัจจุบัน**ถูก track ใน git อยู่** (ตรวจด้วย `git ls-files | grep '^\.env$'`) และมี `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` ของ Lovable Cloud project เดิมอยู่ในนั้น — รัน `git rm --cached .env` แล้วเพิ่ม `.env` เข้า `.gitignore` (ปัจจุบัน `.gitignore` มีแค่ `*.local` ซึ่งไม่ครอบคลุม `.env` เปล่าๆ) **หมายเหตุ: `git rm --cached` เอาไฟล์ออกจาก commit ถัดไปเท่านั้น ค่าเดิมยังอยู่ใน git history ทุก commit ก่อนหน้า** — เมื่อเลิกใช้ Lovable Cloud project เดิมแล้ว ให้ไป revoke/หมุน key ตัวนั้นฝั่ง Lovable Cloud ด้วย อย่าพึ่งแค่การลบออกจาก working tree
+- [ ] สร้าง `.env.example` ที่มีชื่อ env ครบตามตารางในขั้น 2.7 (ค่าว่าง ไม่ใส่ค่าจริง) — เป็นเงื่อนไขหนึ่งใน Definition of Done (หัวข้อ 4)
+
+### ขั้น 2.2 — เขียน `vite.config.ts` ใหม่แบบ explicit
+
+ต้องประกอบ plugin เองให้ครบตามที่ config เดิมเคยห่อไว้ **ลำดับ plugin สำคัญ** และต้องคง `tanstackStart({ server: { entry: "server" } })` ไว้ เพราะ `src/server.ts` เป็น SSR error wrapper ที่ใช้อยู่
+
+โครงคร่าว ๆ:
+
+```ts
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import netlify from "@netlify/vite-plugin-tanstack-start";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsConfigPaths from "vite-tsconfig-paths";
+
+export default defineConfig({
+  plugins: [
+    tsConfigPaths(),
+    tailwindcss(),
+    tanstackStart({ server: { entry: "server" } }),
+    netlify(),
+    viteReact(),
+  ],
+  resolve: {
+    dedupe: ["react", "react-dom", "@tanstack/react-router"],
+  },
+});
+```
+
+- [ ] `npm i -D @netlify/vite-plugin-tanstack-start`
+- [ ] ตรวจว่า alias `@/*` ยังทำงาน (มาจาก `tsconfig.json` → `paths` ผ่าน `vite-tsconfig-paths`)
+- [ ] ตรวจว่า `npm run dev` ขึ้นได้และหน้าแรก render
+- [ ] `package.json` ปัจจุบันมี `nitro` เป็น **explicit devDependency ปักเวอร์ชัน beta** (`3.0.260603-beta`) อยู่แล้ว ไม่ใช่แค่สิ่งที่ `@lovable.dev/vite-tanstack-config` ดึงมาเฉยๆ — **ให้ลอง `@netlify/vite-plugin-tanstack-start` เป็นตัวหลักก่อนเสมอ** ถ้า build/deploy บน Netlify ใช้ได้ ให้ถอด `nitro` ออกจาก devDependencies ไปเลย ถ้าใช้ไม่ได้ (ยังต้องพึ่ง nitro preset) ให้เช็คเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงก่อนตัดสินใจตั้งค่า preset ห้ามเดา
+
+> หมายเหตุ: TanStack Start เวอร์ชันนี้เปลี่ยนวิธีตั้ง preset มาหลายรอบ (เดิม `app.config.ts` → `server.preset`, ต่อมา `nitro/vite`, ปัจจุบัน Netlify มี plugin เฉพาะ) **ให้ยึดเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงเป็นหลัก อย่ายึดตัวอย่างข้างบนถ้าขัดกัน**
+
+### ขั้น 2.3 — ย้าย Database
+
+- [ ] `supabase login` แล้ว `supabase link --project-ref <ref-ใหม่>`
+- [ ] ตรวจ migration ทั้งหมดใน `supabase/migrations/` — มีทั้งหมด 9 ไฟล์ ตามลำดับเวลา:
+  - `20260821174814_*` — profiles, user_roles, has_role(), families, family_members, is_family_member(), documents, reminders, expenses, chat_messages, trigger `handle_new_user()` / `on_auth_user_created` (สร้าง `profiles` row อัตโนมัติตอน sign up)
+  - `20260821174841_*` — REVOKE/GRANT: ปิด `set_updated_at()` + `handle_new_user()` ไม่ให้ user เรียกได้, เปิด `has_role()` + `is_family_member()` ให้ `authenticated`
+  - `20260821174913_*` — RLS policy ของ storage bucket `documents` (`docs_read/insert/update/delete_own`)
+  - `20260825024438_*` — incomes
+  - `20260825024524_*` — REVOKE `has_role()` + `is_family_member()` จาก authenticated (ชั่วคราว)
+  - `20260826030250_*` — GRANT กลับคืนให้ `authenticated` แล้ว REVOKE จาก `anon`/`public` (สุทธิแล้ว = authenticated เรียกได้ anon ไม่ได้)
+  - `20260902154646_*` — แก้ policy `family_members_update_self` + เพิ่ม `family_members_update_by_owner`
+  - `20260903003503_*` — helper_profiles, jobs, job_offers, job_reviews, platform_settings (มี seed `INSERT INTO platform_settings (id) VALUES (true)` มาให้แล้ว)
+  - `20260904035427_*` — benefits, benefit_profiles, user_benefits
+  - เปิดอ่านเนื้อหาไฟล์ 5 ไฟล์ที่ยังไม่เคยตรวจละเอียด (`174841`, `174913`, `024524`, `030250`, `154646`) ก่อนสรุปว่าตารางไหนอยู่ไฟล์ไหน — อย่าเดาจากชื่อไฟล์
+- [ ] `supabase db push` → รันทั้งชุดขึ้น project ใหม่
+- [ ] ตรวจว่า RLS เปิดครบทุกตาราง: `select relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r';` — ต้องเป็น `true` ทุกแถว
+- [ ] สร้าง storage bucket ชื่อ **`documents`** แบบ private — **ต้องสร้างเองใน Dashboard เพราะไม่มี migration ไหนสร้าง bucket ให้** (ตรวจแล้ว: ไม่มี `insert into storage.buckets` เลยสักไฟล์) โค้ดใน `docs.tsx` ใช้ `createSignedUrl` จึงต้องเป็น private
+  - **ส่วน policy ไม่ต้องเขียนเอง** — migration `20260821174913_*` สร้าง RLS บน `storage.objects` ให้ครบทั้ง 4 ตัวแล้ว (`docs_read/insert/update/delete_own`) โดยล็อกด้วย `bucket_id = 'documents' AND (storage.foldername(name))[1] = auth.uid()::text` คือให้เจ้าของเข้าถึงได้เฉพาะไฟล์ที่อยู่ในโฟลเดอร์ชื่อ UUID ของตัวเอง
+  - ⚠️ ลำดับสำคัญ: ถ้า `db push` รันก่อนที่ bucket จะถูกสร้าง policy จะยังถูกสร้างได้ (เพราะผูกกับ `storage.objects` ไม่ใช่ตัว bucket) แต่ต้องสร้าง bucket ให้ชื่อตรงเป๊ะว่า `documents` ไม่งั้น policy จะไม่แมตช์อะไรเลย
+- [ ] ถ้ามีข้อมูลจริงใน Lovable Cloud ที่ต้องเก็บ ให้ `pg_dump --data-only` ออกมาแล้ว restore; ถ้าเป็นข้อมูลทดสอบ ข้ามได้
+- [ ] **ไม่ต้องเขียน trigger สร้าง `profiles` หรือ seed `platform_settings` ใหม่** — ทั้งสองอย่างมีอยู่แล้วในไฟล์ migration ด้านบน และจะติดมาอัตโนมัติตอน `supabase db push` แค่ตรวจยืนยันหลัง push ว่ามาจริง (`select * from platform_settings;` ต้องเจอ 1 แถว, sign up ทดสอบแล้วดูว่ามี row ใน `profiles`)
+- [ ] **ไม่ต้องเขียน seed `benefits` เลย** — ตรวจไฟล์แล้วพบว่า migration `20260904035427_*` มี `INSERT INTO public.benefits` ที่ seed สิทธิของรัฐไทยมาให้ครบ **12 รายการ**อยู่แล้ว (เบี้ยผู้สูงอายุ, เบี้ยความพิการ, บัตรสวัสดิการแห่งรัฐ, เงินอุดหนุนเด็กแรกเกิด, ประกันสังคม ม.33/ม.40, บัตรทอง, ลดหย่อนภาษี, กยศ., ทะเบียนเกษตรกร, เงินว่างงาน, สินเชื่อบ้าน ธอส.) พร้อม `eligibility` เป็น jsonb — จะติดมาเองตอน `db push` แค่ตรวจยืนยันหลัง push ว่าได้ครบ 12 แถว (`select count(*) from benefits;`)
+
+### ขั้น 2.4 — Auth
+
+> **สถานะ: 2.4.1 ทำเสร็จไปแล้วระหว่างขั้น 2.2** (commit `544e9ee`) — ไม่ได้ตั้งใจข้ามขั้น แต่ import ที่ค้างของ `@lovable.dev/cloud-auth-js` (หลังถอด dependency ออกในขั้น 2.1) ทำให้ **dep scan ของ Vite พังตั้งแต่ boot** → ปิด pre-bundling → Vite ไป re-optimize กลางคัน → rename `.vite\deps` ชน `EPERM` บน Windows → deps ค้าง 504 → `client.tsx` โหลดไม่ได้ → **hydration ไม่เกิด** หน้าเว็บเป็น SSR HTML นิ่ง ๆ กดอะไรไม่ได้ พอลบ wrapper ทิ้ง dep scan ผ่าน ลูกโซ่ทั้งเส้นก็หายไป
+>
+> **เหลือในขั้นนี้: 2.4.2 กับส่วน `client.ts` และการตั้งค่าใน Supabase Dashboard ด้านล่าง**
+
+- [ ] `src/integrations/supabase/client.ts` → ใช้ `createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)` — **ชื่อ env นี้ต้องตรงกับที่โค้ดเดิมใช้อยู่แล้ว (`VITE_SUPABASE_PUBLISHABLE_KEY` ฝั่ง client, `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` เป็น fallback ฝั่ง server)** อย่าเปลี่ยนไปใช้ชื่อ `VITE_SUPABASE_ANON_KEY` เพราะไม่มีที่ไหนในโค้ดอ่านชื่อนี้ — ถ้าจะ rename ต้องแก้ทั้ง `client.ts` และ `.env`/`.env.local`/Netlify env ให้ตรงกันทุกที่
+- [ ] หมายเหตุ: Supabase project ใหม่จะได้ key แบบใหม่ (`sb_publishable_...` / `sb_secret_...`) ไม่ใช่ JWT แบบเก่า — `client.ts` มีโค้ด `isNewSupabaseApiKey()` รองรับอยู่แล้ว (ตัด header `Authorization: Bearer` ทิ้งเมื่อ key เป็นแบบใหม่) ไม่ต้องแก้ส่วนนี้
+- [ ] เปิด Email provider + Google OAuth ใน Supabase Dashboard และใส่ redirect URL ของ Netlify
+
+#### 2.4.1 ถอด `@lovable.dev/cloud-auth-js` — ✅ เสร็จแล้ว (commit `544e9ee`)
+
+- [x] ลบไฟล์ `src/integrations/lovable/index.ts` (wrapper ที่เรียก `createLovableAuth()`)
+- [x] แก้ `src/routes/auth.tsx` — เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/today\` } })` และตัด `navigate()` หลังเรียกออก เพราะ OAuth redirect เบราว์เซอร์ออกไปเลย
+- [x] แทนที่ทุกจุดอื่นที่ใช้ `@lovable.dev/cloud-auth-js` — ตรวจแล้วว่า**มีไฟล์เดียวเท่านั้น**ที่ import package นี้ จึงไม่มีจุดอื่นให้แก้
+- [x] `src/routes/_authenticated/route.tsx` ใช้ `supabase.auth.getUser()` อยู่แล้ว — ยังไม่ได้ทดสอบ login จริงเพราะ database ยังว่าง (รอขั้น 2.3)
+
+#### 2.4.2 ถอด `previewAuthStorage`
+
+- [ ] ลบไฟล์ `src/integrations/supabase/previewAuthStorage.ts` (broker session ผ่าน `postMessage` ไปยัง Lovable editor — ไม่มีประโยชน์นอก Lovable preview)
+- [ ] ใน `client.ts` เปลี่ยน `auth: { storage: brokeredPreviewStorage(), ... }` เป็นปล่อยให้ supabase-js ใช้ค่า default (`localStorage`) แทน — ลบ `storage` key ออกจาก options ได้เลย
+
+### ขั้น 2.5 — AI Layer แบบสลับ provider ได้ (Anthropic / OpenAI / Gemini)
+
+**เป้าหมาย:** เปลี่ยน provider ได้ด้วยการแก้ env ตัวเดียว โดยไม่ต้องแตะโค้ดที่เรียกใช้เลย และรองรับการเพิ่ม provider ที่ 4 ในอนาคต
+
+ทั้งสามเจ้าใช้ Vercel AI SDK (`ai` v7) ที่ติดตั้งอยู่แล้ว จึงมี interface เดียวกัน
+
+- [ ] `npm i @ai-sdk/anthropic @ai-sdk/openai @ai-sdk/google`
+- [ ] ถอด `@ai-sdk/openai-compatible` ออก (ใช้เฉพาะกับ Lovable Gateway)
+
+#### 2.5.1 เขียน `src/lib/ai-provider.server.ts` (ไฟล์ใหม่)
+
+ไฟล์นี้ทำหน้าที่เดียว: แปลง env → model instance
+
+```ts
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+
+export type ProviderId = "anthropic" | "openai" | "google";
+
+// งานคนละแบบใช้ model คนละขนาดได้ ประหยัดเงินและเร็วขึ้น
+export type TaskKind = "chat" | "document" | "reasoning";
+
+type ProviderConfig = {
+  envKey: string;
+  models: Record<TaskKind, string>;
+  supportsPdf: boolean;
+  create: (apiKey: string) => (modelId: string) => unknown;
+};
+
+const PROVIDERS: Record<ProviderId, ProviderConfig> = {
+  anthropic: {
+    envKey: "ANTHROPIC_API_KEY",
+    models: { chat: "<model-เล็ก>", document: "<model-ใหญ่>", reasoning: "<model-ใหญ่>" },
+    supportsPdf: true,
+    create: (k) => createAnthropic({ apiKey: k }),
+  },
+  openai: {
+    envKey: "OPENAI_API_KEY",
+    models: { chat: "<model-เล็ก>", document: "<model-ใหญ่>", reasoning: "<model-ใหญ่>" },
+    supportsPdf: true,
+    create: (k) => createOpenAI({ apiKey: k }),
+  },
+  google: {
+    envKey: "GOOGLE_GENERATIVE_AI_API_KEY",
+    models: { chat: "<model-เล็ก>", document: "<model-ใหญ่>", reasoning: "<model-ใหญ่>" },
+    supportsPdf: true,
+    create: (k) => createGoogleGenerativeAI({ apiKey: k }),
+  },
+};
+
+export function resolveProvider(): ProviderId { /* อ่าน AI_PROVIDER, default "anthropic" */ }
+export function getModel(task: TaskKind, override?: ProviderId) { /* ... */ }
+export function providerSupportsPdf(id: ProviderId): boolean { /* ... */ }
+export function availableProviders(): ProviderId[] { /* เจ้าที่มี API key ครบเท่านั้น */ }
+```
+
+- [ ] **ห้าม hardcode ชื่อรุ่นโมเดลจากความจำ** — ตอนลงมือทำให้เปิดหน้า models ของแต่ละเจ้าแล้วใส่ชื่อรุ่นล่าสุดที่ใช้งานได้จริง แล้วเขียนคอมเมนต์กำกับวันที่ตรวจสอบไว้
+- [ ] `availableProviders()` ต้องคืนเฉพาะเจ้าที่มี API key จริงใน env — ใช้ทั้งตอน validate ตอน boot และตอนทำ Admin UI ใน Phase 1
+- [ ] ถ้า `AI_PROVIDER` ชี้ไปเจ้าที่ไม่มี key → throw ตอน startup พร้อมข้อความบอกชัดว่าขาด env ตัวไหน อย่าปล่อยให้ไป fail ตอน user กดใช้งาน
+
+#### 2.5.2 เขียน `src/lib/ai-gateway.server.ts` ใหม่
+
+- [ ] **คง export เดิมไว้ทั้งหมด**: `PHUM_PERSONA_TH`, `PHUM_PERSONA_EN`, `persona(lang)` — เพื่อไม่ต้องแก้ไฟล์อื่น
+- [ ] เปลี่ยน `requireGateway()` → `getModel(task)` จาก `ai-provider.server.ts` แล้วแก้จุดเรียกทั้ง 2 ไฟล์ที่ import `requireGateway` จาก `ai-gateway.server.ts`: `src/lib/phum.server.ts` (3 จุดเรียก) **และ `src/lib/marketplace.server.ts` (2 จุดเรียก — อย่าลืมไฟล์นี้)**
+- [ ] ลบ `createLovableAiGatewayProvider` ทิ้ง
+
+#### 2.5.3 เปลี่ยนวิธีดึง JSON — สำคัญที่สุดของขั้นนี้
+
+โค้ดเดิมใช้ `generateText` แล้วเอา `result.text` มา `parseJsonOutput()` เข้า zod ซึ่ง **จะพังไม่เหมือนกันในแต่ละ provider** (บางเจ้าใส่คำนำ บางเจ้าห่อด้วย ```json บางเจ้าเติม trailing comma)
+
+- [ ] เปลี่ยนไปใช้ **`generateObject({ model, schema })`** ของ AI SDK แทน
+- [ ] AI SDK จะแปลง zod schema เป็นกลไก structured output ที่เหมาะกับแต่ละเจ้าให้เอง (Anthropic ใช้ tool use, OpenAI ใช้ json_schema, Google ใช้ responseSchema) → ได้ผลลัพธ์ที่ valid โดยไม่ต้องพึ่งการ prompt ให้ตอบ JSON
+- [ ] schema เดิมที่ต้องย้ายมา: `DocSchema` (ใน `analyzeDocument`) และ `ActionSchema` (action router)
+- [ ] ลบ `JSON_ONLY` และ `parseJsonOutput` ออกได้หลังย้ายครบ
+- [ ] `ActionSchema` ใช้ `.nullable()` เยอะ — Google กับ OpenAI จัดการ nullable ไม่เหมือน Anthropic ถ้าเจอปัญหา ให้เปลี่ยนเป็น `.optional()` หรือใส่ default แทน แล้วทดสอบซ้ำทั้ง 3 เจ้า
+
+#### 2.5.4 `analyzeDocument` — จุดที่ต่างกันมากที่สุดระหว่าง provider
+
+ฟังก์ชันนี้ส่ง base64 เข้าไปเป็น `type: "image"` หรือ `type: "file"` (PDF)
+
+- [ ] รูปภาพ (`image/*`) — ทั้ง 3 เจ้ารองรับ ใช้ interface เดียวกันของ AI SDK ได้
+- [ ] PDF — พฤติกรรมและข้อจำกัด (ขนาดไฟล์, จำนวนหน้า, ต้องอัปโหลดก่อนไหม) **ต่างกันจริง** ให้ทดสอบไฟล์ PDF จริงกับทั้ง 3 เจ้าก่อนสรุป
+- [ ] เขียน guard: ถ้า provider ที่เลือกอยู่จัดการ PDF ไม่ได้ ให้ throw ข้อความภาษาไทยที่เข้าใจง่าย ("ตอนนี้น้องภูมิอ่าน PDF ไม่ได้ครับ ลองถ่ายรูปเอกสารแทน") ไม่ใช่ปล่อย error ดิบ
+- [ ] เพิ่มขีดจำกัดขนาดไฟล์ฝั่ง client ก่อนส่งขึ้น server
+
+#### 2.5.5 Fallback (ทำเลยตอนนี้ ถูกกว่าไปเพิ่มทีหลัง)
+
+- [ ] ถ้าเรียก provider หลักแล้ว error (rate limit / 5xx / timeout) ให้ retry ด้วย provider สำรองจาก `availableProviders()` อัตโนมัติ 1 ครั้ง
+- [ ] log ทุกครั้งที่ fallback ทำงาน — จะได้รู้ว่าเจ้าไหนล่มบ่อย
+- [ ] ควบคุมด้วย env `AI_FALLBACK_PROVIDER` (เว้นว่าง = ปิด fallback)
+
+### ขั้น 2.6 — ล้างร่องรอย Lovable
+
+- [ ] ลบ `src/lib/lovable-error-reporting.ts` และการเรียกใน `src/routes/__root.tsx` (แทนด้วย `console.error` ไปก่อน)
+- [ ] แก้ meta ใน `__root.tsx`: `author`, `twitter:site`, และเพิ่ม `og:image` ของเราเอง
+- [ ] เขียน `README.md` ใหม่: stack, วิธีรัน local, env ที่ต้องมี, วิธี deploy
+- [ ] ลบโฟลเดอร์ `.lovable/`
+- [ ] ลบ `src/integrations/supabase/cron-auth.ts` — **เป็น dead code ล้วน ๆ จาก template ของ Lovable** (header เขียนว่า auto-generated เหมือน `client.ts`/`previewAuthStorage.ts`) สอบสวนแล้วพบว่า `authenticateCronRequest()` **ไม่เคยถูกเรียกจากที่ไหนเลย แม้แต่ใน git history ทุก commit** และ**ไม่มี API route อยู่ใน repo เลย** (`src/routes/` มีแต่ route ของหน้าเว็บ) ทั้ง migrations, `supabase/config.toml`, และ GitHub Actions ก็ไม่มี scheduler ตั้งไว้ → ไม่มี endpoint ไหนถูกป้องกันด้วย `LOVABLE_CRON_SECRET` ลบได้ปลอดภัย ไม่มีฟีเจอร์ไหนหยุดทำงาน
+- [ ] `grep -ri lovable src/ package.json vite.config.ts` → ต้องไม่เหลืออะไร
+
+### ขั้น 2.7 — Deploy Netlify
+
+- [ ] สร้าง `netlify.toml`: `command = "npm run build"`, `publish` และ functions ตามที่ plugin กำหนด
+- [ ] ตั้ง environment variables ใน Netlify UI:
+
+| ตัวแปร | ฝั่ง | หมายเหตุ |
+|---|---|---|
+| `VITE_SUPABASE_URL` | client | เปิดเผยได้ |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | client | เปิดเผยได้ (RLS คุ้มครองอยู่) — ชื่อนี้ต้องตรงกับที่ `client.ts` อ่านจริง (`sb_publishable_...` แบบใหม่ ไม่ใช่ JWT anon key แบบเก่า) ห้ามตั้งชื่อเป็น `VITE_SUPABASE_ANON_KEY` |
+| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | server | fallback ที่ `client.ts` อ่านจาก `process.env` ตอน SSR — ตั้งค่าเดียวกับตัว `VITE_` ด้านบน |
+| `SUPABASE_SERVICE_ROLE_KEY` | server | **ห้ามขึ้นต้น VITE_** |
+| `AI_PROVIDER` | server | `anthropic` \| `openai` \| `google` (ไม่ใส่ = anthropic) |
+| `AI_FALLBACK_PROVIDER` | server | เว้นว่าง = ปิด fallback |
+| `ANTHROPIC_API_KEY` | server | ใส่เฉพาะเจ้าที่จะใช้ · **ห้ามขึ้นต้น VITE_** |
+| `OPENAI_API_KEY` | server | **ห้ามขึ้นต้น VITE_** |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | server | **ห้ามขึ้นต้น VITE_** |
+
+- [ ] Deploy preview ก่อน → ทดสอบ → แล้วค่อย production
+- [ ] เพิ่ม redirect URL ของ Netlify เข้าไปใน Supabase Auth settings
+- [ ] ปิด auto-sync ของ Lovable ที่ผูกกับ GitHub repo นี้ (ไม่งั้น Lovable อาจ push ทับ)
+
+---
+
+## 3. Checklist ทดสอบก่อนปิด Phase 0
+
+ทำจริงในเบราว์เซอร์ ไม่ใช่แค่ build ผ่าน:
+
+- [ ] สมัครสมาชิกใหม่ด้วยอีเมล → มีแถวใน `profiles` อัตโนมัติ
+- [ ] Login / Logout / Login ด้วย Google
+- [ ] **Docs** — อัปโหลดรูปใบแจ้งค่าไฟ → น้องภูมิอ่านได้ สรุปได้ ดึงวันครบกำหนด/ยอดเงินได้ → กด "เปิดไฟล์" แล้ว signed URL ใช้ได้
+- [ ] Docs → กด "สร้างการเตือนจากเอกสารนี้" แล้วไปโผล่ในหน้า Tasks
+- [ ] **Chat** — พิมพ์ "เตือนจ่ายค่าน้ำวันศุกร์" → ได้ action card → กดยืนยัน → เข้า Tasks
+- [ ] Chat — พิมพ์ "จ่ายค่าไฟ 850 เมื่อวาน" → เข้า Money
+- [ ] **ทดสอบเฉพาะ provider ที่มี API key จริง** — สลับ `AI_PROVIDER` ไปยังเจ้าที่มีเครดิตแล้วรันซ้ำ 3 ข้อนี้: อ่านรูปเอกสาร, อ่าน PDF, chat router สร้าง reminder (ตามหัวข้อ 0 ข้อ 3 ต้องมีอย่างน้อย 1 เจ้าเท่านั้น) — เจ้าที่ยังไม่มี key ให้ทดสอบชุดนี้ซ้ำเมื่อเปิดใช้จริงในอนาคต
+- [ ] ตั้ง `AI_PROVIDER` เป็นเจ้าที่ไม่มี key → ต้องขึ้น error ชัดเจนตอน start ไม่ใช่ตอน user กดใช้
+- [ ] ตั้ง `AI_FALLBACK_PROVIDER` แล้วทำให้เจ้าหลักพัง (ใส่ key ผิด) → ต้องสลับไปเจ้าสำรองได้และมี log
+- [ ] **Money** — รายรับ/รายจ่าย/ยอดคงเหลือ/สรุปตามหมวด แสดงถูก
+- [ ] **Today** — Daily Brief generate ได้
+- [ ] **Family** — สร้างครอบครัว → เอา invite code ไป join ด้วยบัญชีที่ 2 → แชร์เอกสาร 1 ฉบับ → บัญชีที่ 2 เห็น
+- [ ] **สำคัญ: ทดสอบ RLS จริง** — บัญชี A ต้อง**ไม่**เห็นเอกสาร/ค่าใช้จ่าย/reminder ของบัญชี B ที่ไม่ได้แชร์
+- [ ] **Help Me** — สร้าง helper profile, โพสต์งาน, ยื่นข้อเสนอด้วยอีกบัญชี, ตอบรับ, ปิดงาน, ให้คะแนน
+- [ ] **Benefits** — กรอกโปรไฟล์ → ได้ผลลัพธ์สิทธิ
+- [ ] Settings — สลับ ไทย/อังกฤษ และ light/dark
+- [ ] เปิดบนมือถือจริง — layout ไม่แตก
+- [ ] `npm run build` ผ่านโดยไม่มี TS error (tsconfig เปิด strict + `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess` ซึ่งเข้มมาก)
+
+---
+
+## 4. Definition of Done
+
+Phase 0 จบเมื่อ:
+
+1. Production URL บน Netlify ใช้งานได้ครบทุกข้อในหัวข้อ 3
+2. `grep -ri lovable` ใน source ไม่เจออะไร
+3. `package-lock.json` ไม่มี private registry ของ Lovable
+4. Disconnect Lovable (ปิด auto-sync กับ GitHub repo นี้) แล้วแอปยังทำงานปกติ — **อย่าเพิ่งลบ Lovable project ทิ้ง** จนกว่าจะยืนยันแล้วว่าย้ายข้อมูลจาก Lovable Cloud (database, storage) มาครบ เพราะการลบ project จะทำให้ database เดิมหายไปด้วยและกู้คืนไม่ได้
+5. มี `.env.example` ในrepo ที่บอกครบว่าต้องมี env อะไรบ้าง
+
+---
+
+## 5. Roadmap ถัดไป (อ้างอิงเฉย ๆ อย่าเพิ่งทำ)
+
+| Phase | ขอบเขต |
+|---|---|
+| 1 | **Data integrity & deletion path** (ดูหมายเหตุใต้ตาราง — เร่งด่วนสุด) · Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
+| 2 | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance) |
+| 3 | สิทธิฉัน v2 + Decision Board |
+| 4 | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard) |
+| 5 | Life Legacy A — Asset Inventory, Vault, Final Wishes, Trusted Contacts, Checklist, AI Legacy Assistant |
+| 6 | Life Legacy B — Death Verification, Post-Life Action Plan, Memorial, Digital Wreath, AI Funeral Planner |
+
+### หมายเหตุ: Data integrity & deletion path (Phase 1 — เร่งด่วนที่สุดในเฟส 1)
+
+**ไม่มีคอลัมน์ไหนในทั้ง schema ที่มี foreign key ไป `auth.users` เลย และไม่มี `ON DELETE CASCADE` ที่ไหน** (`profiles.id` เป็น `UUID PRIMARY KEY` เปล่า ๆ, `user_roles.user_id` / `documents.user_id` / `reminders.user_id` / `expenses.user_id` / `incomes.user_id` / `chat_messages.user_id` เป็น `UUID NOT NULL` เปล่า ๆ ทั้งหมด) ตัวเชื่อมกับ auth มีแค่ trigger `on_auth_user_created` ตอน INSERT เท่านั้น
+
+**ผลคือลบ user ออกจาก `auth.users` แล้วข้อมูลค้างเป็น orphan ทั้งหมด** — ยืนยันด้วยของจริงระหว่างทดสอบขั้น 2.5: หลัง user ถูกลบไป `auth.users` เหลือ 0 แถว แต่ `profiles` 1, `user_roles` 1, `documents` 2, `reminders` 3, `expenses` 2 ยังอยู่ครบ **และไฟล์ใน storage bucket `documents` ก็ยังอยู่ด้วย** (ไม่มีอะไรไปลบให้)
+
+เป็นของเดิมจาก Lovable ไม่ใช่ regression จากการย้าย แต่แปลว่า **ระบบยังลบข้อมูลผู้ใช้ตาม PDPA ไม่ได้จริง** — ผู้ใช้ขอให้ลบบัญชี เราลบได้แค่ auth row ส่วนเอกสาร ค่าใช้จ่าย และไฟล์แนบยังอยู่ในระบบทั้งหมด
+
+**ต้องทำใน Phase 1 ไม่ใช่ช้ากว่านั้น** เพราะยิ่งมีข้อมูลจริงมากขึ้น การเติม FK ย้อนหลังยิ่งเสี่ยง (ต้องล้าง orphan ที่สะสมไว้ก่อนถึงจะ `ADD CONSTRAINT` ผ่าน และถ้ามีผู้ใช้จริงแล้วต้องทำใน migration ที่ล็อกตาราง) ขอบเขตงาน:
+1. ล้าง orphan ที่มีอยู่
+2. เพิ่ม FK `REFERENCES auth.users(id) ON DELETE CASCADE` ทุกตารางที่มี `user_id`
+3. เขียนเส้นทางลบไฟล์ใน storage ด้วย (FK ของ Postgres ไม่ตามไปลบ object ใน storage ให้)
+4. ทำเป็น flow "ลบบัญชี" ที่ผู้ใช้กดเองได้ + audit log ตามหลักการ PDPA ด้านล่าง
+
+### หมายเหตุ: Recurring reminder engine (Phase 1)
+
+พบระหว่างสอบสวน `cron-auth.ts` ในขั้น 2.6 — **`recurrence` (`none` / `monthly` / `yearly`) มี UI ให้ผู้ใช้เลือกจริง** (ฟอร์มใน `src/routes/_authenticated/tasks.tsx` และ chat action schema ใน `phum.server.ts`) **และถูกเก็บลง DB จริง แต่ไม่มีโค้ดตรงไหนอ่านมันไปประมวลผลเลย** → reminder ที่ตั้งเป็น `monthly`/`yearly` จะไม่ถูกเลื่อนไปงวดถัดไปหลังเลยกำหนด
+
+**เป็นช่องโหว่ที่มีอยู่แล้วในแอปเดิมบน Lovable ไม่ใช่ regression จากการย้าย** จึงไม่ต้องแก้ใน Phase 0 (การทำให้มันทำงานคือการเพิ่มของใหม่ ขัดกฎบรรทัด 6)
+
+ต้องทำ**พร้อมกับ LINE Messaging API** เพราะต้องมีครบทั้ง 2 ชิ้นถึงจะมีประโยชน์:
+1. **scheduler** สำหรับเลื่อนงวด/ยิงเตือนตามเวลา
+2. **ตัวส่งการแจ้งเตือน** — ปัจจุบัน codebase **ไม่มีตัวส่งเลยสักตัว** (ไม่มี webpush, nodemailer, resend, twilio, LINE notify, service worker) reminder เป็นแค่ record ที่รอผู้ใช้เปิดมาดูเอง
+
+และต้อง**เพิ่มคอลัมน์ใน `reminders`** ด้วย — ปัจจุบันไม่มี `notified` / `sent_at` / `last_run` เลย จึงไม่มีทางรู้ว่าเตือนไปแล้วหรือยัง (จะยิงซ้ำทุกรอบที่ scheduler ทำงาน)
+
+### หลักการที่ต้องยึดตั้งแต่ตอนนี้
+
+- **Death Verification และการเปิดเผยข้อมูลใน Life Legacy ต้องเป็น deterministic logic เท่านั้น ห้าม AI ตัดสิน** — ต้องแยกเป็น service ของตัวเอง มี multi-confirmation และ audit log ทุก event
+- **พินัยกรรม** — ระบบเก็บ "สำเนาและตำแหน่งของฉบับจริง" ไม่ใช่ "ทำพินัยกรรม" ต้องมีข้อความกำกับให้ชัดในหน้า UI
+- **เงินที่รับแทนผู้อื่น** (ค่า package งานศพ, พวงหรีด, เงินช่วยงาน, escrow ของ marketplace) ต้องผ่าน payment gateway ที่มีใบอนุญาต และควรปรึกษาที่ปรึกษากฎหมายก่อนเปิดใช้จริง
+- **PDPA** — ทุกตารางที่เก็บข้อมูลอ่อนไหวต้องมี consent record + audit log + เส้นทางลบข้อมูล ออกแบบไว้ตั้งแต่ migration แรกของโมดูลนั้น

@@ -2,6 +2,11 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { assertAiProviderConfig } from "./lib/ai-provider.server";
+
+// Surface a missing/misnamed AI provider key when the server starts rather than
+// when the first user tries to use Nong Phum.
+assertAiProviderConfig();
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
