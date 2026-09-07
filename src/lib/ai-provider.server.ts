@@ -30,6 +30,9 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     create: (k) => createAnthropic({ apiKey: k }),
   },
   // developers.openai.com/api/docs/models
+  // UNTESTED: no OPENAI_API_KEY has ever been set on this project, so no request
+  // has been made against these IDs. Re-check the model list and run a real call
+  // before turning this provider on.
   openai: {
     envKey: "OPENAI_API_KEY",
     models: {
@@ -41,6 +44,10 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     create: (k) => createOpenAI({ apiKey: k }),
   },
   // ai.google.dev/gemini-api/docs/models
+  // The Flash and Pro lines are not on the same version numbers: Flash is at 3.8
+  // while the newest *stable* Pro is still 2.5 (gemini-3.1-pro-preview exists but
+  // is preview-only). So reasoning deliberately pins the older-looking 2.5 rather
+  // than shipping a preview model — switch it when a 3.x Pro reaches stable.
   google: {
     envKey: "GOOGLE_GENERATIVE_AI_API_KEY",
     models: {
@@ -108,13 +115,20 @@ export function getModel(task: TaskKind, override?: ProviderId): LanguageModel {
 }
 
 /**
- * Transient upstream failures worth spending a second provider's quota on.
- * A 4xx that is not 429 means we sent something wrong — retrying elsewhere would fail the same way.
+ * Whether a failure is worth spending the fallback provider's quota on.
+ *
+ * 429/5xx/network are transient. 401/403 are included too: they mean the primary's
+ * key is dead or revoked, which is precisely when a second provider keeps the app
+ * usable — and every switch is logged, so a broken key still surfaces rather than
+ * hiding. Other 4xx (400, 404, 422) mean our own request or model name is wrong,
+ * and would fail identically on the fallback, so they are not worth a second call.
  */
-function isRetryable(error: unknown): boolean {
+function shouldTryFallback(error: unknown): boolean {
   const status = (error as { statusCode?: number; status?: number } | null)?.statusCode
     ?? (error as { status?: number } | null)?.status;
-  if (typeof status === "number") return status === 429 || status >= 500;
+  if (typeof status === "number") {
+    return status === 429 || status === 401 || status === 403 || status >= 500;
+  }
   const name = (error as { name?: string } | null)?.name ?? "";
   const message = (error as { message?: string } | null)?.message ?? "";
   return /timeout|ETIMEDOUT|ECONNRESET|ENOTFOUND|fetch failed/i.test(`${name} ${message}`);
@@ -133,7 +147,7 @@ export async function withProviderFallback<T>(
     return await call(modelFor(primary, task));
   } catch (error) {
     const fallback = resolveFallbackProvider();
-    if (!fallback || fallback === primary || !isRetryable(error)) throw error;
+    if (!fallback || fallback === primary || !shouldTryFallback(error)) throw error;
     if (!apiKeyFor(fallback)) {
       console.error(
         `[ai] fallback provider "${fallback}" is configured but ${PROVIDERS[fallback].envKey} is not set; rethrowing original error`,
@@ -147,9 +161,15 @@ export async function withProviderFallback<T>(
   }
 }
 
-// Fail at import time rather than when a user first taps a button, so a bad
-// deploy is obvious immediately.
-{
+/**
+ * Throws unless the configured provider actually has a key.
+ *
+ * Called from src/server.ts so a misconfigured deploy dies at startup instead of
+ * when a user first taps a button. It cannot be a bare module-side-effect: this
+ * module is only pulled in lazily by the server functions, and package.json
+ * declares "sideEffects": false, so an import-for-effect could be dropped.
+ */
+export function assertAiProviderConfig(): void {
   const configured = resolveProvider();
   if (!apiKeyFor(configured)) {
     const available = availableProviders();
