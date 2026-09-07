@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "24.20.0"
+  # The VITE_-prefixed Supabase values are compiled into the client bundle on
+  # purpose — that is what a publishable key is for, and RLS is what protects the
+  # data. Netlify's secret scanner would otherwise see them in dist/ and fail the
+  # build. Never add a non-VITE_ key here; those must stay server-side.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_PUBLISHABLE_KEY"
+
+# The SSR handler, server routes and server functions are emitted by
+# @netlify/vite-plugin-tanstack-start into .netlify/v1/functions/server.mjs
+# during the build, so there is no functions directory to declare here.
