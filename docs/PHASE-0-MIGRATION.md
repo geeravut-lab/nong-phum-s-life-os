@@ -1,5 +1,9 @@
 # Phase 0 — ย้ายออกจาก Lovable → Supabase (ของเราเอง) + Netlify
 
+> **สถานะ: งานฝั่งโค้ดปิดแล้ว (2026-09-07)** — ถอด Lovable ออกครบทุกจุด, build + typecheck ผ่าน, ล้างข้อมูลทดสอบแล้ว
+> เหลือ Definition of Done ข้อ 1 (ยืนยัน production URL) และข้อ 4 (disconnect Lovable) ที่ต้องทำหลัง deploy ขึ้น Netlify จริง
+> **อ่านหัวข้อ 5 ก่อน** ถ้าจะทำงานต่อ — มี 4 จุดที่ทำต่างจากแผนในเอกสารนี้
+
 เอกสารนี้เป็นแผนปฏิบัติสำหรับ repo `nong-phum-s-life-os`
 **เป้าหมาย: หลังจบ Phase 0 ระบบเดิมทั้ง 10 หน้าต้องทำงานได้ครบเหมือนเดิม โดยไม่มี dependency กับ Lovable เหลืออยู่เลย**
 
@@ -285,14 +289,42 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 Phase 0 จบเมื่อ:
 
 1. Production URL บน Netlify ใช้งานได้ครบทุกข้อในหัวข้อ 3
-2. `grep -ri lovable` ใน source ไม่เจออะไร
-3. `package-lock.json` ไม่มี private registry ของ Lovable
+2. `grep -ri lovable` ใน source ไม่เจออะไร ✅
+3. `package-lock.json` ไม่มี private registry ของ Lovable ✅
 4. Disconnect Lovable (ปิด auto-sync กับ GitHub repo นี้) แล้วแอปยังทำงานปกติ — **อย่าเพิ่งลบ Lovable project ทิ้ง** จนกว่าจะยืนยันแล้วว่าย้ายข้อมูลจาก Lovable Cloud (database, storage) มาครบ เพราะการลบ project จะทำให้ database เดิมหายไปด้วยและกู้คืนไม่ได้
-5. มี `.env.example` ในrepo ที่บอกครบว่าต้องมี env อะไรบ้าง
+5. มี `.env.example` ในrepo ที่บอกครบว่าต้องมี env อะไรบ้าง ✅
 
 ---
 
-## 5. Roadmap ถัดไป (อ้างอิงเฉย ๆ อย่าเพิ่งทำ)
+## 5. สรุปตอนปิด Phase 0
+
+**สถานะ: โค้ดย้ายออกจาก Lovable ครบแล้ว** — dependency, auth, AI layer, database, error reporting และร่องรอยทั้งหมดถูกถอดออก build ผ่าน (`vite build` exit 0) และ typecheck ผ่านแยกต่างหาก (`tsc --noEmit` exit 0 — `vite build` **ไม่ตรวจ type** ให้ ต้องรันเอง)
+
+**ยังค้าง:** DoD ข้อ 1 (ยืนยัน production URL) และข้อ 4 (disconnect Lovable) — รอ deploy ขึ้น Netlify จริงและเดิน checklist หัวข้อ 3 ให้ครบก่อน
+
+### สิ่งที่ทำต่างจากแผนเดิม (บันทึกไว้กันสับสนภายหลัง)
+
+**1. ขั้น 2.4.1 ถูกทำก่อนกำหนด ระหว่างขั้น 2.2**
+ไม่ได้ตั้งใจข้ามลำดับ แต่ import ค้างของ `@lovable.dev/cloud-auth-js` (หลังถอด dependency ในขั้น 2.1) ทำให้ **dep scan ของ Vite พังตั้งแต่ boot** → ปิด pre-bundling → re-optimize กลางคัน → `rename .vite\deps` ชน `EPERM` บน Windows → deps ค้าง 504 → client entry โหลดไม่ได้ → **hydration ไม่เกิด** หน้าเว็บกดอะไรไม่ได้เลย จึงต้องลบ wrapper ทิ้งก่อนถึงจะปิดขั้น 2.2 ได้
+
+**2. Fallback ขยายไปครอบ 401/403 (กว้างกว่าที่แผนเขียน)**
+แผนระบุไว้แค่ `rate limit / 5xx / timeout` แต่ตอนทดสอบจริงพบว่า **key ผิด/ถูก revoke ให้ 401 ซึ่งไม่เข้าเงื่อนไขเลย** แปลว่าแอปล่มทั้งที่มี provider สำรองพร้อมใช้ — ซึ่งคือสถานการณ์ที่ fallback มีไว้เพื่อสิ่งนี้โดยตรง จึงเพิ่ม 401/403 เข้าไป ส่วน 4xx อื่น (400/404/422) ยังไม่ retry เพราะเป็นความผิดฝั่งเรา ยิงเจ้าไหนก็พังเหมือนกัน ทุกครั้งที่สลับมี log กำกับ ไม่ได้กลืนเงียบ
+
+**3. ไม่ได้ใส่ `og:image` ตามที่ขั้น 2.6 สั่ง**
+repo ไม่มีไฟล์รูปเลย (`public/` มีแค่ `favicon.ico` กับ `robots.txt`) การชี้ meta tag ไปไฟล์ที่ไม่มีอยู่แย่กว่าไม่ใส่ — **ต้องมี asset จริงก่อนถึงจะเพิ่มได้** ส่วน `twitter:site` ก็ลบทิ้งแทนที่จะแต่ง handle ใหม่ เพราะเราไม่ได้เป็นเจ้าของบัญชีนั้น
+
+**4. `netlify.toml` ต้องอยู่บน production branch ถึงจะถูกอ่าน**
+Netlify อ่าน `netlify.toml` จาก branch ที่กำลัง deploy ตราบใดที่ไฟล์ยังอยู่แค่บน `phase-0/*` **build ของ production จะยังใช้ค่าจาก UI อยู่** ตรวจได้จาก deploy log ที่ฟิลด์ `commandOrigin` — ถ้าขึ้น `ui` แปลว่ายังไม่ได้อ่านไฟล์ ถ้าขึ้น `config` คืออ่านจาก `netlify.toml` แล้ว **ต้อง merge เข้า `main` ก่อน production build ถึงจะใช้ค่าในไฟล์**
+
+### ข้อมูลทดสอบ
+
+ล้างครบแล้ว: user ทดสอบ, documents, expenses, reminders, chat_messages, ไฟล์ใน storage และ orphan rows ทั้งหมด เหลือเฉพาะ **seed ที่ต้องมี** (`benefits` 12 แถว, `platform_settings` 1 แถว) และบัญชีจริงของเจ้าของโปรเจกต์
+
+ระหว่างล้างพบ orphan เพิ่มอีก 3 ไฟล์ใน storage ที่ไม่มีแถวใน `documents` คู่กัน — เกิดจากอัปโหลดสำเร็จแต่ AI วิเคราะห์ล้มเหลว ระบบเลยไม่ได้เขียน row ลง DB **แต่ก็ไม่มีอะไรไปลบไฟล์ทิ้ง** เป็นหลักฐานเพิ่มของช่องโหว่ deletion path ในหัวข้อ Phase 1
+
+---
+
+## 6. Roadmap ถัดไป (อ้างอิงเฉย ๆ อย่าเพิ่งทำ)
 
 | Phase | ขอบเขต |
 |---|---|
