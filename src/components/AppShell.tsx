@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  CalendarCheck,
   FileText,
   HandHelping,
   ShieldCheck,
@@ -20,12 +19,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
-    <span
-      className={`inline-flex ${className} items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-soft`}
+    <img
+      src="/logo-256.png"
+      alt=""
       aria-hidden="true"
-    >
-      <CalendarCheck className="size-1/2" />
-    </span>
+      className={`${className} rounded-2xl object-cover shadow-soft`}
+    />
   );
 }
 

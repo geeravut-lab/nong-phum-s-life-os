@@ -81,14 +81,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "น้องภูมิ — ผู้ช่วย Life OS ส่วนตัว" },
       { property: "og:description", content: "ดูแลเรื่องรอบตัวคุณในที่เดียว" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      // Absolute, not relative: link-preview crawlers do not resolve relative
+      // og:image paths, so a "/og-image.png" here would simply show no preview.
+      { property: "og:image", content: "https://lavieos.netlify.app/og-image.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://lavieos.netlify.app/og-image.png" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { rel: "icon", href: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
     ],
   }),
   shellComponent: RootShell,
