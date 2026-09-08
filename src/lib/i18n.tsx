@@ -175,6 +175,7 @@ const dict = {
     shared: "แชร์กับครอบครัว",
     sharedItems: "รายการที่แชร์กัน",
     noFamily: "คุณยังไม่ได้อยู่ในครอบครัวใด",
+    familyLoadError: "โหลดข้อมูลครอบครัวไม่สำเร็จ จึงยังแชร์ไม่ได้ ลองรีเฟรชหน้าอีกครั้งนะครับ",
     leave: "ออกจากครอบครัว",
     // settings
     settingsTitle: "ตั้งค่า",
@@ -396,6 +397,7 @@ const dict = {
     shared: "Shared with family",
     sharedItems: "Shared with you",
     noFamily: "You are not in a family yet.",
+    familyLoadError: "Couldn't load your family, so sharing is unavailable. Try refreshing the page.",
     leave: "Leave family",
     settingsTitle: "Settings",
     language: "Language",

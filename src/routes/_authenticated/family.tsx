@@ -35,13 +35,20 @@ function FamilyPage() {
   const [familyName, setFamilyName] = useState("");
   const [code, setCode] = useState("");
 
-  const { data: membership, isLoading } = useQuery({
+  const { data: membership, isLoading, isError } = useQuery({
     queryKey: ["family-membership"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user!.id;
+      // Filter by user_id: family_members_read lets a member read every row of
+      // their own family (the members list below needs that), so an unfiltered
+      // maybeSingle() starts failing the moment a second member joins.
+      const { data, error } = await supabase
         .from("family_members")
         .select("id, family_id, families(id, name, invite_code, owner_id)")
+        .eq("user_id", uid)
         .maybeSingle();
+      if (error) throw error;
       return data ?? null;
     },
   });
@@ -133,6 +140,12 @@ function FamilyPage() {
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">{t.loading}</p>
+      ) : isError ? (
+        // Not just a toast: falling through to the create/join forms would tell
+        // someone who is already in a family that they have none.
+        <p className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-center text-sm text-destructive">
+          {t.familyLoadError}
+        </p>
       ) : !family ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <form

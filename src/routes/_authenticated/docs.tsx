@@ -52,10 +52,20 @@ function DocsPage() {
     },
   });
 
-  const { data: family } = useQuery({
+  const { data: family, isError: familyFailed } = useQuery({
     queryKey: ["my-family"],
     queryFn: async () => {
-      const { data } = await supabase.from("family_members").select("family_id").maybeSingle();
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user!.id;
+      // Filter by user_id: family_members_read lets a member read every row of
+      // their own family (the members list needs that), so an unfiltered
+      // maybeSingle() starts failing the moment a second member joins.
+      const { data, error } = await supabase
+        .from("family_members")
+        .select("family_id")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (error) throw error;
       return data?.family_id ?? null;
     },
   });
@@ -146,6 +156,12 @@ function DocsPage() {
           onChange={onFile}
         />
       </header>
+
+      {familyFailed && (
+        <p className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          {t.familyLoadError}
+        </p>
+      )}
 
       {busy && <Skeleton className="mb-4 h-28 w-full" />}
 
