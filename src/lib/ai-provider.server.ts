@@ -43,17 +43,23 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     supportsPdf: true,
     create: (k) => createOpenAI({ apiKey: k }),
   },
-  // ai.google.dev/gemini-api/docs/models
-  // The Flash and Pro lines are not on the same version numbers: Flash is at 3.8
-  // while the newest *stable* Pro is still 2.5 (gemini-3.1-pro-preview exists but
-  // is preview-only). So reasoning deliberately pins the older-looking 2.5 rather
-  // than shipping a preview model — switch it when a 3.x Pro reaches stable.
+  // ai.google.dev/gemini-api/docs/models — but the docs page and the live API
+  // disagree, and the API wins. Probed against our own key on 2026-09-08:
+  //   gemini-3.8-flash      429 quota exceeded, and ~28s when it did answer
+  //   gemini-3.6-flash      worked, but one run took 28s and the next 1.6s
+  //   gemini-3.7-flash      ~1.5s, consistent across every run
+  //   gemini-2.5-pro        404 "no longer available to new users"
+  //   every Pro model       429 — the Pro tier has no free-tier quota at all
+  // So 3.7 is not a downgrade here, it is the newest Flash our plan actually
+  // serves reliably. reasoning points at it too rather than a Pro model that
+  // 429s on this key; move reasoning to a Pro id once the account is on a paid
+  // plan (the API suggests gemini-3.1-pro-preview as 2.5-pro's replacement).
   google: {
     envKey: "GOOGLE_GENERATIVE_AI_API_KEY",
     models: {
-      chat: "gemini-3.8-flash",
-      document: "gemini-3.8-flash",
-      reasoning: "gemini-2.5-pro",
+      chat: "gemini-3.7-flash",
+      document: "gemini-3.7-flash",
+      reasoning: "gemini-3.7-flash",
     },
     supportsPdf: true,
     create: (k) => createGoogleGenerativeAI({ apiKey: k }),
