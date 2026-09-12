@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { generateDailyBrief } from "@/lib/lifeos.functions";
 import { formatDay, formatMoney } from "@/lib/format";
+import { monthStartInBangkok } from "@/lib/time";
 
 export const Route = createFileRoute("/_authenticated/today")({
   head: () => ({
@@ -34,8 +35,7 @@ function TodayPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["today"],
     queryFn: async () => {
-      const monthStart = new Date();
-      monthStart.setDate(1);
+      const monthStart = monthStartInBangkok();
       const [profile, reminders, expenses, docs] = await Promise.all([
         supabase.from("profiles").select("display_name").maybeSingle(),
         supabase
@@ -47,7 +47,7 @@ function TodayPage() {
         supabase
           .from("expenses")
           .select("amount")
-          .gte("spent_on", monthStart.toISOString().slice(0, 10)),
+          .gte("spent_on", monthStart),
         supabase.from("documents").select("id", { count: "exact", head: true }),
       ]);
       return {

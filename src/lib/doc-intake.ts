@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
+import { bangkokDateAtHour, todayInBangkok } from "@/lib/time";
 
 export type DocAnalysisResult = {
   title: string;
@@ -73,7 +74,7 @@ export async function intakeDocument(
     .single();
   if (error) throw error;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInBangkok();
   const routed: IntakeResult["routed"] = [];
 
   if (result.isIncome && result.amount) {
@@ -102,7 +103,7 @@ export async function intakeDocument(
     await supabase.from("reminders").insert({
       user_id: userId,
       title: result.suggestedReminderTitle ?? result.title,
-      due_at: result.dueDate ? new Date(result.dueDate).toISOString() : null,
+      due_at: result.dueDate ? bangkokDateAtHour(result.dueDate, 9) : null,
       priority: "high",
       source_document_id: doc.id,
     });

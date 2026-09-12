@@ -16,6 +16,7 @@ import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
 import { intakeDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
+import { bangkokDateAtHour } from "@/lib/time";
 
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
@@ -120,7 +121,9 @@ function DocsPage() {
     const { error } = await supabase.from("reminders").insert({
       user_id: userData.user!.id,
       title: doc.title,
-      due_at: doc.due_date ? new Date(doc.due_date).toISOString() : null,
+      // A document only knows the day; 09:00 Bangkok is a sensible reminder
+      // hour, not the 07:00 that UTC-midnight parsing would produce.
+      due_at: doc.due_date ? bangkokDateAtHour(doc.due_date, 9) : null,
       source_document_id: doc.id,
       priority: "high",
     });

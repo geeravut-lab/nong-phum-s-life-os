@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { todayInBangkok } from "@/lib/time";
 
 export type PhumActionPayload = {
   type: string;
@@ -15,7 +16,7 @@ export type PhumActionPayload = {
 
 export type AppliedAction = { kind: "reminder" | "expense" | "income"; label: string };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayInBangkok();
 
 /** Saves the action Nong Phum decided on straight into the matching module. */
 export async function applyPhumAction(

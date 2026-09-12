@@ -1,4 +1,5 @@
 import type { Lang } from "./i18n";
+import { todayInBangkok } from "./time";
 
 export function formatMoney(n: number) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(n || 0);
@@ -14,5 +15,5 @@ export function formatDay(d: Date, lang: Lang, withTime = false) {
 }
 
 export function toDateInput(d: Date) {
-  return d.toISOString().slice(0, 10);
+  return todayInBangkok(d);
 }

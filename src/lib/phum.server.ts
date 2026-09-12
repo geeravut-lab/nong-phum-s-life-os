@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { persona } from "./ai-gateway.server";
 import { providerSupportsPdf, resolveProvider, withProviderFallback } from "./ai-provider.server";
+import { APP_TIME_ZONE, APP_UTC_OFFSET, todayInBangkok } from "./time";
 
 const CATEGORIES = [
   "bill",
@@ -103,7 +104,12 @@ const ActionSchema = z.object({
         "none",
       ]),
       title: z.string().nullable(),
-      dueAt: z.string().nullable().describe("ISO datetime for reminders"),
+      dueAt: z
+        .string()
+        .nullable()
+        .describe(
+          `ISO 8601 datetime for reminders, always with the ${APP_UTC_OFFSET} offset, e.g. 2026-09-15T09:00:00${APP_UTC_OFFSET}`,
+        ),
       priority: z.enum(["high", "normal", "low"]).nullable(),
       recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
       amount: z.number().nullable(),
@@ -175,7 +181,7 @@ export async function runChatRouter(
 ) {
   const ctx = await loadContext(supabase, userId);
   const langName = input.lang === "en" ? "English" : "Thai";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInBangkok();
 
   const history = await supabase
     .from("chat_messages")
@@ -198,7 +204,7 @@ export async function runChatRouter(
       model,
       schema: ActionSchema,
       system: `${persona(input.lang)}
-Today is ${today}. Reply in ${langName}.
+Today is ${today} (${APP_TIME_ZONE}, UTC${APP_UTC_OFFSET}). All dates and times are in that zone. Reply in ${langName}.
 You route the user's request to exactly one action in their Life OS:
 - create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
 - add_expense: the user reports spending money (fill title, amount, category, spentOn)
@@ -234,13 +240,13 @@ The app saves create_reminder, add_expense and add_income automatically as soon 
 export async function runDailyBrief(lang: "th" | "en", supabase: Db, userId: string) {
   const ctx = await loadContext(supabase, userId);
   const langName = lang === "en" ? "English" : "Thai";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInBangkok();
 
   const result = await withProviderFallback("chat", (model) =>
     generateText({
       model,
       system: `${persona(lang)}
-Today is ${today}. Write the user's daily brief in ${langName}.
+Today is ${today} (${APP_TIME_ZONE}, UTC${APP_UTC_OFFSET}). Write the user's daily brief in ${langName}.
 Format: one warm opening line, then a short numbered list (max 5) of the things that matter today — overdue or upcoming reminders, documents expiring soon, unusual spending. End with one practical suggestion.
 Use markdown. Keep it under 140 words. Never invent items that are not in the data.`,
       prompt: `REMINDERS: ${JSON.stringify(ctx.reminders)}
