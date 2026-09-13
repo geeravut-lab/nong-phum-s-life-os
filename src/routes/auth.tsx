@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
+const AIVORA_HUB_URL = "https://aivora-lc.netlify.app";
+const AIVORA_APP_SLUG = "lifeos";
+const AIVORA_CALLBACK = "https://lavieos.netlify.app/sso/callback";
+
+function aivoraAuthorizeUrl(): string {
+  return `${AIVORA_HUB_URL}/sso/authorize?app=${AIVORA_APP_SLUG}&return=${encodeURIComponent(AIVORA_CALLBACK)}`;
+}
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -96,6 +104,12 @@ function AuthPage() {
 
             <Button variant="outline" className="mt-5 w-full" onClick={google} type="button">
               {t.continueGoogle}
+            </Button>
+            {/* Aivora Hub SSO: a plain link to the hub, which redirects back to
+                /sso/callback with a one-shot ticket. Additive — every existing
+                sign-in path above and below is untouched. */}
+            <Button variant="outline" className="mt-2 w-full" asChild>
+              <a href={aivoraAuthorizeUrl()}>{t.continueAivora}</a>
             </Button>
 
             <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
