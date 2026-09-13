@@ -197,6 +197,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 - [ ] **ซ่อม `incomes.source_document_id`** — ตอนนี้ `REFERENCES documents(id)` โดย**ไม่มี ON DELETE** (= NO ACTION) ต่างจาก `reminders`/`expenses` ที่เป็น `SET NULL` → ลบเอกสารที่มี income อ้างถึงจะ error ต้องเปลี่ยนเป็น `SET NULL` ให้สม่ำเสมอ
 - [ ] ตัดสินใจ design ของแนบไฟล์ (1.9 ทางที่ 1 หรือ 2) **ในรอบนี้** แล้วค่อยเขียนโค้ดที่ 1.9
 - [ ] คำถามเชิง schema จาก 1.8 ที่รอตอบในรอบนี้ (ดู 1.8)
+
 **สถานะ 2026-09-14:** สำรวจเสร็จ (orphan = 0 ทุกตาราง · ไฟล์กำพร้า 1) · ตัดสินใจครบ · migration เขียนแล้วที่ `supabase/migrations/20260914120000_data_integrity.sql` **ยังไม่ apply** รอสำรองข้อมูลด้วย `scripts/backup-db.sh` / `.ps1` ก่อน · ไฟล์กำพร้า 1 ไฟล์รอลบผ่าน Storage API หลังสำรอง
 
 ---
