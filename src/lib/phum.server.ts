@@ -2,7 +2,7 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { persona } from "./ai-gateway.server";
-import { providerSupportsPdf, resolveProvider, withProviderFallback } from "./ai-provider.server";
+import { providerCapabilities, resolveProvider, withProviderFallback } from "./ai-provider.server";
 import { APP_TIME_ZONE, APP_UTC_OFFSET, todayInBangkok } from "./time";
 
 const CATEGORIES = [
@@ -52,7 +52,7 @@ export async function runDocumentAnalysis(input: {
   const langName = input.lang === "en" ? "English" : "Thai";
   const isImage = input.mimeType.startsWith("image/");
 
-  if (!isImage && !providerSupportsPdf(resolveProvider())) {
+  if (!isImage && !providerCapabilities(await resolveProvider("document")).pdf) {
     throw new Error(
       input.lang === "en"
         ? "Nong Phum can't read PDFs right now. Try taking a photo of the document instead."
