@@ -12,8 +12,90 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      ai_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          id: string
+          message: string | null
+          provider: string
+          status: string
+          task: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          message?: string | null
+          provider: string
+          status: string
+          task: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          message?: string | null
+          provider?: string
+          status?: string
+          task?: string
+        }
+        Relationships: []
+      }
+      ai_settings: {
+        Row: {
+          default_provider: string | null
+          fallback_provider: string | null
+          id: boolean
+          model_overrides: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          default_provider?: string | null
+          fallback_provider?: string | null
+          id?: boolean
+          model_overrides?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          default_provider?: string | null
+          fallback_provider?: string | null
+          id?: boolean
+          model_overrides?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       benefit_profiles: {
         Row: {
           birth_year: number | null
@@ -934,6 +1016,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "member"],
