@@ -39,6 +39,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletions: {
+        Row: {
+          aivora_user_id: string | null
+          deleted_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          removed: Json
+          requested_by: string
+          user_id: string
+        }
+        Insert: {
+          aivora_user_id?: string | null
+          deleted_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          removed?: Json
+          requested_by?: string
+          user_id: string
+        }
+        Update: {
+          aivora_user_id?: string | null
+          deleted_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          removed?: Json
+          requested_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_events: {
         Row: {
           created_at: string

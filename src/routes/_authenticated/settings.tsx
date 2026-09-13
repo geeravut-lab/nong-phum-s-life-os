@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { DeleteAccountCard } from "@/components/DeleteAccountCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n, type Lang } from "@/lib/i18n";
 
@@ -126,6 +127,8 @@ function SettingsPage() {
         <Button variant="outline" onClick={signOut}>
           {t.signOut}
         </Button>
+
+        <DeleteAccountCard />
       </div>
     </AppShell>
   );
