@@ -376,3 +376,14 @@ export function assertAiProviderConfig(): void {
   }
   resolveFallbackFromEnv();
 }
+
+/**
+ * A model handle for an arbitrary ID on `id`, bypassing ai_settings. Used by
+ * the admin console's Test button, which must exercise the exact ID the admin
+ * is about to save rather than whatever is currently in effect.
+ */
+export function modelForId(id: ProviderId, modelId: string): LanguageModel {
+  const apiKey = apiKeyFor(id);
+  if (!apiKey) throw new Error(`${PROVIDERS[id].envKey} is not set.`);
+  return PROVIDERS[id].create(apiKey)(modelId);
+}
