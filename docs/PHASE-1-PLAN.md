@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | 1 | **1.8 (hotfix)** | Timezone — Asia/Bangkok ทุกจุดที่ตัดสินว่า "วันนี้คือวันไหน" | ✅ `f4f5f69` | บั๊กที่ผู้ใช้เจอทุกเช้า 00:00–07:00 แก้ได้ 7 จุดโดยไม่แตะ schema ไม่มีเหตุผลให้รอ 1.2 |
 | 2 | **1.6** | i18n guard — บังคับ key ครบสองภาษาตอน build | ✅ `777f553` | ต้องมาก่อน 1.1 เพราะหน้า Admin จะเพิ่ม key ใหม่หลายสิบตัว ใส่ guard ก่อนแล้วของใหม่จะถูกบังคับตั้งแต่บรรทัดแรก |
-| 3 | **1.1** | Admin Console + AI provider/model switching | 1.1.1–1.1.4 ✅ · 1.1.5–1.1.8 ⏳ | ติดปัญหา quota รายวัน แก้แล้วได้ใช้ทันที และเป็นฐานของ Admin ที่ขั้นอื่นต้องใช้ |
+| 3 | **1.1** | Admin Console + AI provider/model switching | ✅ ทั้งขั้น (เหลือ cron ล้าง ai_events → 1.3) | ติดปัญหา quota รายวัน แก้แล้วได้ใช้ทันที และเป็นฐานของ Admin ที่ขั้นอื่นต้องใช้ |
 | 4 | **1.7** | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว | ⏳ | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict |
 | 5 | **1.2 + 1.8 (schema)** | Data integrity & deletion path + คำถามเชิง schema เรื่องเวลา | ⏳ | งาน schema ยิ่งมีข้อมูลจริงมากยิ่งเติม FK ย้อนหลังยาก · การตัดสินใจเรื่อง attachments (1.9) ต้องทำในรอบนี้ |
 | 6 | **1.9** | แนบไฟล์ | ⏳ | ต้องรอ FK จาก 1.2 |
@@ -55,8 +55,8 @@ Admin เปิดหน้าเว็บ เลือก provider และ mo
       ```
       (uuid = บัญชี `geeravut@gmail.com` · `user_roles` ไม่มี INSERT policy ให้ผู้ใช้ทั่วไป จึงต้องรันใน Dashboard เท่านั้น — ถูกต้องแล้ว)
 - [x] guard ฝั่ง server — `requireAdmin` ใน `auth-middleware.ts` ต่อจาก `requireSupabaseAuth` แล้ว `rpc('has_role')` (`af23c77`)
-- [ ] Route `/admin` + ซ่อนเมนูฝั่ง client → ทำใน 1.1.6 (client เรียก `supabase.rpc('has_role', …)` ได้ตรง ๆ)
-- [x] ลบคอมเมนต์ "automatically generated" ใน `auth-middleware.ts` (`af23c77`) — `auth-attacher.ts` และ `client.server.ts` ยังมีอยู่ ไม่ได้แตะเพราะไม่ได้แก้ไฟล์นั้น
+- [x] Route `/admin` + ซ่อนเมนูฝั่ง client — ทำใน 1.1.6 (`c7956af`): `beforeLoad` เรียก `has_role` → redirect, `useIsAdmin` ซ่อนเมนู
+- [x] ลบคอมเมนต์ "automatically generated" ใน `auth-middleware.ts` (`af23c77`) · `auth-attacher.ts` และ `client.server.ts` (`c20cefd`)
 
 > **สำคัญ:** guard ฝั่ง client อย่างเดียวไม่พอ ใครก็พิมพ์ URL เข้าได้ การตรวจสิทธิ์จริงต้องอยู่ฝั่ง server ทุกครั้ง
 
@@ -98,7 +98,7 @@ ai_settings (DB)  →  env (AI_PROVIDER)  →  ค่า default ในโค้
 - [x] `supportsPdf: boolean` → **`capabilities: { pdf, audio }`** ตั้งแต่รอบนี้ (ตรวจเอกสาร 2026-09-12: Google รับ audio ในการเรียกแชท · Anthropic รับ text+image เท่านั้น · OpenAI ต้องใช้ endpoint ถอดความแยก) — 1.1.6 และ 1.10 ต้องใช้
 - [x] save guard: `updateAiSettings` ใน `admin.functions.ts` ปฏิเสธ provider ที่ไม่มี key **พร้อมชื่อ env var** และปฏิเสธ fallback ซ้ำ default
 
-> **⚠️ `getAiConfig` / `updateAiSettings` ยังไม่อยู่ใน production bundle** — TanStack Start emit server function เฉพาะที่มี route import ถึง จนกว่า 1.1.6 จะสร้าง `/admin` ที่ import สองฟังก์ชันนี้ **ทางเดียวที่แก้ `ai_settings` บน production คือ SQL Editor** (มีผลใน 30 วิ) ส่วนโมดูล provider อยู่ใน bundle จริงผ่านทาง chat — พิสูจน์แล้วด้วยการปลูก override ปลอมใน DB แล้วเห็น `ai_events` จาก production
+> **แก้แล้วใน 1.1.6:** `getAiConfig` / `updateAiSettings` เคยถูก tree-shake ออกจาก production bundle เพราะไม่มี route import ถึง (grep `dist/server` = 0) — พอ `/admin` import ก็อยู่ใน bundle (= 3) และเปิดหน้าบน production ได้ข้อมูลจริง
 
 > **ที่คาดไว้ก่อนลงมือ vs ที่เกิดจริง:** คาดว่า async จะลามไป call site 5 จุด (6 ไฟล์) —
 > ของจริงลามน้อยกว่านั้น เพราะ call site ทั้ง 5 เรียกผ่าน `withProviderFallback()` ที่ async อยู่แล้ว
@@ -116,25 +116,30 @@ ai_settings (DB)  →  env (AI_PROVIDER)  →  ค่า default ในโค้
 - [ ] เขียนให้ชัดใน UI ว่า "การเปลี่ยนแปลงมีผลภายใน 1 นาที" → 1.1.6 (`getAiConfig` ส่ง `cacheTtlSeconds: 30` มาให้แสดงแล้ว)
 - [x] บน Netlify Functions แต่ละ instance มี cache ของตัวเอง — TTL คือสิ่งเดียวที่รับประกันความสอดคล้อง (คอมเมนต์ไว้ที่ค่าคงที่ในโค้ด)
 
-## 1.1.5 ดึงรายชื่อ model ที่ใช้ได้จริง
+## 1.1.5 ดึงรายชื่อ model ที่ใช้ได้จริง ✅ `f896123` + `55bb5e9`
 
 Admin ต้องเห็นรายการ model ทั้งหมดของแต่ละเจ้า ไม่ใช่พิมพ์ชื่อเอง (พิมพ์ผิดแล้วพังตอน runtime)
 
-- [ ] เขียน `listModels(provider)` เรียก API รายชื่อ model ของแต่ละเจ้า
-- [ ] **ตรวจ endpoint จากเอกสารทางการของแต่ละเจ้าก่อน อย่าเดาจากความจำ** และใส่คอมเมนต์กำกับวันที่ตรวจสอบ
-- [ ] cache ผลลัพธ์ 1 ชั่วโมง
-- [ ] ถ้าเจ้าไหนไม่มี API รายชื่อ model ให้ fallback เป็นรายการที่ hardcode ไว้ในโค้ด พร้อมแสดงในหน้า Admin ว่ารายการนี้มาจากไหน (live หรือ hardcode)
-- [ ] แสดงเฉพาะ provider ที่มี API key ใน env
+- [x] `listModels(provider)` ใน `src/lib/ai-models.server.ts` — endpoint ตรวจจากเอกสารทางการ 2026-09-13 อ้างอิงไว้ในหัวไฟล์: Google `GET /v1beta/models` (กรอง `supportedGenerationMethods` มี `generateContent`) · Anthropic `GET /v1/models` (ให้ `capabilities.image_input`/`pdf_input` มาด้วย → แสดง `✕img` ในช่อง document) · OpenAI `GET /v1/models` (ไม่มี type field ใช้ prefix `gpt-`/`o<เลข>` กรอง)
+- [x] cache 1 ชั่วโมงต่อ instance — **cache ผลที่ล้มเหลวด้วย** ไม่งั้น vendor ล่มจะโดนยิงทุกครั้งที่เปิดหน้า
+- [x] ล้มเหลว/ไม่มี key → คืนรายการ hardcode พร้อม `source: "hardcoded"` + `error` · หน้า Admin โชว์ป้าย "รายการจาก API" / "รายการในโค้ด" และข้อความ error ใน tooltip
+- [x] แสดงเฉพาะ provider ที่มี key
+- [x] **ต้องใช้ base URL เดียวกับที่ AI SDK ใช้** — พบบน production ว่า `@ai-sdk/openai` อ่าน `OPENAI_BASE_URL` และ `@ai-sdk/anthropic` อ่าน `ANTHROPIC_BASE_URL` (ตรวจใน `node_modules/@ai-sdk/*/dist` 2026-09-14) รอบแรก listModels ยิง host สาธารณะของ vendor ด้วย token ของ gateway → 401 ทั้งที่แชทผ่าน แก้แล้ว + โชว์ host ที่ใช้จริงใต้ชื่อ provider
 
-> **ข้อควรระวัง:** ไม่ใช่ทุก model ที่อ่านรูปและ PDF ได้ ถ้า admin เลือก model ที่ไม่รองรับมาใช้กับงาน `document` หน้า Docs จะพัง — ถ้า API ของเจ้านั้นบอก capability มาด้วยให้ใช้กรอง ถ้าไม่บอก ให้มีปุ่ม "ทดสอบ" ในหน้า Admin ที่ยิงคำขอจริงหนึ่งครั้งก่อนบันทึก
+> **คำตอบเรื่อง quota Gemini free tier — นับ RPD แยกรายโมเดล** (ตัดสินว่า console นี้แก้ปัญหาได้จริงแม้มี key เจ้าเดียว)
+> - เอกสารทางการ ai.google.dev/gemini-api/docs/rate-limits ระบุตรง ๆ: *"Each model variation has an associated rate limit"* และ *"Limits vary depending on the specific model being used"* (limit ผูกกับ project ไม่ใช่ API key แต่**นิยามต่อ model**)
+> - หลักฐานเชิงประจักษ์ 2026-09-13 ระหว่างทดสอบ 1.1.8: การทดสอบทั้งวันทำให้ `gemini-3.7-flash` ติด **429 quota exceeded** ขณะที่ **key เดียวกัน นาทีเดียวกัน** `gemini-3.6-flash` ✅ 1.5 วิ และ `gemini-3.8-flash` ✅ 4.5 วิ → สลับ chat ไป 3.6 ผ่านหน้า Admin แล้วแชทกลับมาใช้ได้ทันที
+> - เคยเห็นแบบเดียวกันตอน Phase 0 (3.8 429 ขณะ 3.7 ผ่าน)
 
-## 1.1.6 หน้า Admin
+## 1.1.6 หน้า Admin ✅ `c7956af`
 
-- [ ] เลือก **default provider** และ **fallback provider** (fallback เลือก "ปิด" ได้)
-- [ ] เลือก model แยกตามงาน — เป็นตาราง provider × task (`chat` / `document` / `reasoning`)
-- [ ] ปุ่ม **ทดสอบ** ยิงคำขอจริงไปยัง provider+model ที่เลือก แสดงผลว่าสำเร็จหรือ error อะไร **ก่อน**บันทึก
-- [ ] แสดงสถานะปัจจุบัน: ใช้เจ้าไหนอยู่, ใครแก้ล่าสุด, เมื่อไหร่
-- [ ] ใช้ระบบดีไซน์เดิมของแอปให้เข้ากับหน้าอื่น: **Tailwind v4** (token อยู่ใน `@theme inline` ที่ `src/styles.css`), **shadcn/ui** (`src/components/ui/`) และฟอนต์ **IBM Plex Sans Thai** — เลย์เอาต์ห่อด้วย `AppShell` เหมือนทุกหน้า
+- [x] `/admin` ใน `src/routes/_authenticated/admin.tsx` — `beforeLoad` เรียก `has_role` แล้ว redirect ไป `/today` ถ้าไม่ใช่ admin · เมนู "ผู้ดูแลระบบ" โชว์เฉพาะ admin (`useIsAdmin` hook) — ทั้งสองเป็นความสะดวก ของจริงคือ `requireAdmin` + RLS
+- [x] เลือก default / fallback provider (fallback มี "ปิด") · provider ที่ไม่มี key ถูก disable พร้อมบอกชื่อ env
+- [x] ตาราง provider × task · Select จากรายการ live · ค่า "ค่าเริ่มต้น · <id ในโค้ด>" คือ null
+- [x] ปุ่ม **ทดสอบ** ต่อช่อง — `testAiModel` ยิง `generateText` จริง 1 ครั้ง (`maxOutputTokens: 256` เพราะ Gemini 3.x คิดก่อนตอบ 16 token ได้คำตอบว่าง) งาน document แนบ PNG 1×1 เพื่อพิสูจน์ว่ารับรูปได้ · แสดง ✅/❌ + ms + error
+- [x] สถานะปัจจุบัน: provider/model ที่มีผลจริง · แก้ล่าสุดโดยใคร (resolve display_name ฝั่ง server เพราะ profiles RLS อ่านได้แค่ตัวเอง) เมื่อไหร่ · "มีผลภายใน 1 นาที"
+- [x] Tailwind v4 + shadcn/ui (Select/Table/Badge/Button/Skeleton) ใน `AppShell` · i18n 42 key ครบสองภาษา EN เขียนเป็นภาษาคน
+- [x] host ของแต่ละ provider แสดงใต้ชื่อ (เพื่อเห็นว่าใช้ gateway หรือ vendor ตรง)
 
 ## 1.1.7 บันทึกเหตุการณ์ AI — ตัวช่วยที่จะได้ใช้ทุกวัน
 
@@ -142,17 +147,24 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 - [x] ตาราง `ai_events` (`b28c373`): `provider`, `task`, `status` (ok / fallback / error), `error_code`, `message`, `created_at` + index · admin อ่านได้อย่างเดียว **ไม่มี write policy เลย** server เขียนผ่าน service role — ต้องทำในรอบ 1.1.3 เพราะ runtime guard ต้องเขียนลงตารางนี้
 - [x] log ตอน fallback และ error เท่านั้น (primary พัง / fallback ไม่มี key / fallback พังซ้ำ / guard) **ไม่ log ตอนสำเร็จ** (`18c27e7`)
-- [ ] หน้า Admin แสดง 50 รายการล่าสุด
+- [x] หน้า Admin แสดง 50 รายการล่าสุด (`listAiEvents` → ตารางท้ายหน้า) (`c7956af`)
 - [ ] เพิ่มงานลบ event เก่ากว่า 30 วัน เข้าไปใน cron ของขั้น 1.3
 
-## 1.1.8 ทดสอบ
+## 1.1.8 ทดสอบ ✅ (2026-09-13/14 ใช้ admin/member ชั่วคราว ลบแล้ว)
 
-- [ ] admin เปลี่ยน provider แล้วมีผลภายใน 1 นาที โดยไม่ deploy
-- [ ] admin เปลี่ยน model ของงาน `document` แล้วอัปโหลดเอกสาร → ใช้ model ใหม่จริง
-- [ ] ผู้ใช้ที่ไม่ใช่ admin เข้า `/admin` ไม่ได้ ทั้งผ่านเมนูและพิมพ์ URL ตรง
-- [ ] เลือก provider ที่ไม่มี key → บันทึกไม่ได้ พร้อมข้อความบอกว่าขาด env ตัวไหน
-- [ ] ทำให้ quota เต็มจริง (หรือใส่ key ผิด) → fallback ทำงาน และมีแถวใน `ai_events`
+- [x] admin เปลี่ยน model แล้วมีผลทันทีโดยไม่ deploy — **เคสจริง**: 3.7-flash 429 → เปลี่ยน chat เป็น 3.6-flash ผ่าน UI → แชทตอบใน 5.8 วิ
+- [x] เปลี่ยน model ของ `document` → ปุ่มทดสอบยิงรูปจริง ✅ บน 3.6-flash (พิสูจน์ routing ด้วย override ปลอม → ai_events บันทึกชื่อ model ปลอมจาก production ตอน 1.1.3)
+- [x] member เข้า `/admin` → redirect `/today` · ไม่มีเมนู · เรียก server fn ตรง → `Forbidden: admin only`
+- [x] provider ไม่มี key → Select disable + ชื่อ env · server ปฏิเสธ `OPENAI_API_KEY is not set` (ทดสอบตอน 1.1.3)
+- [x] key ผิดจริง (`ANTHROPIC_API_KEY=invalid`, primary anthropic, fallback google) → `401 API key is invalid → retried on "google"` → แชทตอบ · แถว `fallback` ใน ai_events และแสดงในตาราง
+- [x] **หลัง deploy `getAiConfig`/`updateAiSettings`/`testAiModel`/`listAiEvents` อยู่ใน production bundle** — grep `dist/server` เจอ 3 ไฟล์ (เดิม 0) และเปิด `/admin` บน production ด้วย admin ชั่วคราวได้ข้อมูลจริง
+- [x] console บน production ไม่มี error ใหม่ (warning "state update on unmounted component" ที่เห็นใน dev เป็น artifact ของ HMR — bisect แล้ว ไม่เกิดบน server ที่ start ใหม่และไม่เกิดบน production)
 
+> **พบบน production ระหว่างทดสอบ — ต้องรู้ก่อนตั้ง fallback:**
+> - Netlify **AI Gateway** เปิดอยู่: `ANTHROPIC_BASE_URL` และ `OPENAI_BASE_URL` ชี้มาที่ `lavieos.netlify.app` เอง พร้อม token ของ gateway (ไม่ใช่ key ของ vendor)
+> - ผ่าน gateway นี้ **OpenAI ใช้ได้จริง** — `gpt-5.6-luna` ตอบใน ~800 ms (provider ที่เคยติดป้าย UNTESTED)
+> - แต่ **Anthropic ผ่าน gateway ตอบ `404 Not Found` ใน 59 ms** ทุกรุ่น และ `/models` ของ gateway ตอบ `400 Invalid Content-Type` (ไม่รองรับ GET) → รายการ Anthropic/OpenAI บน production เป็น "รายการในโค้ด" ถาวรตราบใดที่ยังใช้ gateway
+> - **ผลคือ `AI_FALLBACK_PROVIDER=anthropic` บน production ไม่เคยทำงานได้** — ควรเปลี่ยน fallback เป็น `openai` ผ่านหน้า Admin (หรือใส่ ANTHROPIC key จริงและถอด gateway ออกจาก Anthropic)
 ---
 
 # 1.2 Data integrity & deletion path
