@@ -142,13 +142,15 @@ ALTER TABLE public.incomes
 --                         is what closes the orphan-file hole
 --            'failed'     upload or analysis failed; a cron (1.3) sweeps these
 --
---    Existing rows are all AI-analysed and complete, so the defaults are the
---    correct backfill.
+--    status already exists (TEXT NOT NULL DEFAULT 'ready' since the first
+--    migration, never read or written by code, every live row is 'ready');
+--    it only gains the CHECK. kind is new. Existing rows are all AI-analysed
+--    and complete, so the defaults are the correct backfill.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.documents
   ADD COLUMN kind text NOT NULL DEFAULT 'analyzed'
     CHECK (kind IN ('analyzed', 'attachment')),
-  ADD COLUMN status text NOT NULL DEFAULT 'ready'
+  ADD CONSTRAINT documents_status_check
     CHECK (status IN ('pending', 'ready', 'failed'));
 
 -- Documents that never finished should not clutter lists or feed the AI context.

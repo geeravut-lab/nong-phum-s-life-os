@@ -249,6 +249,7 @@ export type Database = {
           family_id: string | null
           id: string
           is_shared: boolean
+          kind: string
           mime_type: string | null
           status: string
           storage_path: string | null
@@ -268,6 +269,7 @@ export type Database = {
           family_id?: string | null
           id?: string
           is_shared?: boolean
+          kind?: string
           mime_type?: string | null
           status?: string
           storage_path?: string | null
@@ -287,6 +289,7 @@ export type Database = {
           family_id?: string | null
           id?: string
           is_shared?: boolean
+          kind?: string
           mime_type?: string | null
           status?: string
           storage_path?: string | null

@@ -186,8 +186,8 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 > 4. ล้าง orphan (ข้อแรกของขอบเขต) ต้อง**ลิสต์แถวที่จะลบออกมาดูก่อน** แล้วค่อยลบ ไม่ใช่ `DELETE … WHERE NOT EXISTS` ทีเดียว
 
 ขอบเขต:
-- [ ] ล้าง orphan ที่มีอยู่ก่อน (ไม่งั้นสร้าง constraint ไม่ผ่าน)
-- [ ] เติม FK + `ON DELETE CASCADE` ทุกตารางที่อ้าง user — **รวม `aivora_links` ด้วย**: ตารางนี้มี FK ไป `auth.users` + CASCADE อยู่แล้ว (เป็นตารางเดียวที่มี) ให้ใช้เป็นต้นแบบ และตรวจว่าตอนลบบัญชี SSO แถวใน `aivora_links` หายตามจริง ไม่งั้น hub id นั้นจะล็อกอินใหม่ไม่ได้ตลอดไป (`findOrCreateLocalUser` จะเจอ link ที่ชี้ไป user ที่ไม่มี → `session_failed`)
+- [x] ล้าง orphan ที่มีอยู่ก่อน — สำรวจ 2026-09-14: orphan แถว = **0** ทุกตาราง จึงไม่ต้องลบแถวใด · ไฟล์กำพร้า 1 ไฟล์ลบผ่าน Storage API หลังพี่สำรอง (`backups/20260914-053550`)
+- [x] เติม FK + `ON DELETE CASCADE` ทุกตารางที่อ้าง user — migration `20260914120000_data_integrity.sql` apply แล้ว: FK → `auth.users` 15 ตัว (CASCADE; `ai_settings.updated_by` SET NULL) · ซ่อม `incomes.family_id`/`source_document_id` → SET NULL · default วันที่ไทย · `documents.kind` ใหม่ + CHECK บน `status` เดิม (คอลัมน์ `status` มีอยู่แล้วตั้งแต่ migration แรก — สำรวจรอบแรกพลาด push ครั้งแรก rollback ทั้งไฟล์แล้วแก้) · `aivora_links` มี CASCADE อยู่แล้ว
 - [ ] ลบไฟล์ใน storage เมื่อลบ document / ลบบัญชี
 - [ ] จัดการกรณีอัปโหลดสำเร็จแต่ประมวลผลล้มเหลว — ต้องไม่ทิ้งไฟล์ค้าง (ลำดับใน `doc-intake.ts` คือ upload → analyze → insert; ถ้า analyze โยน ไฟล์อยู่ใน bucket แล้วโดยไม่มีแถว — ยืนยันอีกครั้งตอนล้างข้อมูลทดสอบ 2026-09-08 เจอไฟล์กำพร้า 1 ไฟล์)
 - [ ] flow ลบบัญชีของผู้ใช้เอง + audit log (ฐานของ PDPA)
@@ -198,7 +198,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 - [ ] ตัดสินใจ design ของแนบไฟล์ (1.9 ทางที่ 1 หรือ 2) **ในรอบนี้** แล้วค่อยเขียนโค้ดที่ 1.9
 - [ ] คำถามเชิง schema จาก 1.8 ที่รอตอบในรอบนี้ (ดู 1.8)
 
-**สถานะ 2026-09-14:** สำรวจเสร็จ (orphan = 0 ทุกตาราง · ไฟล์กำพร้า 1) · ตัดสินใจครบ · migration เขียนแล้วที่ `supabase/migrations/20260914120000_data_integrity.sql` **ยังไม่ apply** รอสำรองข้อมูลด้วย `scripts/backup-db.sh` / `.ps1` ก่อน · ไฟล์กำพร้า 1 ไฟล์รอลบผ่าน Storage API หลังสำรอง
+**สถานะ 2026-09-14:** migration apply แล้ว · **ทดสอบ CASCADE ด้วย user ชั่วคราว 2 คน (A เจ้าของครอบครัว, B สมาชิก) ผ่านตามที่ทำนายทุกข้อ:** ลบ A → 13 ตารางของ A เหลือ 0 · ครอบครัวสลาย B หลุดจาก family_members · เอกสารที่ B แชร์ยังอยู่ `family_id → NULL` · งานของ B ยังอยู่ `assigned_helper_id → NULL` · รีวิวบนงานนั้นหายตาม helper · **ไฟล์ของ A ใน storage ยังอยู่** (ยืนยันว่า flow ลบบัญชีต้องลบไฟล์ผ่าน API เอง) · ผู้ใช้จริง 3 คนตรงกับ backup ทุกตาราง
 
 ---
 
