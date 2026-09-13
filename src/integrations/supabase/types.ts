@@ -96,6 +96,24 @@ export type Database = {
         }
         Relationships: []
       }
+      aivora_links: {
+        Row: {
+          aivora_user_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          aivora_user_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          aivora_user_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       benefit_profiles: {
         Row: {
           birth_year: number | null
