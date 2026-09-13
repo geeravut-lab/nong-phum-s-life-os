@@ -15,6 +15,32 @@ import { PROVIDER_IDS, defaultModelsFor, providerEnvKey, type ProviderId } from 
 //             header Authorization: Bearer …
 //             → { data: [{ id, owned_by, created }] }   (no capability data)
 //             developers.openai.com/api/reference/resources/models/methods/list
+//
+// Base URLs: the AI SDK providers honour these environment overrides (read in
+// node_modules/@ai-sdk/*/dist on 2026-09-14), so the list calls must use the
+// same base or a gateway token that works for chat gets a 401 from the
+// vendor's public host here:
+//   @ai-sdk/openai    OPENAI_BASE_URL      default https://api.openai.com/v1
+//   @ai-sdk/anthropic ANTHROPIC_BASE_URL   default https://api.anthropic.com/v1
+//   @ai-sdk/google    (no env override)    https://generativelanguage.googleapis.com/v1beta
+
+const DEFAULT_BASE_URL: Record<ProviderId, string> = {
+  openai: "https://api.openai.com/v1",
+  anthropic: "https://api.anthropic.com/v1",
+  google: "https://generativelanguage.googleapis.com/v1beta",
+};
+const BASE_URL_ENV: Partial<Record<ProviderId, string>> = {
+  openai: "OPENAI_BASE_URL",
+  anthropic: "ANTHROPIC_BASE_URL",
+};
+
+/** The base URL the AI SDK will actually call for `id` — env override first, vendor default otherwise. */
+export function providerBaseUrl(id: ProviderId): string {
+  const envName = BASE_URL_ENV[id];
+  const fromEnv = envName ? process.env[envName]?.trim() : undefined;
+  const base = fromEnv || DEFAULT_BASE_URL[id];
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+}
 
 export type ModelInfo = {
   id: string;
@@ -70,7 +96,7 @@ async function fetchGoogle(key: string): Promise<ModelInfo[]> {
   const out: ModelInfo[] = [];
   let pageToken: string | undefined;
   do {
-    const url = new URL("https://generativelanguage.googleapis.com/v1beta/models");
+    const url = new URL(`${providerBaseUrl("google")}/models`);
     url.searchParams.set("key", key);
     url.searchParams.set("pageSize", "1000");
     if (pageToken) url.searchParams.set("pageToken", pageToken);
@@ -100,7 +126,7 @@ async function fetchAnthropic(key: string): Promise<ModelInfo[]> {
   const out: ModelInfo[] = [];
   let afterId: string | undefined;
   do {
-    const url = new URL("https://api.anthropic.com/v1/models");
+    const url = new URL(`${providerBaseUrl("anthropic")}/models`);
     url.searchParams.set("limit", "1000");
     if (afterId) url.searchParams.set("after_id", afterId);
     const json = (await getJson(url.toString(), {
@@ -122,7 +148,7 @@ async function fetchAnthropic(key: string): Promise<ModelInfo[]> {
 
 async function fetchOpenAI(key: string): Promise<ModelInfo[]> {
   type Row = { id: string };
-  const json = (await getJson("https://api.openai.com/v1/models", {
+  const json = (await getJson(`${providerBaseUrl("openai")}/models`, {
     Authorization: `Bearer ${key}`,
   })) as { data?: Row[] };
   return (json.data ?? [])

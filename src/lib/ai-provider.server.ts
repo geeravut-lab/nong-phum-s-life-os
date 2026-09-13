@@ -40,9 +40,10 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     create: (k) => createAnthropic({ apiKey: k }),
   },
   // developers.openai.com/api/docs/models
-  // UNTESTED: no OPENAI_API_KEY has ever been set on this project, so no request
-  // has been made against these IDs. Re-check the model list and run a real call
-  // before turning this provider on.
+  // 2026-09-14: gpt-5.6-luna answered a test call from the admin console on
+  // production, where OPENAI_API_KEY and OPENAI_BASE_URL point at a gateway —
+  // so these IDs work through that gateway. They have not been exercised
+  // against api.openai.com directly; the other two IDs are untested anywhere.
   openai: {
     envKey: "OPENAI_API_KEY",
     models: {

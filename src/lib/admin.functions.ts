@@ -35,6 +35,7 @@ export const getAiConfig = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw error;
 
+    const { listAllModels, providerBaseUrl } = await import("./ai-models.server");
     const available = new Set(ai.availableProviders());
     const providers = ai.PROVIDER_IDS.map((id) => ({
       id,
@@ -42,6 +43,7 @@ export const getAiConfig = createServerFn({ method: "GET" })
       envKey: ai.providerEnvKey(id),
       defaults: ai.defaultModelsFor(id),
       capabilities: ai.providerCapabilities(id),
+      baseUrl: providerBaseUrl(id),
     }));
 
     const effectiveProvider = await ai.resolveProvider("config");
@@ -52,7 +54,6 @@ export const getAiConfig = createServerFn({ method: "GET" })
     ) as Record<TaskKind, string>;
 
     // Live model catalogues for every provider that has a key (1h cache).
-    const { listAllModels } = await import("./ai-models.server");
     const models = await listAllModels();
 
     // updated_by is a uuid; profiles RLS only lets a user read their own row,

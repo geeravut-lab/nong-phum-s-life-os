@@ -261,6 +261,9 @@ function AdminPage() {
                         </Badge>
                         {p.capabilities.audio && <Badge variant="outline">audio</Badge>}
                       </div>
+                      <p className="mt-1 max-w-[14rem] break-all font-mono text-[10px] text-muted-foreground" title={p.baseUrl}>
+                        {new URL(p.baseUrl).host}
+                      </p>
                       {list?.error && (
                         <p className="mt-1 max-w-[14rem] text-xs text-destructive" title={list.error}>
                           {t.adminListFailed}
