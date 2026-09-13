@@ -51,11 +51,27 @@ export const getAiConfig = createServerFn({ method: "GET" })
       ),
     ) as Record<TaskKind, string>;
 
+    // Live model catalogues for every provider that has a key (1h cache).
+    const { listAllModels } = await import("./ai-models.server");
+    const models = await listAllModels();
+
+    // updated_by is a uuid; profiles RLS only lets a user read their own row,
+    // so the editor's name is looked up server-side.
+    let updatedByLabel: string | null = null;
+    if (settings?.updated_by) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: p } = await supabaseAdmin.from("profiles").select("display_name").eq("id", settings.updated_by).maybeSingle();
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(settings.updated_by);
+      updatedByLabel = p?.display_name ?? u.user?.email ?? settings.updated_by;
+    }
+
     return {
       settings: settings
         ? { ...settings, model_overrides: (settings.model_overrides ?? {}) as ModelOverrides }
         : null,
+      updatedByLabel,
       providers,
+      models,
       env: {
         AI_PROVIDER: process.env["AI_PROVIDER"]?.trim() || null,
         AI_FALLBACK_PROVIDER: process.env["AI_FALLBACK_PROVIDER"]?.trim() || null,
@@ -115,4 +131,68 @@ export const updateAiSettings = createServerFn({ method: "POST" })
 
     ai.invalidateAiSettingsCache();
     return { ...row, model_overrides: (row.model_overrides ?? {}) as ModelOverrides };
+  });
+
+/**
+ * One real request against a provider + model ID, before anything is saved.
+ * The document task sends a 1×1 PNG along with the prompt so a text-only
+ * model fails here instead of on a user's first upload.
+ */
+export const testAiModel = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z.object({ provider: ProviderIdSchema, task: TaskSchema, modelId: z.string().trim().min(1).max(200) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const ai = await import("./ai-provider.server");
+    const { generateText } = await import("ai");
+    if (!ai.availableProviders().includes(data.provider)) {
+      return { ok: false as const, ms: 0, error: `${ai.providerEnvKey(data.provider)} is not set in the environment.` };
+    }
+    const started = Date.now();
+    try {
+      const model = ai.modelForId(data.provider, data.modelId);
+      const result = await generateText({
+        model,
+        // Gemini 3.x thinks before it answers and that counts against this budget;
+        // 16 tokens produced an empty reply on a model that was in fact healthy.
+        maxOutputTokens: 256,
+        messages: [
+          {
+            role: "user",
+            content:
+              data.task === "document"
+                ? [
+                    { type: "text", text: "Reply with the single word OK." },
+                    // 1×1 transparent PNG — the smallest thing that still exercises image input.
+                    {
+                      type: "image",
+                      image:
+                        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+                      mediaType: "image/png",
+                    },
+                  ]
+                : [{ type: "text", text: "Reply with the single word OK." }],
+          },
+        ],
+      });
+      return { ok: true as const, ms: Date.now() - started, reply: result.text.slice(0, 80) };
+    } catch (err) {
+      const status = (err as { statusCode?: number } | null)?.statusCode;
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, ms: Date.now() - started, error: `${status ? status + " " : ""}${message.slice(0, 300)}` };
+    }
+  });
+
+/** Latest fallbacks and errors, newest first. RLS already limits reads to admins; the middleware is the second gate. */
+export const listAiEvents = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("ai_events")
+      .select("id, provider, task, status, error_code, message, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    return data ?? [];
   });

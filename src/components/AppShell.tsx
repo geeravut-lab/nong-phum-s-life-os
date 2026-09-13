@@ -8,6 +8,7 @@ import {
   MessageCircleHeart,
   MoreHorizontal,
   Settings,
+  ShieldEllipsis,
   Users,
   Wallet,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
@@ -32,6 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { data: isAdmin } = useIsAdmin();
 
   const nav = [
     { to: "/today", label: t.navToday, icon: Home },
@@ -71,6 +74,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         ))}
         <div className="mt-auto flex flex-col gap-1">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent"
+              activeProps={{ className: "bg-primary/10 text-primary" }}
+            >
+              <ShieldEllipsis className="size-4" />
+              {t.navAdmin}
+            </Link>
+          )}
           <Link
             to="/settings"
             className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent"
@@ -143,6 +156,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {item.label}
                 </Link>
               ))}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+                  activeProps={{ className: "bg-primary/10 text-primary" }}
+                >
+                  <ShieldEllipsis className="size-4" />
+                  {t.navAdmin}
+                </Link>
+              )}
               <Link
                 to="/settings"
                 onClick={() => setMoreOpen(false)}
