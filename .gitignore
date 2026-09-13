@@ -37,3 +37,6 @@ dist-ssr
 
 # Supabase CLI scratch
 supabase/.temp
+
+# Database dumps contain e-mails and personal data; the repo is public.
+backups/
