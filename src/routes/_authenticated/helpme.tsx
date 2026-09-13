@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,22 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import { draftJob, matchHelpers, suggestHelperSkills } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/helpme")({
-  head: () => ({
-    meta: [
-      { title: "ช่วยฉันที | น้องภูมิ" },
-      {
-        name: "description",
-        content: "เล่าปัญหาให้น้องภูมิ แล้วระบบจะแปลงเป็นงานและจับคู่ผู้ช่วยใกล้บ้านให้อัตโนมัติ",
-      },
-      { property: "og:title", content: "ช่วยฉันที | น้องภูมิ" },
-      {
-        property: "og:description",
-        content: "AI รับเรื่อง เข้าใจงาน หาผู้ช่วยที่เหมาะที่สุด นัดหมาย และติดตามงานให้จบ",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("helpme") }),
   component: HelpMePage,
 });
 
@@ -133,7 +119,10 @@ function RequesterTab() {
       budget_max: draft.budgetMax,
       ai_extract: { neededSkills: draft.neededSkills },
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(t.jobPosted);
     setDraft(null);
     setText("");
@@ -150,7 +139,12 @@ function RequesterTab() {
     }
   };
 
-  const acceptOffer = async (offerId: string, jobId: string, helperId: string, price: number | null) => {
+  const acceptOffer = async (
+    offerId: string,
+    jobId: string,
+    helperId: string,
+    price: number | null,
+  ) => {
     const rate = Number(settings?.commission_rate ?? 5);
     const fee =
       settings?.revenue_mode === "service_fee"
@@ -159,7 +153,12 @@ function RequesterTab() {
     await supabase.from("job_offers").update({ status: "accepted" }).eq("id", offerId);
     await supabase
       .from("jobs")
-      .update({ status: "matched", assigned_helper_id: helperId, agreed_price: price, platform_fee: fee })
+      .update({
+        status: "matched",
+        assigned_helper_id: helperId,
+        agreed_price: price,
+        platform_fee: fee,
+      })
       .eq("id", jobId);
     toast.success(t.accepted);
     qc.invalidateQueries({ queryKey: ["my-jobs"] });
@@ -186,7 +185,11 @@ function RequesterTab() {
           className="mb-3"
         />
         <Button onClick={makeDraft} disabled={busy || !text.trim()}>
-          {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+          {busy ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 size-4" />
+          )}
           {busy ? t.helpDrafting : t.helpDraftBtn}
         </Button>
       </section>
@@ -197,7 +200,10 @@ function RequesterTab() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label>{t.jobTitleLabel}</Label>
-              <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+              <Input
+                value={draft.title}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              />
             </div>
             <div className="sm:col-span-2">
               <Label>{t.jobDesc}</Label>
@@ -228,13 +234,23 @@ function RequesterTab() {
                 <Input
                   type="number"
                   value={draft.budgetMin ?? ""}
-                  onChange={(e) => setDraft({ ...draft, budgetMin: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      budgetMin: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
                 />
                 <span>–</span>
                 <Input
                   type="number"
                   value={draft.budgetMax ?? ""}
-                  onChange={(e) => setDraft({ ...draft, budgetMax: e.target.value ? Number(e.target.value) : null })}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      budgetMax: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -275,17 +291,23 @@ function RequesterTab() {
             status: string;
           }>;
           return (
-            <article key={job.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <article
+              key={job.id}
+              className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-medium">{job.title}</h3>
                   <p className="text-sm text-muted-foreground">{job.description}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {job.location_text} {job.scheduled_at ? `· ${new Date(job.scheduled_at).toLocaleString()}` : ""}
+                    {job.location_text}{" "}
+                    {job.scheduled_at ? `· ${new Date(job.scheduled_at).toLocaleString()}` : ""}
                     {job.budget_min ? ` · ${job.budget_min}–${job.budget_max} ${t.baht}` : ""}
                   </p>
                 </div>
-                <Badge>{t[STATUS_KEY[(job.status as keyof typeof STATUS_KEY) ?? "open"] ?? "statusOpen"]}</Badge>
+                <Badge>
+                  {t[STATUS_KEY[(job.status as keyof typeof STATUS_KEY) ?? "open"] ?? "statusOpen"]}
+                </Badge>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
@@ -308,7 +330,9 @@ function RequesterTab() {
 
               {matchesFor === job.id && (
                 <div className="mt-3 space-y-2">
-                  {matches.length === 0 && <p className="text-sm text-muted-foreground">{t.matching}</p>}
+                  {matches.length === 0 && (
+                    <p className="text-sm text-muted-foreground">{t.matching}</p>
+                  )}
                   {matches.map((m) => (
                     <div key={m.helperId} className="rounded-xl border border-border p-3 text-sm">
                       <div className="flex items-center justify-between">
@@ -351,9 +375,14 @@ function RequesterTab() {
 
               <div className="mt-3">
                 <p className="text-xs font-medium text-muted-foreground">{t.offers}</p>
-                {offers.length === 0 && <p className="text-sm text-muted-foreground">{t.noOffers}</p>}
+                {offers.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t.noOffers}</p>
+                )}
                 {offers.map((o) => (
-                  <div key={o.id} className="mt-2 flex items-center justify-between rounded-xl border border-border p-3 text-sm">
+                  <div
+                    key={o.id}
+                    className="mt-2 flex items-center justify-between rounded-xl border border-border p-3 text-sm"
+                  >
                     <div>
                       <p>{o.message}</p>
                       <p className="text-xs text-muted-foreground">
@@ -361,7 +390,10 @@ function RequesterTab() {
                       </p>
                     </div>
                     {o.status === "pending" && job.status === "open" ? (
-                      <Button size="sm" onClick={() => acceptOffer(o.id, job.id, o.helper_id, o.price)}>
+                      <Button
+                        size="sm"
+                        onClick={() => acceptOffer(o.id, job.id, o.helper_id, o.price)}
+                      >
                         {t.acceptOffer}
                       </Button>
                     ) : (
@@ -480,8 +512,13 @@ function HelperTab() {
       available_to: current.available_to || null,
       is_active: current.is_active,
     };
-    const { error } = await supabase.from("helper_profiles").upsert(payload, { onConflict: "user_id" });
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("helper_profiles")
+      .upsert(payload, { onConflict: "user_id" });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(t.saved);
     qc.invalidateQueries({ queryKey: ["helper-profile"] });
   };
@@ -495,7 +532,10 @@ function HelperTab() {
       price: offerPrice ? Number(offerPrice) : null,
       message: offerMsg || null,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(t.offerSent);
     setOfferFor(null);
     setOfferPrice("");
@@ -507,9 +547,18 @@ function HelperTab() {
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="font-semibold">{t.helperProfile}</h2>
         <p className="text-sm text-muted-foreground">{t.helperIntro}</p>
-        <Textarea value={intro} onChange={(e) => setIntro(e.target.value)} rows={2} placeholder={t.helperIntro} />
+        <Textarea
+          value={intro}
+          onChange={(e) => setIntro(e.target.value)}
+          rows={2}
+          placeholder={t.helperIntro}
+        />
         <Button variant="secondary" onClick={buildSkills} disabled={busy || !intro.trim()}>
-          {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+          {busy ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 size-4" />
+          )}
           {t.aiSkills}
         </Button>
 
@@ -523,11 +572,17 @@ function HelperTab() {
           </div>
           <div>
             <Label>{t.helperArea}</Label>
-            <Input value={current.area} onChange={(e) => setForm({ ...current, area: e.target.value })} />
+            <Input
+              value={current.area}
+              onChange={(e) => setForm({ ...current, area: e.target.value })}
+            />
           </div>
           <div className="sm:col-span-2">
             <Label>{t.helperSkills}</Label>
-            <Input value={current.skills} onChange={(e) => setForm({ ...current, skills: e.target.value })} />
+            <Input
+              value={current.skills}
+              onChange={(e) => setForm({ ...current, skills: e.target.value })}
+            />
           </div>
           <div>
             <Label>{t.helperRate}</Label>
@@ -566,13 +621,19 @@ function HelperTab() {
 
       <section className="space-y-3">
         <h2 className="font-semibold">{t.openJobs}</h2>
-        {(openJobs ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t.noOpenJobs}</p>}
+        {(openJobs ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">{t.noOpenJobs}</p>
+        )}
         {(openJobs ?? []).map((job) => (
-          <article key={job.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <article
+            key={job.id}
+            className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+          >
             <h3 className="font-medium">{job.title}</h3>
             <p className="text-sm text-muted-foreground">{job.description}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {job.location_text} {job.scheduled_at ? `· ${new Date(job.scheduled_at).toLocaleString()}` : ""}
+              {job.location_text}{" "}
+              {job.scheduled_at ? `· ${new Date(job.scheduled_at).toLocaleString()}` : ""}
               {job.budget_min ? ` · ${job.budget_min}–${job.budget_max} ${t.baht}` : ""}
             </p>
             {offerFor === job.id ? (
@@ -599,7 +660,12 @@ function HelperTab() {
                 </div>
               </div>
             ) : (
-              <Button className="mt-3" size="sm" variant="secondary" onClick={() => setOfferFor(job.id)}>
+              <Button
+                className="mt-3"
+                size="sm"
+                variant="secondary"
+                onClick={() => setOfferFor(job.id)}
+              >
                 {t.sendOffer}
               </Button>
             )}

@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/sso/callback")({
   ssr: false,
-  head: () => ({ meta: [{ title: "เข้าสู่ระบบด้วย Aivora | น้องภูมิ" }] }),
+  head: () => ({ meta: routeMeta("sso") }),
   component: SsoCallbackPage,
 });
 
@@ -77,7 +78,9 @@ function SsoCallbackPage() {
           userId = data.session.user.id;
         } else {
           lastError = error?.message ?? "no session returned";
-          console.warn(`[sso] setSession attempt ${attempt}/${SET_SESSION_ATTEMPTS} failed: ${lastError}`);
+          console.warn(
+            `[sso] setSession attempt ${attempt}/${SET_SESSION_ATTEMPTS} failed: ${lastError}`,
+          );
         }
       }
       if (!userId) {
@@ -121,7 +124,10 @@ function SsoCallbackPage() {
     };
 
     const timeout = new Promise<void>((_, reject) =>
-      setTimeout(() => reject(new Error(`no progress after ${FLOW_TIMEOUT_MS / 1000}s`)), FLOW_TIMEOUT_MS),
+      setTimeout(
+        () => reject(new Error(`no progress after ${FLOW_TIMEOUT_MS / 1000}s`)),
+        FLOW_TIMEOUT_MS,
+      ),
     );
     Promise.race([run(), timeout]).catch((err) => {
       fail("timeout", err instanceof Error ? err.message : String(err));

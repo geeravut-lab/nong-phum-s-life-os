@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -18,23 +19,7 @@ function aivoraAuthorizeUrl(): string {
 }
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title: "เข้าสู่ระบบน้องภูมิ | Life OS ผู้ช่วยส่วนตัว" },
-      {
-        name: "description",
-        content:
-          "เข้าสู่ระบบหรือสมัครใช้งานน้องภูมิ ผู้ช่วย Life OS ที่ช่วยจัดการเอกสาร เตือนความจำ ค่าใช้จ่าย และเรื่องครอบครัวของคุณ",
-      },
-      { property: "og:title", content: "เข้าสู่ระบบน้องภูมิ | Life OS ผู้ช่วยส่วนตัว" },
-      {
-        property: "og:description",
-        content: "เข้าสู่ระบบเพื่อให้น้องภูมิช่วยดูแลเรื่องรอบตัวคุณ",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("auth") }),
   component: AuthPage,
 });
 

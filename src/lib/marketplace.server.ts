@@ -1,3 +1,4 @@
+import { langName as langNameFor } from "./i18n.dict";
 import { generateObject } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -37,8 +38,11 @@ const JobDraftSchema = z.object({
 export type JobDraft = z.infer<typeof JobDraftSchema>;
 
 /** Turns a plain-language problem statement into a structured job. */
-export async function draftJobFromText(input: { message: string; lang: "th" | "en" }): Promise<JobDraft> {
-  const langName = input.lang === "en" ? "English" : "Thai";
+export async function draftJobFromText(input: {
+  message: string;
+  lang: "th" | "en";
+}): Promise<JobDraft> {
+  const langName = langNameFor(input.lang);
   const now = new Date().toISOString();
 
   const { object } = await withProviderFallback("chat", (model) =>
@@ -64,7 +68,7 @@ const SkillsSchema = z.object({
 
 /** Builds a helper profile (skill tags + short bio) from a free-text self description. */
 export async function draftHelperSkills(input: { text: string; lang: "th" | "en" }) {
-  const langName = input.lang === "en" ? "English" : "Thai";
+  const langName = langNameFor(input.lang);
   const { object } = await withProviderFallback("chat", (model) =>
     generateObject({
       model,
@@ -141,7 +145,9 @@ export async function matchHelpersForJob(
 ): Promise<HelperMatch[]> {
   const { data: job } = await supabase
     .from("jobs")
-    .select("id,title,description,category,lat,lng,location_text,scheduled_at,budget_min,budget_max,ai_extract")
+    .select(
+      "id,title,description,category,lat,lng,location_text,scheduled_at,budget_min,budget_max,ai_extract",
+    )
     .eq("id", jobId)
     .maybeSingle();
   if (!job) return [];
@@ -163,8 +169,12 @@ export async function matchHelpersForJob(
 
   const matches: HelperMatch[] = ((helpers ?? []) as HelperRow[]).map((h) => {
     const tags = (h.skills ?? []).map((s) => s.toLowerCase());
-    const hit = tags.filter((tag) => haystack.includes(tag) || needed.some((n) => n.includes(tag) || tag.includes(n)));
-    const skillScore = tags.length ? Math.min(1, hit.length / Math.max(1, Math.min(3, needed.length || 2))) : 0;
+    const hit = tags.filter(
+      (tag) => haystack.includes(tag) || needed.some((n) => n.includes(tag) || tag.includes(n)),
+    );
+    const skillScore = tags.length
+      ? Math.min(1, hit.length / Math.max(1, Math.min(3, needed.length || 2)))
+      : 0;
 
     let distanceKm: number | null = null;
     if (j.lat != null && j.lng != null && h.lat != null && h.lng != null) {
@@ -183,14 +193,20 @@ export async function matchHelpersForJob(
 
     let priceScore = 0.5;
     if (budgetMax != null && h.hourly_rate != null) {
-      priceScore = h.hourly_rate <= budgetMax ? 1 : Math.max(0, 1 - (h.hourly_rate - budgetMax) / budgetMax);
+      priceScore =
+        h.hourly_rate <= budgetMax ? 1 : Math.max(0, 1 - (h.hourly_rate - budgetMax) / budgetMax);
     }
 
     const ratingScore = h.rating > 0 ? Math.min(1, h.rating / 5) : 0.6;
     const expScore = Math.min(1, h.jobs_done / 50);
 
     const score =
-      skillScore * 35 + distScore * 20 + availScore * 15 + priceScore * 10 + ratingScore * 10 + expScore * 10;
+      skillScore * 35 +
+      distScore * 20 +
+      availScore * 15 +
+      priceScore * 10 +
+      ratingScore * 10 +
+      expScore * 10;
 
     return {
       helperId: h.id,

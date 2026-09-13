@@ -1,3 +1,4 @@
+import { localized, routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -25,22 +26,7 @@ import {
 } from "@/lib/benefits";
 
 export const Route = createFileRoute("/_authenticated/benefits")({
-  head: () => ({
-    meta: [
-      { title: "สิทธิฉัน | น้องภูมิ" },
-      {
-        name: "description",
-        content: "เช็กสิทธิและสวัสดิการรัฐที่คุณน่าจะได้รับ พร้อมวิธีขอรับสิทธิและติดตามสถานะ",
-      },
-      { property: "og:title", content: "สิทธิฉัน | น้องภูมิ" },
-      {
-        property: "og:description",
-        content: "กรอกข้อมูลสั้น ๆ แล้วน้องภูมิจับคู่สิทธิรัฐที่เข้าเกณฑ์ให้อัตโนมัติ",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("benefits") }),
   component: BenefitsPage,
 });
 
@@ -167,7 +153,10 @@ function BenefitsPage() {
     } else {
       const { error } = await supabase
         .from("user_benefits")
-        .upsert({ user_id: user.id, benefit_id: benefitId, status }, { onConflict: "user_id,benefit_id" });
+        .upsert(
+          { user_id: user.id, benefit_id: benefitId, status },
+          { onConflict: "user_id,benefit_id" },
+        );
       if (error) {
         toast.error(error.message);
         return;
@@ -340,7 +329,7 @@ function BenefitsPage() {
                 {reasons.length ? (
                   <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
                     {reasons.map((r, i) => (
-                      <li key={i}>{lang === "en" ? r.en : r.th}</li>
+                      <li key={i}>{localized(lang, r)}</li>
                     ))}
                   </ul>
                 ) : null}

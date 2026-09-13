@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,16 +15,7 @@ import { formatDay, formatMoney } from "@/lib/format";
 import { monthStartInBangkok } from "@/lib/time";
 
 export const Route = createFileRoute("/_authenticated/today")({
-  head: () => ({
-    meta: [
-      { title: "วันนี้ | น้องภูมิ" },
-      { name: "description", content: "สรุปเรื่องสำคัญของวันนี้ ทั้งงานค้าง บิลใกล้ครบกำหนด และเอกสารที่ต้องดู" },
-      { property: "og:title", content: "วันนี้ | น้องภูมิ" },
-      { property: "og:description", content: "สรุปเรื่องสำคัญของวันนี้ ทั้งงานค้าง บิลใกล้ครบกำหนด และเอกสารที่ต้องดู" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("today") }),
   component: TodayPage,
 });
 
@@ -44,10 +36,7 @@ function TodayPage() {
           .eq("status", "open")
           .order("due_at", { ascending: true })
           .limit(6),
-        supabase
-          .from("expenses")
-          .select("amount")
-          .gte("spent_on", monthStart),
+        supabase.from("expenses").select("amount").gte("spent_on", monthStart),
         supabase.from("documents").select("id", { count: "exact", head: true }),
       ]);
       return {
@@ -154,9 +143,7 @@ function TodayPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{r.title}</p>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                    {r.priority === "high" && (
-                      <AlertTriangle className="size-3 text-destructive" />
-                    )}
+                    {r.priority === "high" && <AlertTriangle className="size-3 text-destructive" />}
                     {r.due_at ? formatDay(new Date(r.due_at), lang, true) : "—"}
                   </p>
                 </div>
@@ -176,15 +163,7 @@ function TodayPage() {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-3 shadow-soft">
       <div className="flex items-center gap-1.5 text-muted-foreground">{icon}</div>

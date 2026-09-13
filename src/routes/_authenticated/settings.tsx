@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -11,16 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n, type Lang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({
-    meta: [
-      { title: "ตั้งค่า | น้องภูมิ" },
-      { name: "description", content: "ตั้งค่าโปรไฟล์ ภาษา ธีม และดูนโยบายความเป็นส่วนตัวของน้องภูมิ" },
-      { property: "og:title", content: "ตั้งค่า | น้องภูมิ" },
-      { property: "og:description", content: "ตั้งค่าโปรไฟล์ ภาษา ธีม และดูนโยบายความเป็นส่วนตัวของน้องภูมิ" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("settings") }),
   component: SettingsPage,
 });
 
@@ -93,11 +85,7 @@ function SettingsPage() {
         >
           <div className="space-y-1.5">
             <Label htmlFor="name">{t.displayName}</Label>
-            <Input
-              id="name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
+            <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
           </div>
           <Button type="submit">{t.save}</Button>
         </form>

@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -23,16 +24,7 @@ import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
 import { formatMoney, toDateInput } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/money")({
-  head: () => ({
-    meta: [
-      { title: "บิลและค่าใช้จ่าย | น้องภูมิ" },
-      { name: "description", content: "บันทึกรายรับ-รายจ่าย จัดหมวดอัตโนมัติ และดูสรุปยอดรายเดือน" },
-      { property: "og:title", content: "บิลและค่าใช้จ่าย | น้องภูมิ" },
-      { property: "og:description", content: "บันทึกรายรับ-รายจ่าย จัดหมวดอัตโนมัติ และดูสรุปยอดรายเดือน" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("money") }),
   component: MoneyPage,
 });
 
@@ -74,7 +66,10 @@ function MoneyPage() {
       title: r.title,
       category: r.category,
       amount: Number(r.amount ?? 0),
-      date: tab === "expense" ? (r as { spent_on: string }).spent_on : (r as { received_on: string }).received_on,
+      date:
+        tab === "expense"
+          ? (r as { spent_on: string }).spent_on
+          : (r as { received_on: string }).received_on,
     }));
   }, [tab, expenses, incomes]);
 

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { persona } from "./ai-gateway.server";
 import { providerCapabilities, resolveProvider, withProviderFallback } from "./ai-provider.server";
 import { APP_TIME_ZONE, APP_UTC_OFFSET, todayInBangkok } from "./time";
+import { dictFor, langName as langNameFor } from "./i18n.dict";
 
 const CATEGORIES = [
   "bill",
@@ -34,12 +35,13 @@ const DocSchema = z.object({
   isExpense: z.boolean().describe("True when this looks like a bill or receipt with a paid amount"),
   isIncome: z
     .boolean()
-    .describe("True when this is money received: payslip, salary slip, transfer-in, sales invoice paid to the user"),
+    .describe(
+      "True when this is money received: payslip, salary slip, transfer-in, sales invoice paid to the user",
+    ),
   needsAction: z
     .boolean()
     .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
 });
-
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
 
@@ -49,15 +51,11 @@ export async function runDocumentAnalysis(input: {
   fileName: string;
   lang: "th" | "en";
 }): Promise<DocAnalysis> {
-  const langName = input.lang === "en" ? "English" : "Thai";
+  const langName = langNameFor(input.lang);
   const isImage = input.mimeType.startsWith("image/");
 
   if (!isImage && !providerCapabilities(await resolveProvider("document")).pdf) {
-    throw new Error(
-      input.lang === "en"
-        ? "Nong Phum can't read PDFs right now. Try taking a photo of the document instead."
-        : "ตอนนี้น้องภูมิอ่าน PDF ไม่ได้ครับ ลองถ่ายรูปเอกสารแทนได้ไหมครับ",
-    );
+    throw new Error(dictFor(input.lang).docsPdfUnsupported);
   }
 
   const { object } = await withProviderFallback("document", (model) =>
@@ -169,7 +167,6 @@ async function loadContext(supabase: Db, userId: string) {
   };
 }
 
-
 export async function runChatRouter(
   input: {
     message: string;
@@ -180,7 +177,7 @@ export async function runChatRouter(
   userId: string,
 ) {
   const ctx = await loadContext(supabase, userId);
-  const langName = input.lang === "en" ? "English" : "Thai";
+  const langName = langNameFor(input.lang);
   const today = todayInBangkok();
 
   const history = await supabase
@@ -239,7 +236,7 @@ The app saves create_reminder, add_expense and add_income automatically as soon 
 
 export async function runDailyBrief(lang: "th" | "en", supabase: Db, userId: string) {
   const ctx = await loadContext(supabase, userId);
-  const langName = lang === "en" ? "English" : "Thai";
+  const langName = langNameFor(lang);
   const today = todayInBangkok();
 
   const result = await withProviderFallback("chat", (model) =>

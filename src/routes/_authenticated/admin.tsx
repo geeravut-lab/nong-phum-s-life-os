@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,9 +8,22 @@ import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { getAiConfig, listAiEvents, testAiModel, updateAiSettings } from "@/lib/admin.functions";
 import type { ModelOverrides, ProviderId, TaskKind } from "@/lib/ai-provider.server";
@@ -20,7 +34,7 @@ import { useI18n } from "@/lib/i18n";
 // This is convenience, not security — every server function this page calls
 // runs requireAdmin, and the tables enforce has_role in RLS.
 export const Route = createFileRoute("/_authenticated/admin")({
-  head: () => ({ meta: [{ title: "ผู้ดูแลระบบ | น้องภูมิ" }] }),
+  head: () => ({ meta: routeMeta("admin") }),
   beforeLoad: async ({ context }) => {
     const { data } = await supabase.rpc("has_role", { _user_id: context.user.id, _role: "admin" });
     if (data !== true) throw redirect({ to: "/today" });
@@ -30,7 +44,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 const TASKS: TaskKind[] = ["chat", "document", "reasoning"];
 const PROVIDERS: ProviderId[] = ["anthropic", "openai", "google"];
-const PROVIDER_LABEL: Record<ProviderId, string> = { anthropic: "Anthropic", openai: "OpenAI", google: "Google" };
+const PROVIDER_LABEL: Record<ProviderId, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  google: "Google",
+};
 // Sentinel values for the Select components, which cannot carry null/"".
 const USE_ENV = "__env__";
 const OFF = "none";
@@ -89,12 +107,19 @@ function AdminPage() {
   });
 
   const taskLabel = (task: TaskKind) =>
-    task === "chat" ? t.adminTaskChat : task === "document" ? t.adminTaskDocument : t.adminTaskReasoning;
+    task === "chat"
+      ? t.adminTaskChat
+      : task === "document"
+        ? t.adminTaskDocument
+        : t.adminTaskReasoning;
 
   const setOverride = (provider: ProviderId, task: TaskKind, value: string) => {
     setDraft((d) => {
       if (!d) return d;
-      const next: ModelOverrides = { ...d.model_overrides, [provider]: { ...(d.model_overrides[provider] ?? {}) } };
+      const next: ModelOverrides = {
+        ...d.model_overrides,
+        [provider]: { ...(d.model_overrides[provider] ?? {}) },
+      };
       if (value === DEFAULT_MODEL) delete next[provider]![task];
       else next[provider]![task] = value;
       if (Object.keys(next[provider]!).length === 0) delete next[provider];
@@ -109,7 +134,10 @@ function AdminPage() {
       const r = await runTest({ data: { provider, task, modelId } });
       setTests((s) => ({ ...s, [key]: { ok: r.ok, ms: r.ms, text: r.ok ? r.reply : r.error } }));
     } catch (err) {
-      setTests((s) => ({ ...s, [key]: { ok: false, ms: 0, text: err instanceof Error ? err.message : String(err) } }));
+      setTests((s) => ({
+        ...s,
+        [key]: { ok: false, ms: 0, text: err instanceof Error ? err.message : String(err) },
+      }));
     }
   };
 
@@ -159,7 +187,8 @@ function AdminPage() {
             <dd className="mt-0.5 space-y-0.5 font-mono text-xs">
               {TASKS.map((task) => (
                 <div key={task}>
-                  <span className="text-muted-foreground">{taskLabel(task)}:</span> {cfg.effective.models[task]}
+                  <span className="text-muted-foreground">{taskLabel(task)}:</span>{" "}
+                  {cfg.effective.models[task]}
                 </div>
               ))}
             </dd>
@@ -187,7 +216,9 @@ function AdminPage() {
           <Label>{t.adminDefaultProvider}</Label>
           <Select
             value={draft.default_provider ?? USE_ENV}
-            onValueChange={(v) => setDraft({ ...draft, default_provider: v === USE_ENV ? null : (v as ProviderId) })}
+            onValueChange={(v) =>
+              setDraft({ ...draft, default_provider: v === USE_ENV ? null : (v as ProviderId) })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -195,7 +226,9 @@ function AdminPage() {
             <SelectContent>
               <SelectItem value={USE_ENV}>
                 {t.adminUseEnv}
-                {cfg.env.AI_PROVIDER ? ` (${PROVIDER_LABEL[cfg.env.AI_PROVIDER as ProviderId] ?? cfg.env.AI_PROVIDER})` : ""}
+                {cfg.env.AI_PROVIDER
+                  ? ` (${PROVIDER_LABEL[cfg.env.AI_PROVIDER as ProviderId] ?? cfg.env.AI_PROVIDER})`
+                  : ""}
               </SelectItem>
               {PROVIDERS.map((id) => (
                 <SelectItem key={id} value={id} disabled={!providerRow(id).hasKey}>
@@ -211,7 +244,10 @@ function AdminPage() {
           <Select
             value={draft.fallback_provider ?? USE_ENV}
             onValueChange={(v) =>
-              setDraft({ ...draft, fallback_provider: v === USE_ENV ? null : (v as ProviderId | "none") })
+              setDraft({
+                ...draft,
+                fallback_provider: v === USE_ENV ? null : (v as ProviderId | "none"),
+              })
             }
           >
             <SelectTrigger>
@@ -220,7 +256,9 @@ function AdminPage() {
             <SelectContent>
               <SelectItem value={USE_ENV}>
                 {t.adminUseEnv}
-                {cfg.env.AI_FALLBACK_PROVIDER ? ` (${PROVIDER_LABEL[cfg.env.AI_FALLBACK_PROVIDER as ProviderId] ?? cfg.env.AI_FALLBACK_PROVIDER})` : ""}
+                {cfg.env.AI_FALLBACK_PROVIDER
+                  ? ` (${PROVIDER_LABEL[cfg.env.AI_FALLBACK_PROVIDER as ProviderId] ?? cfg.env.AI_FALLBACK_PROVIDER})`
+                  : ""}
               </SelectItem>
               <SelectItem value={OFF}>{t.adminFallbackOff}</SelectItem>
               {PROVIDERS.map((id) => (
@@ -261,11 +299,17 @@ function AdminPage() {
                         </Badge>
                         {p.capabilities.audio && <Badge variant="outline">audio</Badge>}
                       </div>
-                      <p className="mt-1 max-w-[14rem] break-all font-mono text-[10px] text-muted-foreground" title={p.baseUrl}>
+                      <p
+                        className="mt-1 max-w-[14rem] break-all font-mono text-[10px] text-muted-foreground"
+                        title={p.baseUrl}
+                      >
                         {new URL(p.baseUrl).host}
                       </p>
                       {list?.error && (
-                        <p className="mt-1 max-w-[14rem] text-xs text-destructive" title={list.error}>
+                        <p
+                          className="mt-1 max-w-[14rem] text-xs text-destructive"
+                          title={list.error}
+                        >
                           {t.adminListFailed}
                         </p>
                       )}
@@ -290,7 +334,9 @@ function AdminPage() {
                               <SelectItem value={DEFAULT_MODEL}>
                                 {t.adminDefaultModel} · {p.defaults[task]}
                               </SelectItem>
-                              {override && !known && <SelectItem value={override}>{override}</SelectItem>}
+                              {override && !known && (
+                                <SelectItem value={override}>{override}</SelectItem>
+                              )}
                               {options.map((m) => (
                                 <SelectItem key={m.id} value={m.id} className="font-mono text-xs">
                                   {m.id}
@@ -309,13 +355,19 @@ function AdminPage() {
                               {result === "running" ? t.adminTesting : t.adminTest}
                             </Button>
                             {result && result !== "running" && (
-                              <span className={`text-xs ${result.ok ? "text-primary" : "text-destructive"}`} title={result.text}>
-                                {result.ok ? `✅ ${t.adminTestOk}` : `❌ ${t.adminTestFail}`} · {result.ms} ms
+                              <span
+                                className={`text-xs ${result.ok ? "text-primary" : "text-destructive"}`}
+                                title={result.text}
+                              >
+                                {result.ok ? `✅ ${t.adminTestOk}` : `❌ ${t.adminTestFail}`} ·{" "}
+                                {result.ms} ms
                               </span>
                             )}
                           </div>
                           {result && result !== "running" && !result.ok && (
-                            <p className="mt-1 max-w-[16rem] break-words font-mono text-[11px] text-destructive">{result.text}</p>
+                            <p className="mt-1 max-w-[16rem] break-words font-mono text-[11px] text-destructive">
+                              {result.text}
+                            </p>
                           )}
                         </TableCell>
                       );
@@ -327,7 +379,10 @@ function AdminPage() {
           </Table>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button disabled={!dirty || saveMutation.isPending} onClick={() => saveMutation.mutate(draft)}>
+          <Button
+            disabled={!dirty || saveMutation.isPending}
+            onClick={() => saveMutation.mutate(draft)}
+          >
             {t.adminSave}
           </Button>
           <Button variant="ghost" disabled={!dirty} onClick={() => setDraft(null)}>
@@ -361,11 +416,15 @@ function AdminPage() {
               <TableBody>
                 {events.data.map((e) => (
                   <TableRow key={e.id}>
-                    <TableCell className="whitespace-nowrap text-xs">{formatDay(new Date(e.created_at), lang, true)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs">
+                      {formatDay(new Date(e.created_at), lang, true)}
+                    </TableCell>
                     <TableCell className="text-xs">{e.provider}</TableCell>
                     <TableCell className="text-xs">{e.task}</TableCell>
                     <TableCell>
-                      <Badge variant={e.status === "error" ? "destructive" : "secondary"}>{e.status}</Badge>
+                      <Badge variant={e.status === "error" ? "destructive" : "secondary"}>
+                        {e.status}
+                      </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{e.error_code ?? "—"}</TableCell>
                     <TableCell className="max-w-[28rem] truncate text-xs" title={e.message ?? ""}>

@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -22,16 +23,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
-  head: () => ({
-    meta: [
-      { title: "เรื่องที่ต้องทำ | น้องภูมิ" },
-      { name: "description", content: "จัดการเตือนความจำ งานที่เกิดซ้ำ และลำดับความสำคัญของเรื่องรอบตัวคุณ" },
-      { property: "og:title", content: "เรื่องที่ต้องทำ | น้องภูมิ" },
-      { property: "og:description", content: "จัดการเตือนความจำ งานที่เกิดซ้ำ และลำดับความสำคัญของเรื่องรอบตัวคุณ" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("tasks") }),
   component: TasksPage,
 });
 

@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -22,16 +23,7 @@ const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 export const Route = createFileRoute("/_authenticated/docs")({
-  head: () => ({
-    meta: [
-      { title: "คลังเอกสาร | น้องภูมิ" },
-      { name: "description", content: "อัปโหลดรูปหรือ PDF แล้วน้องภูมิอ่าน สรุป จัดหมวด และดึงวันครบกำหนดให้" },
-      { property: "og:title", content: "คลังเอกสาร | น้องภูมิ" },
-      { property: "og:description", content: "อัปโหลดรูปหรือ PDF แล้วน้องภูมิอ่าน สรุป จัดหมวด และดึงวันครบกำหนดให้" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("docs") }),
   component: DocsPage,
 });
 
@@ -79,11 +71,7 @@ function DocsPage() {
     // request size. Reject here so the user gets a clear message instead of a
     // provider error after a long upload.
     if (file.size > MAX_UPLOAD_BYTES) {
-      toast.error(
-        lang === "en"
-          ? `That file is too large (max ${MAX_UPLOAD_MB} MB). Try a photo or a smaller scan.`
-          : `ไฟล์ใหญ่เกินไปครับ (ไม่เกิน ${MAX_UPLOAD_MB} MB) ลองถ่ายรูปหรือย่อไฟล์ก่อนนะครับ`,
-      );
+      toast.error(t.docsFileTooLarge(MAX_UPLOAD_MB));
       return;
     }
     setBusy(true);

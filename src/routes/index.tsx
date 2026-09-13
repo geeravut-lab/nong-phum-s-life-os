@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, ListTodo, MessageCircleHeart, Sparkles, Users, Wallet } from "lucide-react";
 import { PhumMark } from "@/components/AppShell";
@@ -6,23 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuthUser } from "@/hooks/useAuthUser";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "น้องภูมิ — ผู้ช่วย Life OS ดูแลเอกสาร เตือนความจำ ค่าใช้จ่าย" },
-      {
-        name: "description",
-        content:
-          "น้องภูมิคือผู้ช่วยส่วนตัวที่อ่านเอกสารให้ สร้างเตือนความจำ จัดหมวดค่าใช้จ่าย แชร์กับครอบครัว และสรุปเรื่องสำคัญให้ทุกเช้า",
-      },
-      { property: "og:title", content: "น้องภูมิ — ผู้ช่วย Life OS ส่วนตัวของคุณ" },
-      {
-        property: "og:description",
-        content: "เอกสาร เตือนความจำ ค่าใช้จ่าย และครอบครัว รวมไว้ในที่เดียว พร้อมสรุปทุกเช้า",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("index") }),
   component: Landing,
 });
 

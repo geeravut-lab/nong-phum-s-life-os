@@ -1,3 +1,4 @@
+import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,16 +16,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/family")({
-  head: () => ({
-    meta: [
-      { title: "ครอบครัว | น้องภูมิ" },
-      { name: "description", content: "สร้างกลุ่มครอบครัว เชิญสมาชิกด้วยรหัส และแชร์เฉพาะเรื่องที่คุณเลือก" },
-      { property: "og:title", content: "ครอบครัว | น้องภูมิ" },
-      { property: "og:description", content: "สร้างกลุ่มครอบครัว เชิญสมาชิกด้วยรหัส และแชร์เฉพาะเรื่องที่คุณเลือก" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: routeMeta("family") }),
   component: FamilyPage,
 });
 
@@ -35,7 +27,11 @@ function FamilyPage() {
   const [familyName, setFamilyName] = useState("");
   const [code, setCode] = useState("");
 
-  const { data: membership, isLoading, isError } = useQuery({
+  const {
+    data: membership,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["family-membership"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -127,9 +123,7 @@ function FamilyPage() {
   };
 
   const family = membership?.families as
-    | { id: string; name: string; invite_code: string; owner_id: string }
-    | null
-    | undefined;
+    { id: string; name: string; invite_code: string; owner_id: string } | null | undefined;
 
   return (
     <AppShell>

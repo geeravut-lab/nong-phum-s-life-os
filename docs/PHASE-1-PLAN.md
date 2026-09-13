@@ -15,7 +15,7 @@
 | 1 | **1.8 (hotfix)** | Timezone — Asia/Bangkok ทุกจุดที่ตัดสินว่า "วันนี้คือวันไหน" | ✅ `f4f5f69` | บั๊กที่ผู้ใช้เจอทุกเช้า 00:00–07:00 แก้ได้ 7 จุดโดยไม่แตะ schema ไม่มีเหตุผลให้รอ 1.2 |
 | 2 | **1.6** | i18n guard — บังคับ key ครบสองภาษาตอน build | ✅ `777f553` | ต้องมาก่อน 1.1 เพราะหน้า Admin จะเพิ่ม key ใหม่หลายสิบตัว ใส่ guard ก่อนแล้วของใหม่จะถูกบังคับตั้งแต่บรรทัดแรก |
 | 3 | **1.1** | Admin Console + AI provider/model switching | ✅ ทั้งขั้น (เหลือ cron ล้าง ai_events → 1.3) | ติดปัญหา quota รายวัน แก้แล้วได้ใช้ทันที และเป็นฐานของ Admin ที่ขั้นอื่นต้องใช้ |
-| 4 | **1.7** | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว | ⏳ | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict |
+| 4 | **1.7** | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว | ✅ 2026-09-14 | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict |
 | 5 | **1.2 + 1.8 (schema)** | Data integrity & deletion path + คำถามเชิง schema เรื่องเวลา | ⏳ | งาน schema ยิ่งมีข้อมูลจริงมากยิ่งเติม FK ย้อนหลังยาก · การตัดสินใจเรื่อง attachments (1.9) ต้องทำในรอบนี้ |
 | 6 | **1.9** | แนบไฟล์ | ⏳ | ต้องรอ FK จาก 1.2 |
 | 7 | **1.3** | Scheduler + LINE notification + Recurring reminder | ⏳ | ทั้งสามใช้ cron runner ตัวเดียวกัน |
@@ -263,7 +263,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 ---
 
-# 1.7 เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว
+# 1.7 เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว ✅ 2026-09-14
 
 ## ยืนยันแล้ว: หน้านี้เป็น "รายรับ-รายจ่าย" เต็มตัว ป้ายยังบอกว่า "ค่าใช้จ่าย"
 
@@ -278,11 +278,11 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 | `routedToExpense` | toast ตอนเอกสารถูกส่งไปหน้าเงิน | เพิ่มในค่าใช้จ่ายแล้ว | Added to Expenses | ให้**ตรงกับชื่อใหม่ของ tab** ไม่งั้นผู้ใช้หา "ค่าใช้จ่าย" ไม่เจอ |
 | `<title>` + og ใน `money.tsx:28,30` | tab เบราว์เซอร์ | บิลและค่าใช้จ่าย | (ไทยล้วน) | แก้คู่กัน — เป็น 1 ใน 12 จุดนอก dict |
 
-- [ ] เปลี่ยน 3 key ข้างบน (ไทยด้วย — ตกลงคำไทยกับเจ้าของก่อน เช่น "รายรับ-รายจ่าย")
-- [ ] **ไม่เปลี่ยน** เพราะหมายถึงรายจ่ายอย่างเดียวจริง: `monthSpend` (การ์ดหน้า Today นับแค่ expenses), `tabExpense`/`tabIncome`, `addExpense`/`addIncome`, `moneyEmpty`/`incomeEmpty` (แยกตาม tab อยู่แล้ว), `totalExpense`/`totalIncome`, `heroSub`
-- [ ] ย้าย inline `lang === "en"` 12 จุดเข้า dict — จุดใน `*.server.ts` เป็นข้อความ error ที่ส่งกลับผู้ใช้ ย้ายได้ แต่ **prompt ที่ส่งให้ AI ไม่ต้องย้าย** (ไม่ใช่ UI)
-- [ ] `<title>`/og 12 route — ตัดสินใจว่าจะสลับภาษาตาม `lang` (ต้องใช้ `head` แบบ dynamic) หรือคงไทยเพราะ SEO ตลาดไทย — ถ้าคงไทย ให้บันทึกเป็น decision ไม่ใช่ลืม
-- [ ] `catLabel()` fallback: โชว์ `categoryLabels.other` แทน key ดิบ
+- [x] เปลี่ยน 3 key: `navMoney` → "รายรับ-รายจ่าย"/"Money" · `moneyTitle` → "รายรับ-รายจ่าย"/"Income & expenses" · `routedToExpense` → "เพิ่มในรายรับ-รายจ่ายแล้ว"/"Added to Income & expenses" · title/og ของ money.tsx ย้ายเข้า dict พร้อมกัน
+- [x] **ไม่เปลี่ยน** เพราะหมายถึงรายจ่ายอย่างเดียวจริง: `monthSpend` (การ์ดหน้า Today นับแค่ expenses), `tabExpense`/`tabIncome`, `addExpense`/`addIncome`, `moneyEmpty`/`incomeEmpty` (แยกตาม tab อยู่แล้ว), `totalExpense`/`totalIncome`, `heroSub`
+- [x] inline `lang === "en"` — **นับใหม่ตามจริง: จาก 12 จุดที่ grep เจอ มีแค่ 2 จุดที่เป็น UI string ฮาร์ดโค้ด** (ข้อความ PDF ใน `phum.server.ts`, ไฟล์ใหญ่เกินใน `docs.tsx`) → ย้ายเข้า dict แล้ว (`docsPdfUnsupported`, `docsFileTooLarge(mb)`) · 5 จุดเป็นชื่อภาษาใน prompt AI → รวมศูนย์เป็น `langName()` · 2 จุดเลือก `{th,en}` จากข้อมูล → `localized()` · **ไม่แตะ 3 จุด**: persona AI (`ai-gateway.server.ts`), เลือก `title_en`/`title` จาก DB (`benefits.ts`), `variant` ของปุ่มภาษาใน settings (style ไม่ใช่ข้อความ)
+- [x] `<title>`/og 14 route → `routeMeta(page)` อ่านจาก dict (key `meta_<page>_title` / `_desc` ครบสองภาษา) — **decision:** `<title>` สลับตามภาษาผู้ใช้ ส่วน `description`/`og:*` **คงไทยเสมอ** เพราะเป็นของ crawler ที่เห็นแค่ SSR (ไม่มี localStorage) และถ้าให้ client สลับ React จะเก็บ `<meta>` ของ SSR กับของ client ไว้คู่กัน (ทดสอบแล้วเจอ description 2 อัน) ขณะที่ `<title>` เป็น singleton อัปเดตได้สะอาด · dict แยกออกเป็น `src/lib/i18n.dict.ts` (ไม่มี React) ให้ server และ `head()` ใช้ได้
+- [ ] `catLabel()` fallback: โชว์ `categoryLabels.other` แทน key ดิบ — ยังไม่ทำ (นอกขอบเขตที่สั่งรอบนี้)
 
 ---
 

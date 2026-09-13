@@ -1,3 +1,4 @@
+import { localized } from "@/lib/i18n.dict";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
@@ -137,9 +138,7 @@ export function BenefitChatCards() {
               </Badge>
             </div>
             {reasons.length ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {lang === "en" ? reasons[0]!.en : reasons[0]!.th}
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{localized(lang, reasons[0]!)}</p>
             ) : null}
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {STATUSES.map((s) => (
