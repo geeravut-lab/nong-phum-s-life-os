@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
-import { Bell, ExternalLink, Trash2, Upload } from "lucide-react";
+import { Bell, ExternalLink, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
-import { intakeDocument } from "@/lib/doc-intake";
+import { DocumentAnalysisError, intakeDocument, retryDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 import { bangkokDateAtHour } from "@/lib/time";
 
@@ -33,6 +33,7 @@ function DocsPage() {
   const analyze = useServerFn(analyzeDocument);
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [retrying, setRetrying] = useState<string | null>(null);
 
   const { data: docs, isLoading } = useQuery({
     queryKey: ["documents"],
@@ -86,9 +87,29 @@ function DocsPage() {
       toast.success(`${analysis.title} — ${notes.join(" · ")}`);
       qc.invalidateQueries();
     } catch (err) {
+      // A failed analysis leaves the row as status="failed"; refresh so it shows up with a retry button.
+      if (err instanceof DocumentAnalysisError) qc.invalidateQueries({ queryKey: ["documents"] });
       toast.error(err instanceof Error ? err.message : t.error);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const retry = async (id: string) => {
+    setRetrying(id);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { analysis, routed } = await retryDocument(id, analyze, lang, userData.user!.id);
+      const notes: string[] = [t.savedToDocs];
+      if (routed.includes("expense")) notes.push(t.routedToExpense);
+      if (routed.includes("income")) notes.push(t.routedToIncome);
+      if (routed.includes("reminder")) notes.push(t.routedToTasks);
+      toast.success(`${analysis.title} — ${notes.join(" · ")}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t.error);
+    } finally {
+      setRetrying(null);
+      qc.invalidateQueries();
     }
   };
 
@@ -165,7 +186,9 @@ function DocsPage() {
               <CardContent className="pt-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="font-medium">{d.title}</h2>
-                  <Badge variant="secondary">{catLabel(d.category, lang)}</Badge>
+                  {d.status === "pending" && <Badge variant="outline">{t.docStatusPending}</Badge>}
+                  {d.status === "failed" && <Badge variant="destructive">{t.docStatusFailed}</Badge>}
+                  {d.status === "ready" && <Badge variant="secondary">{catLabel(d.category, lang)}</Badge>}
                   {d.due_date && (
                     <Badge variant="outline">
                       {t.dueDate}: {d.due_date}
@@ -182,17 +205,32 @@ function DocsPage() {
                     {t.counterparty}: {d.counterparty}
                   </p>
                 )}
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{d.summary}</p>
+                {d.status === "failed" ? (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t.docFailedHint}
+                    {d.summary && <span className="mt-1 block break-all font-mono text-xs">{d.summary}</span>}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{d.summary}</p>
+                )}
 
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => openFile(d.storage_path)}>
                     <ExternalLink className="mr-1.5 size-3.5" />
                     {t.download}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => makeReminder(d)}>
-                    <Bell className="mr-1.5 size-3.5" />
-                    {t.createReminderFromDoc}
-                  </Button>
+                  {d.status === "failed" && (
+                    <Button size="sm" variant="outline" disabled={retrying === d.id} onClick={() => retry(d.id)}>
+                      <RefreshCw className={`mr-1.5 size-3.5 ${retrying === d.id ? "animate-spin" : ""}`} />
+                      {retrying === d.id ? t.docRetrying : t.docRetry}
+                    </Button>
+                  )}
+                  {d.status === "ready" && (
+                    <Button size="sm" variant="outline" onClick={() => makeReminder(d)}>
+                      <Bell className="mr-1.5 size-3.5" />
+                      {t.createReminderFromDoc}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"

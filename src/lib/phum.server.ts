@@ -148,6 +148,8 @@ async function loadContext(supabase: Db, userId: string) {
       .from("documents")
       .select("title, category, summary, due_date, amount, counterparty")
       .eq("user_id", userId)
+      // pending/failed rows carry a file name and an error, not facts
+      .eq("status", "ready")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase.from("benefit_profiles").select("*").eq("user_id", userId).maybeSingle(),

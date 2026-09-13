@@ -62,6 +62,11 @@ const th = {
   docsPdfUnsupported: "ตอนนี้น้องภูมิอ่าน PDF ไม่ได้ครับ ลองถ่ายรูปเอกสารแทนได้ไหมครับ",
   docsFileTooLarge: (mb: number) =>
     `ไฟล์ใหญ่เกินไปครับ (ไม่เกิน ${mb} MB) ลองถ่ายรูปหรือย่อไฟล์ก่อนนะครับ`,
+  docStatusPending: "กำลังประมวลผล…",
+  docStatusFailed: "อ่านไม่สำเร็จ",
+  docFailedHint: "ไฟล์ถูกเก็บไว้แล้ว ลองอ่านใหม่หรือลบทิ้งได้",
+  docRetry: "ลองใหม่",
+  docRetrying: "กำลังอ่านใหม่…",
   // admin
   navAdmin: "ผู้ดูแลระบบ",
   adminTitle: "ตั้งค่า AI",
@@ -397,6 +402,11 @@ const en = {
     "Nong Phum can't read PDFs right now. Try taking a photo of the document instead.",
   docsFileTooLarge: (mb: number) =>
     `That file is too large (max ${mb} MB). Try a photo or a smaller scan.`,
+  docStatusPending: "Processing…",
+  docStatusFailed: "Reading failed",
+  docFailedHint: "The file is saved. You can try again or delete it.",
+  docRetry: "Try again",
+  docRetrying: "Reading again…",
   // admin
   navAdmin: "Admin",
   adminTitle: "AI settings",
