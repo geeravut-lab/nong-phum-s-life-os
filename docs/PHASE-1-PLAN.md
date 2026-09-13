@@ -24,6 +24,8 @@
 | 10 | **1.5** | งานค้างเล็ก ๆ | ⏳ | Help Me rating UI, `.validator()` deprecation, bundle 600 kB |
 
 > 1.3 / 1.10 / 1.4 ไม่พึ่งพากัน สลับลำดับกันเองได้ตามความจำเป็นตอนนั้น
+>
+> **ระบบที่มีอยู่แล้วนอกแผน:** SSO จาก Aivora Hub อยู่บน production ตั้งแต่ 2026-09-13 และมีผู้ใช้จริง — ดูหัวข้อท้ายเอกสาร **ทุกงาน schema ตั้งแต่นี้ไปต้องถือว่า DB มีข้อมูลจริง**
 
 ---
 
@@ -173,9 +175,19 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 หลักฐานที่เจอจริง: ลบ user ออกจาก `auth.users` แล้ว `profiles`, `user_roles`, `documents`, `reminders`, `expenses` ยังอยู่ครบ และเจอไฟล์ใน storage 3 ไฟล์ที่ไม่มีแถวใน `documents` คู่กัน (อัปโหลดสำเร็จแต่ AI ล้มเหลว ระบบไม่เขียน row และไม่มีอะไรลบไฟล์)
 
+> ## ⚠️ ตั้งแต่ 2026-09-13 มีผู้ใช้จริงบน production แล้ว
+>
+> SSO จาก Aivora Hub เปิดใช้แล้ว (ดูหัวข้อ **SSO — Aivora Hub** ท้ายเอกสาร) และมีผู้ใช้จริงล็อกอินผ่านมาแล้ว
+> **DB นี้ไม่ใช่ sandbox อีกต่อไป** กฎสำหรับทุกงานใน 1.2:
+>
+> 1. **สำรองข้อมูลก่อนรัน migration ทุกครั้ง** — Dashboard → Database → Backups (หรือ `pg_dump` ผ่าน connection string) และจดไว้ว่าสำรองเมื่อไหร่ ก่อน `supabase db push`
+> 2. **ห้ามล้าง DB แบบรวบยอด** — ไม่มี `TRUNCATE`, ไม่มี `DELETE FROM x` โดยไม่มี `WHERE`, ไม่มี "ลบทุก user ยกเว้น…" การลบข้อมูลทดสอบ**ต้องระบุเป็นรายบัญชี** ด้วย uuid หรืออีเมลที่ยืนยันแล้วว่าเป็นบัญชีทดสอบ เหมือนที่ทำตอนปิด Phase 0
+> 3. บัญชีที่**ห้ามแตะ**: `geeravut@gmail.com` (เจ้าของ) และผู้ใช้ทุกคนที่มีแถวใน `aivora_links` (มาจาก hub จริง)
+> 4. ล้าง orphan (ข้อแรกของขอบเขต) ต้อง**ลิสต์แถวที่จะลบออกมาดูก่อน** แล้วค่อยลบ ไม่ใช่ `DELETE … WHERE NOT EXISTS` ทีเดียว
+
 ขอบเขต:
 - [ ] ล้าง orphan ที่มีอยู่ก่อน (ไม่งั้นสร้าง constraint ไม่ผ่าน)
-- [ ] เติม FK + `ON DELETE CASCADE` ทุกตารางที่อ้าง user
+- [ ] เติม FK + `ON DELETE CASCADE` ทุกตารางที่อ้าง user — **รวม `aivora_links` ด้วย**: ตารางนี้มี FK ไป `auth.users` + CASCADE อยู่แล้ว (เป็นตารางเดียวที่มี) ให้ใช้เป็นต้นแบบ และตรวจว่าตอนลบบัญชี SSO แถวใน `aivora_links` หายตามจริง ไม่งั้น hub id นั้นจะล็อกอินใหม่ไม่ได้ตลอดไป (`findOrCreateLocalUser` จะเจอ link ที่ชี้ไป user ที่ไม่มี → `session_failed`)
 - [ ] ลบไฟล์ใน storage เมื่อลบ document / ลบบัญชี
 - [ ] จัดการกรณีอัปโหลดสำเร็จแต่ประมวลผลล้มเหลว — ต้องไม่ทิ้งไฟล์ค้าง (ลำดับใน `doc-intake.ts` คือ upload → analyze → insert; ถ้า analyze โยน ไฟล์อยู่ใน bucket แล้วโดยไม่มีแถว — ยืนยันอีกครั้งตอนล้างข้อมูลทดสอบ 2026-09-08 เจอไฟล์กำพร้า 1 ไฟล์)
 - [ ] flow ลบบัญชีของผู้ใช้เอง + audit log (ฐานของ PDPA)
@@ -397,3 +409,51 @@ documents (1) ──source_document_id──▶ reminders (n)   ON DELETE SET NU
 - [ ] ถ้าผ่าน: ทำตามคำแนะนำข้างบน · ถ้าไม่ผ่าน: งานนี้ทำไม่ได้บนช่องทางหลัก ยกไปคิดใหม่ (LIFF SDK? เปิดใน Safari แทน?)
 - [ ] ใช้ `capabilities.audio` ที่มีแล้วกรอง provider ในหน้า Admin (1.1.6)
 - [ ] **ลบ `src/routes/mic-test.tsx` เมื่อจบงานนี้**
+
+---
+
+# SSO — Aivora Hub (มีอยู่บน production แล้ว ตั้งแต่ 2026-09-13)
+
+ไม่ใช่งานในแผน แต่เป็นระบบที่**อยู่บน production และมีผู้ใช้จริงผ่านมาแล้ว** บันทึกไว้เพื่อให้ทุกขั้นถัดไป (โดยเฉพาะ 1.2) รู้ว่ามันอยู่ตรงไหนและผูกกับอะไร
+
+commit: `799a8f4` (ตาราง) · `eb75243` (โค้ด) · สเปกเต็มอยู่ในประวัติการคุยวันที่ 2026-09-13
+
+## flow
+
+```
+ปุ่ม "เข้าสู่ระบบด้วย LINE (Aivora)" ที่ /auth
+  → https://aivora-lc.netlify.app/sso/authorize?app=lifeos&return=<callback>
+  → hub redirect กลับ /sso/callback?sso_ticket=…   (ตั๋วใช้ครั้งเดียว อายุ 60 วิ)
+  → หน้า callback ลบ ticket ออกจาก URL ก่อน await แรก
+  → server function exchangeSsoTicket → sso.server.ts:
+       POST ticket ไป hub /api/public/sso/exchange
+       ตรวจ app_slug = lifeos
+       หา/สร้าง auth.users ด้วย hub user.id เท่านั้น
+       ออก session: admin.generateLink(magiclink) → fetch /auth/v1/verify ด้วย publishable key
+  → client setSession (retry เฉพาะขั้นนี้ ไม่แลกตั๋วซ้ำ) → อ่าน profile ตัวเอง → /today
+```
+
+## ตารางที่เกี่ยวข้อง
+
+| ตาราง | บทบาท | FK / CASCADE |
+|---|---|---|
+| `auth.users` | ผู้ใช้ SSO เป็น user ปกติทุกอย่าง · `app_metadata.aivora_user_id` = id จาก hub · `app_metadata.provider = 'aivora'` (GoTrue เขียนทับเป็น `email` ใน JWT — ไม่กระทบ เราไม่อิง field นี้) · อีเมล = ของ hub ถ้ามี ไม่มี = `aivora+<hub id>@lavieos.netlify.app` | — |
+| **`aivora_links`** | `aivora_user_id text PK` → `user_id uuid UNIQUE` · **ตัวเดียวที่ใช้หาผู้ใช้** ห้ามหาด้วยอีเมล | ✅ `user_id REFERENCES auth.users(id) ON DELETE CASCADE` — **ตารางเดียวใน schema ที่มี FK ไป auth.users** · RLS เปิด ไม่มี policy ไม่มี GRANT ให้ authenticated = service role เท่านั้น |
+| `profiles` / `user_roles` | สร้างโดย trigger `on_auth_user_created` เหมือน signup ปกติ · role = `member` เสมอ **ไม่รับ roles จาก hub** · `display_name` จาก hub เติมเฉพาะตอนว่างหรือเป็น placeholder `aivora+…` ไม่ทับที่ผู้ใช้ตั้งเอง | ❌ ยังไม่มี FK (เหมือนตารางอื่น — งาน 1.2) |
+
+## กฎความปลอดภัยที่ฝังอยู่ในโค้ด (อย่าแก้โดยไม่รู้ว่าทำไม)
+
+- **หาด้วย `aivora_user_id` เท่านั้น** — ถ้าอีเมลจาก hub ตรงกับบัญชีที่มีอยู่แล้วในแอป **ปฏิเสธ** (`409 email_in_use`) ไม่ผูกให้ เพราะ hub ไม่ได้ยืนยันว่าอีเมลนั้นเป็นของคนนั้นจริง (ทดสอบแล้ว: victim ไม่ถูกแตะ)
+- `user.id` จาก hub ต้องเป็น string ไม่ว่าง · ฟิลด์อื่นรับ `null` ได้ (ผู้ใช้ LINE มักไม่มีอีเมล)
+- ออก session ด้วย `fetch` ตรงไป `/auth/v1/verify` **ไม่ใช่ `verifyOtp` บน admin client** — ไม่งั้น session ของผู้ใช้จะค้างใน service-role singleton
+- service role ไม่หลุด client (`grep -ri service_role dist/client` = ว่าง)
+- log ทุกกรณีรวมที่ตั้งใจปฏิเสธ (`[sso] <status> <code>: …`) ไม่ log token · 401 ตั๋วผิด / 403 slug ผิด / 409 อีเมลชน / 502 hub ล่ม
+
+## ผู้ใช้จริงที่ผ่านมาแล้ว (ณ 2026-09-14)
+
+2 คน — คนหนึ่งมีอีเมลจาก hub คนหนึ่งไม่มี (ได้อีเมลสังเคราะห์) ทั้งคู่ล็อกอินซ้ำสำเร็จ (path หาผู้ใช้เดิมทำงาน) ชื่อจาก hub ลง profile ครบ role = member — **ห้ามลบ** ดูรายชื่อได้จาก `select * from aivora_links`
+
+## ที่ยังไม่ได้ทำ / ควรรู้
+
+- ยังไม่มีฟีเจอร์ "เชื่อมบัญชี SSO กับบัญชีอีเมลเดิม" — สเปกให้ทำเป็นหน้าตั้งค่าแยก ต้องล็อกอินบัญชีเดิมก่อนถึงกด
+- Netlify มี `SUPABASE_SERVICE_ROLE` (ชื่อตามสเปก SSO) ซ้ำกับ `SUPABASE_SERVICE_ROLE_KEY` ที่โค้ดใช้จริง — ตัวแรกไม่มีใครอ่าน ลบได้
