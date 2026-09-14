@@ -25,7 +25,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { getAiConfig, listAiEvents, testAiModel, updateAiSettings } from "@/lib/admin.functions";
+import {
+  getAiConfig,
+  getNotificationConfig,
+  listAiEvents,
+  testAiModel,
+  updateAiSettings,
+  updateNotificationSettings,
+} from "@/lib/admin.functions";
+import { Input } from "@/components/ui/input";
 import type { ModelOverrides, ProviderId, TaskKind } from "@/lib/ai-provider.server";
 import { formatDay } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
@@ -392,6 +400,8 @@ function AdminPage() {
         </div>
       </section>
 
+      <LineQuotaCard />
+
       {/* ---- Events ---- */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.adminEventsTitle}</h2>
@@ -438,5 +448,124 @@ function AdminPage() {
         )}
       </section>
     </AppShell>
+  );
+}
+
+// The guard against the quota running out unnoticed: what has been used
+// this month (our log vs LINE's number, larger wins), the cap and the reserve
+// the tick enforces, and the halt switch the tick flips on an auth failure.
+function LineQuotaCard() {
+  const { t, lang } = useI18n();
+  const qc = useQueryClient();
+  const save = useServerFn(updateNotificationSettings);
+  const cfg = useQuery({ queryKey: ["notification-config"], queryFn: () => getNotificationConfig() });
+  const [form, setForm] = useState<{ cap: string; reserve: string; hour: string } | null>(null);
+
+  useEffect(() => {
+    if (cfg.data && form === null) {
+      const st = cfg.data.settings;
+      setForm({ cap: String(st.line_monthly_cap), reserve: String(st.line_digest_reserve), hour: String(st.line_digest_hour) });
+    }
+  }, [cfg.data, form]);
+
+  const mutation = useMutation({
+    mutationFn: (resume: boolean) =>
+      save({
+        data: {
+          line_monthly_cap: Number(form!.cap),
+          line_digest_reserve: Number(form!.reserve),
+          line_digest_hour: Number(form!.hour),
+          resume,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(t.adminSaved);
+      setForm(null);
+      qc.invalidateQueries({ queryKey: ["notification-config"] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : t.error),
+  });
+
+  const d = cfg.data;
+  const st = d?.settings;
+  const halted = !!st?.line_halted_until && new Date(st.line_halted_until) > new Date();
+  const dirty =
+    !!d && !!form &&
+    (Number(form.cap) !== st!.line_monthly_cap || Number(form.reserve) !== st!.line_digest_reserve || Number(form.hour) !== st!.line_digest_hour);
+  const pct = d ? Math.min(100, Math.round((d.used / Math.max(1, st!.line_monthly_cap)) * 100)) : 0;
+  const stopAt = form ? Math.max(0, Number(form.cap) - Number(form.reserve)) : 0;
+
+  return (
+    <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <h2 className="text-sm font-semibold">{t.adminLineTitle}</h2>
+      <p className="mb-3 mt-1 text-xs text-muted-foreground">{t.adminLineSub}</p>
+      {cfg.isLoading || !d || !form ? (
+        <Skeleton className="h-24 w-full" />
+      ) : (
+        <div className="space-y-4">
+          {!d.configured && (
+            <p className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {t.adminLineNotConfigured}
+            </p>
+          )}
+          {halted && (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <p className="font-medium">{t.adminLineHalted(formatDay(new Date(st!.line_halted_until!), lang, true))}</p>
+              {st!.line_halt_reason && <p className="mt-1 break-all font-mono text-xs">{st!.line_halt_reason}</p>}
+              <Button size="sm" variant="outline" className="mt-2" disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
+                {t.adminLineResume}
+              </Button>
+            </div>
+          )}
+          <div>
+            <div className="flex items-baseline justify-between text-sm">
+              <span className="text-muted-foreground">{t.adminLineUsed}</span>
+              <span className="font-semibold">
+                {d.used} / {st!.line_monthly_cap}
+              </span>
+            </div>
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full ${pct >= 100 ? "bg-destructive" : pct >= 80 ? "bg-amber-500" : "bg-primary"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t.adminLineUsedHint(d.sentThisMonth, d.line?.totalUsage != null ? String(d.line.totalUsage) : "—")}
+              {d.line?.limit != null && ` · LINE limit ${d.line.limitType ?? ""} ${d.line.limit}`}
+              {d.line?.error && ` · ${d.line.error}`}
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="line-cap">{t.adminLineCap}</Label>
+              <Input id="line-cap" type="number" min={0} value={form.cap} onChange={(e) => setForm({ ...form, cap: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="line-reserve">{t.adminLineReserve}</Label>
+              <Input id="line-reserve" type="number" min={0} value={form.reserve} onChange={(e) => setForm({ ...form, reserve: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="line-hour">{t.adminLineDigestHour}</Label>
+              <Input id="line-hour" type="number" min={0} max={23} value={form.hour} onChange={(e) => setForm({ ...form, hour: e.target.value })} />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">{t.adminLineReserveHint(stopAt)}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button disabled={!dirty || mutation.isPending} onClick={() => mutation.mutate(false)}>
+              {t.adminSave}
+            </Button>
+            <Button variant="ghost" disabled={!dirty} onClick={() => setForm(null)}>
+              {t.adminDiscard}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t.adminLineLinked(d.linkedUsers, d.friendUsers)}
+            {d.lastTick && ` · ${t.adminLineLastTick(formatDay(new Date(d.lastTick.tick), lang, true))}`}
+            {` · ${t.adminLineOpenUrl} ${d.openUrl}`}
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

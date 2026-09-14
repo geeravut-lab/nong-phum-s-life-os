@@ -23,7 +23,10 @@
 //               notified_at IS NULL, RETURNING; zero rows = someone else won
 //   2. log    — one notification_log row; 'immediate' for priority = 'high',
 //               otherwise appended to the user's 'digest' row for today.
-//               channel = 'none' until a LINE link exists (step 4).
+//               channel = 'line' + status 'queued' when the user has a LINE
+//               link and is a friend of the OA, else 'none' + 'skipped'
+//               (in-app only). Delivery, retries and the quota guard live in
+//               line-deliver.server.ts and run right after, in the same tick.
 // A recurring reminder is NOT advanced here. It stays open — and visibly
 // overdue on Today — until the user marks it done, which moves it to the next
 // occurrence (src/lib/recurrence.ts). The one exception is rolloverStale():
@@ -32,7 +35,16 @@
 // opens the app) keeps getting one per period instead of falling silent.
 import { supabaseAdmin } from "../integrations/supabase/client.server";
 import { isRepeating, lastOccurrenceAtOrBefore, nextOccurrence } from "./recurrence";
-import { todayInBangkok } from "./time";
+import { bangkokDateAtHour, todayInBangkok } from "./time";
+import {
+  bangkokHour,
+  deliverQueued,
+  ensureFriend,
+  linkFor,
+  loadLineContext,
+  targetDigestDate,
+  type LineContext,
+} from "./line-deliver.server";
 import {
   AI_EVENT_RETENTION_DAYS,
   CRON_TICK_RETENTION_DAYS,
@@ -87,11 +99,14 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
   const summary: TickSummary = {};
   let error: string | null = null;
   try {
+    const line = await loadLineContext(now, summary);
     const steps: Array<[string, () => Promise<number>]> = [
       // Reminders first: a notification a few seconds late matters more than
       // a stale ai_events row surviving one more tick.
       ["reminders_rolled_over", () => rolloverStale(now, overBudget)],
-      ["reminders_notified", () => notifyDue(now, overBudget, summary)],
+      ["reminders_notified", () => notifyDue(now, overBudget, summary, line)],
+      ["digest_lookahead_claimed", () => claimForDigest(line, overBudget)],
+      ["line_sent", () => deliverQueued(line, overBudget)],
       ["ai_events_deleted", () => deleteOlderThan("ai_events", "created_at", agoIso(now, AI_EVENT_RETENTION_DAYS * DAY))],
       ["failed_docs_deleted", () => deleteDocuments("failed", agoIso(now, FAILED_DOC_RETENTION_DAYS * DAY), summary)],
       ["pending_docs_deleted", () => deleteDocuments("pending", agoIso(now, PENDING_DOC_RETENTION_HOURS * HOUR), summary)],
@@ -191,7 +206,7 @@ const REMINDER_COLUMNS = "id, user_id, title, due_at, notify_at, priority, recur
  * has claimed yet. Claim each, then write the log row. Returns how many were
  * claimed by this run.
  */
-async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSummary): Promise<number> {
+async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSummary, line: LineContext): Promise<number> {
   const nowIso = now.toISOString();
   const { data: rows, error } = await supabaseAdmin
     .from("reminders")
@@ -221,9 +236,9 @@ async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSumm
     if (!won?.length) continue;
     claimed += 1;
 
-    // channel 'none': nothing can be delivered yet, the row records that the
-    // occurrence came due. Step 4 turns this into a LINE push when the user
-    // has a link.
+    // 'line'/'queued' when the user can be reached on LINE, else 'none'/
+    // 'skipped': the row still records that the occurrence came due.
+    const reach = await reachable(line, r.user_id);
     if (r.priority === "high") {
       const { error: logErr } = await supabaseAdmin.from("notification_log").insert({
         user_id: r.user_id,
@@ -231,14 +246,14 @@ async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSumm
         reminder_id: r.id,
         due_at: r.due_at ?? nowIso,
         reminder_ids: [r.id],
-        channel: "none",
-        status: "skipped",
+        channel: reach ? "line" : "none",
+        status: reach ? "queued" : "skipped",
       });
       // 23505 = this occurrence was logged by a run that died after sending;
       // the claim above already prevents a second delivery, so just move on.
       if (logErr && logErr.code !== "23505") throw new Error(`notification_log insert: ${logErr.message}`);
     } else {
-      await appendToDigest(r.user_id, r.id, todayInBangkok(now));
+      await appendToDigest(r.user_id, r.id, await targetDigestDate(r.user_id, now), reach);
     }
   }
   return claimed;
@@ -249,14 +264,22 @@ async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSumm
  * reminder that came due that day. Insert first (it is the claim on the day);
  * on conflict, append to the existing row's reminder_ids.
  */
-async function appendToDigest(userId: string, reminderId: string, digestDate: string): Promise<void> {
+/** Has a LINE link and is a friend of the OA (checked, cached per tick). */
+async function reachable(line: LineContext, userId: string): Promise<boolean> {
+  if (!line.token) return false;
+  const link = await linkFor(line, userId);
+  if (!link) return false;
+  return ensureFriend(line, link);
+}
+
+async function appendToDigest(userId: string, reminderId: string, digestDate: string, reach: boolean): Promise<void> {
   const { error: insErr } = await supabaseAdmin.from("notification_log").insert({
     user_id: userId,
     kind: "digest",
     digest_date: digestDate,
     reminder_ids: [reminderId],
-    channel: "none",
-    status: "skipped",
+    channel: reach ? "line" : "none",
+    status: reach ? "queued" : "skipped",
   });
   if (!insErr) return;
   if (insErr.code !== "23505") throw new Error(`digest insert: ${insErr.message}`);
@@ -311,4 +334,54 @@ async function rolloverStale(now: Date, overBudget: () => boolean): Promise<numb
     rolled += 1;
   }
   return rolled;
+}
+
+/**
+ * Morning digest look-ahead. From the digest hour on, a LINE user's non-urgent
+ * reminders due later TODAY are claimed now and put into today's digest, so
+ * the one message of the day says "today: rent at 15:00" instead of arriving
+ * after the fact. Users without LINE are left to notifyDue (nothing would be
+ * sent anyway, and Today already shows their items).
+ */
+async function claimForDigest(line: LineContext, overBudget: () => boolean): Promise<number> {
+  if (!line.token || bangkokHour(line.now) < line.settings.line_digest_hour) return 0;
+  const today = todayInBangkok(line.now);
+  const endOfToday = new Date(bangkokDateAtHour(today, 0));
+  endOfToday.setUTCDate(endOfToday.getUTCDate() + 1);
+
+  const { data: links, error: linkErr } = await supabaseAdmin
+    .from("line_links")
+    .select("user_id, line_user_id, is_friend, friend_checked_at, blocked_at")
+    .eq("is_friend", true)
+    .is("blocked_at", null);
+  if (linkErr) throw new Error(`line_links list: ${linkErr.message}`);
+
+  let claimed = 0;
+  for (const link of links ?? []) {
+    if (overBudget()) break;
+    line.links.set(link.user_id, link);
+    const { data: rows, error } = await supabaseAdmin
+      .from("reminders")
+      .select("id, due_at")
+      .eq("user_id", link.user_id)
+      .eq("status", "open")
+      .is("notified_at", null)
+      .neq("priority", "high")
+      .not("due_at", "is", null)
+      .lt("due_at", endOfToday.toISOString())
+      .limit(REMINDER_BATCH);
+    if (error) throw new Error(`digest lookahead select: ${error.message}`);
+    for (const r of rows ?? []) {
+      const { data: won } = await supabaseAdmin
+        .from("reminders")
+        .update({ notified_at: line.now.toISOString() })
+        .eq("id", r.id)
+        .is("notified_at", null)
+        .select("id");
+      if (!won?.length) continue;
+      await appendToDigest(link.user_id, r.id, await targetDigestDate(link.user_id, line.now), true);
+      claimed += 1;
+    }
+  }
+  return claimed;
 }

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { checkFriend, lineChannelToken } from "./line-push.server";
 
 // LINE account linking. Endpoints and parameters from the LINE Login docs
 // (developers.line.biz "Integrating LINE Login with a web app" and "Get
@@ -40,7 +41,8 @@ export type LineLinkErrorCode =
   | "line_denied"
   | "token_exchange_failed"
   | "id_token_invalid"
-  | "line_id_in_use";
+  | "line_id_in_use"
+  | "profile_check_failed";
 
 export class LineLinkError extends Error {
   constructor(
@@ -219,6 +221,35 @@ export async function finishLink(input: FinishInput): Promise<LineLinkView> {
 
   const view = await getLink(input.userId);
   if (!view) throw new Error("line_links row missing after upsert");
+  return view;
+}
+
+/**
+ * Re-reads the friendship status with the OA's own channel token
+ * (GET /v2/bot/profile/{userId}: 200 = friend, 404 = not / blocked). No
+ * OAuth round-trip, no consent screen — the user just taps "check again".
+ */
+export async function recheckFriend(userId: string): Promise<LineLinkView> {
+  const token = lineChannelToken();
+  if (!token) throw new LineLinkError("not_configured", "LINE_CHANNEL_ACCESS_TOKEN not set");
+  const current = await getLink(userId);
+  if (!current) throw new Error("no LINE link to check");
+  const res = await checkFriend(token, current.lineUserId);
+  if (!res.ok) throw new LineLinkError("profile_check_failed", `LINE answered ${res.status}`);
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin
+    .from("line_links")
+    .update({
+      is_friend: res.friend,
+      friend_checked_at: now,
+      blocked_at: res.friend ? null : (current.blockedAt ?? now),
+      ...(res.displayName ? { display_name: res.displayName } : {}),
+      ...(res.pictureUrl ? { picture_url: res.pictureUrl } : {}),
+    })
+    .eq("user_id", userId);
+  if (error) throw new Error(`line_links update: ${error.message}`);
+  const view = await getLink(userId);
+  if (!view) throw new Error("line_links row missing after update");
   return view;
 }
 

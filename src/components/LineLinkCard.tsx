@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getLineLink, startLineLink, unlinkLine } from "@/lib/line.functions";
+import { getLineLink, recheckLineFriend, startLineLink, unlinkLine } from "@/lib/line.functions";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
@@ -27,6 +27,7 @@ export function LineLinkCard() {
   const qc = useQueryClient();
   const start = useServerFn(startLineLink);
   const unlink = useServerFn(unlinkLine);
+  const recheckFn = useServerFn(recheckLineFriend);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const status = useQuery({ queryKey: ["line-link"], queryFn: () => getLineLink() });
@@ -35,6 +36,21 @@ export function LineLinkCard() {
     mutationFn: async () => {
       const { url } = await start({ data: { origin: window.location.origin } });
       window.location.href = url;
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
+  });
+
+  // Asks the OA (Messaging API profile) whether the user is a friend now —
+  // no OAuth round-trip, no consent screen.
+  const recheck = useMutation({
+    mutationFn: () => recheckFn(),
+    onSuccess: (r) => {
+      if (!r.ok) {
+        toast.error(t.lineRecheckFailed);
+        return;
+      }
+      toast[r.link.isFriend ? "success" : "warning"](r.link.isFriend ? t.lineFriendYes : t.lineFriendNo);
+      qc.invalidateQueries({ queryKey: ["line-link"] });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
   });
@@ -102,9 +118,8 @@ export function LineLinkCard() {
                     </a>
                   </Button>
                 )}
-                {/* Re-running the flow re-reads the friendship status. */}
-                <Button size="sm" variant="outline" onClick={() => connect.mutate()} disabled={connect.isPending}>
-                  <RefreshCw className={`mr-1.5 size-3.5 ${connect.isPending ? "animate-spin" : ""}`} />
+                <Button size="sm" variant="outline" onClick={() => recheck.mutate()} disabled={recheck.isPending}>
+                  <RefreshCw className={`mr-1.5 size-3.5 ${recheck.isPending ? "animate-spin" : ""}`} />
                   {t.lineRecheck}
                 </Button>
               </div>

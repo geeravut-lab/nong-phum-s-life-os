@@ -58,6 +58,18 @@ export const finishLineLink = createServerFn({ method: "POST" })
     }
   });
 
+export const recheckLineFriend = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<LineLinkOutcome> => {
+    const { recheckFriend, LineLinkError } = await import("./line-link.server");
+    try {
+      return { ok: true, link: await recheckFriend(context.userId) };
+    } catch (err) {
+      if (err instanceof LineLinkError) return { ok: false, code: err.code };
+      throw err;
+    }
+  });
+
 export const unlinkLine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

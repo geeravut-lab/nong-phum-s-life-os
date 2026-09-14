@@ -186,6 +186,70 @@ export const testAiModel = createServerFn({ method: "POST" })
   });
 
 /** Latest fallbacks and errors, newest first. RLS already limits reads to admins; the middleware is the second gate. */
+// ---- LINE notifications (phase 1.3 step 4b) ----------------------------
+
+const NotificationSettingsInput = z.object({
+  line_monthly_cap: z.number().int().min(0).max(100_000),
+  line_digest_reserve: z.number().int().min(0).max(100_000),
+  line_digest_hour: z.number().int().min(0).max(23),
+  /** true = clear the halt set by the tick after an auth failure */
+  resume: z.boolean().optional(),
+});
+
+export type NotificationSettingsInput = z.infer<typeof NotificationSettingsInput>;
+
+/** Quota state as the tick sees it, plus the settings row and a hint of the last run. */
+export const getNotificationConfig = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { loadSettings, sentThisMonth } = await import("./line-deliver.server");
+    const { getQuota, lineChannelToken, appOpenUrl } = await import("./line-push.server");
+    const now = new Date();
+    const token = lineChannelToken();
+    const [settings, own, line, links, lastTick] = await Promise.all([
+      loadSettings(),
+      sentThisMonth(now),
+      token ? getQuota(token) : Promise.resolve(null),
+      context.supabase.from("line_links").select("is_friend", { count: "exact", head: true }),
+      context.supabase.from("cron_ticks").select("tick, finished_at, summary, error").order("tick", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    const { count: friends } = await context.supabase
+      .from("line_links")
+      .select("user_id", { count: "exact", head: true })
+      .eq("is_friend", true);
+    return {
+      configured: !!token,
+      settings,
+      sentThisMonth: own,
+      line,
+      used: Math.max(own, line?.totalUsage ?? 0),
+      linkedUsers: links.count ?? 0,
+      friendUsers: friends ?? 0,
+      openUrl: appOpenUrl("/today"),
+      lastTick: lastTick.data ?? null,
+    };
+  });
+
+export const updateNotificationSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) => NotificationSettingsInput.parse(input))
+  .handler(async ({ data, context }) => {
+    if (data.line_digest_reserve > data.line_monthly_cap) throw new Error("reserve cannot exceed the cap");
+    // Under the caller's JWT: the has_role policy on the table is the second gate.
+    const { error } = await context.supabase
+      .from("notification_settings")
+      .update({
+        line_monthly_cap: data.line_monthly_cap,
+        line_digest_reserve: data.line_digest_reserve,
+        line_digest_hour: data.line_digest_hour,
+        updated_by: context.userId,
+        ...(data.resume ? { line_halted_until: null, line_halt_reason: null } : {}),
+      })
+      .eq("id", true);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
 export const listAiEvents = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
   .handler(async ({ context }) => {
