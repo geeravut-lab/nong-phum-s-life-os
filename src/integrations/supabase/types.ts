@@ -882,6 +882,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          id: boolean
+          line_digest_hour: number
+          line_digest_reserve: number
+          line_halt_reason: string | null
+          line_halted_until: string | null
+          line_monthly_cap: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          line_digest_hour?: number
+          line_digest_reserve?: number
+          line_halt_reason?: string | null
+          line_halted_until?: string | null
+          line_monthly_cap?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          line_digest_hour?: number
+          line_digest_reserve?: number
+          line_halt_reason?: string | null
+          line_halted_until?: string | null
+          line_monthly_cap?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           commission_rate: number
