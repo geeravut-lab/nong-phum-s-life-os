@@ -21,6 +21,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
+import { completeReminder } from "@/lib/reminder-actions";
+import { isRepeating } from "@/lib/recurrence";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({ meta: routeMeta("tasks") }),
@@ -86,13 +88,30 @@ function TasksPage() {
     qc.invalidateQueries();
   };
 
-  const toggle = async (id: string, status: string) => {
-    await supabase
-      .from("reminders")
-      .update({ status: status === "done" ? "open" : "done" })
-      .eq("id", id);
+  const toggle = async (r: { id: string; status: string; due_at: string | null; recurrence: string }) => {
+    try {
+      if (r.status === "done") {
+        const { error } = await supabase.from("reminders").update({ status: "open" }).eq("id", r.id);
+        if (error) throw error;
+      } else {
+        const { advancedTo } = await completeReminder(r);
+        if (advancedTo) toast.success(t.advancedTo(formatDay(advancedTo, lang)));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["reminders"] });
   };
+
+  // What the button will do, stated before the tap: a recurring reminder is
+  // not closed by "done", it moves to the next occurrence.
+  const doneLabel = (r: { recurrence: string; due_at: string | null }) =>
+    isRepeating(r.recurrence) && r.due_at
+      ? r.recurrence === "monthly"
+        ? t.markDoneNextMonth
+        : t.markDoneNextYear
+      : t.markDone;
 
   const share = async (id: string, next: boolean) => {
     await supabase
@@ -209,8 +228,8 @@ function TasksPage() {
                     aria-label={t.shared}
                   />
                 )}
-                <Button size="sm" variant="outline" onClick={() => toggle(r.id, r.status)}>
-                  {r.status === "done" ? t.reopen : t.markDone}
+                <Button size="sm" variant="outline" onClick={() => toggle(r)}>
+                  {r.status === "done" ? t.reopen : doneLabel(r)}
                 </Button>
               </div>
             </li>

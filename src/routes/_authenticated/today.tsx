@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CalendarClock, FileText, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { generateDailyBrief } from "@/lib/lifeos.functions";
 import { formatDay, formatMoney } from "@/lib/format";
-import { monthStartInBangkok } from "@/lib/time";
+import { bangkokDateAtHour, monthStartInBangkok, todayInBangkok } from "@/lib/time";
+import { completeReminder } from "@/lib/reminder-actions";
+import { isRepeating } from "@/lib/recurrence";
 
 export const Route = createFileRoute("/_authenticated/today")({
   head: () => ({ meta: routeMeta("today") }),
@@ -28,12 +31,24 @@ function TodayPage() {
     queryKey: ["today"],
     queryFn: async () => {
       const monthStart = monthStartInBangkok();
-      const [profile, reminders, expenses, docs] = await Promise.all([
+      const nowIso = new Date().toISOString();
+      const [profile, dueNow, reminders, expenses, docs] = await Promise.all([
         supabase.from("profiles").select("display_name").maybeSingle(),
+        // Came due and nobody has dealt with it: the in-app notification for
+        // everyone without a delivery channel (today, that is everyone).
+        // Same predicate the tick uses to notify.
         supabase
           .from("reminders")
-          .select("id, title, due_at, priority, status")
+          .select("id, title, due_at, priority, recurrence")
           .eq("status", "open")
+          .or(`notify_at.lte.${nowIso},and(notify_at.is.null,due_at.lte.${nowIso})`)
+          .order("due_at", { ascending: true })
+          .limit(20),
+        supabase
+          .from("reminders")
+          .select("id, title, due_at, priority, recurrence")
+          .eq("status", "open")
+          .or(`due_at.gt.${nowIso},due_at.is.null`)
           .order("due_at", { ascending: true })
           .limit(6),
         supabase.from("expenses").select("amount").gte("spent_on", monthStart),
@@ -41,6 +56,7 @@ function TodayPage() {
       ]);
       return {
         name: profile.data?.display_name ?? "",
+        dueNow: dueNow.data ?? [],
         reminders: reminders.data ?? [],
         monthTotal: (expenses.data ?? []).reduce((s, e) => s + Number(e.amount ?? 0), 0),
         docCount: docs.count ?? 0,
@@ -55,20 +71,32 @@ function TodayPage() {
   });
 
   const complete = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reminders").update({ status: "done" }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+    mutationFn: (r: { id: string; due_at: string | null; recurrence: string }) => completeReminder(r),
+    onSuccess: ({ advancedTo }) => {
       qc.invalidateQueries({ queryKey: ["today"] });
-      toast.success(t.done);
+      toast.success(advancedTo ? t.advancedTo(formatDay(advancedTo, lang)) : t.done);
     },
+    onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
   });
 
+  const doneLabel = (r: { recurrence: string; due_at: string | null }) =>
+    isRepeating(r.recurrence) && r.due_at
+      ? r.recurrence === "monthly"
+        ? t.markDoneNextMonth
+        : t.markDoneNextYear
+      : t.markDone;
+
   const now = Date.now();
-  const urgent = (data?.reminders ?? []).filter(
+  const dueNow = data?.dueNow ?? [];
+  // A reminder with an early notify_at is due-now AND still upcoming by
+  // due_at; show it once, in the due-now list.
+  const dueNowIds = new Set(dueNow.map((r) => r.id));
+  const upcoming = (data?.reminders ?? []).filter((r) => !dueNowIds.has(r.id));
+  const urgent = upcoming.filter(
     (r) => r.due_at && new Date(r.due_at).getTime() < now + 3 * 86400000,
   );
+  // "Overdue" = due before today (Bangkok), not merely before this minute.
+  const dayStart = new Date(bangkokDateAtHour(todayInBangkok(), 0));
 
   return (
     <AppShell>
@@ -78,15 +106,46 @@ function TodayPage() {
           {t.todayTitle} {data?.name ? `${data.name} 👋` : "👋"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {urgent.length ? t.todayCount(urgent.length) : t.todayNone}
+          {dueNow.length ? t.dueNowCount(dueNow.length) : urgent.length ? t.todayCount(urgent.length) : t.todayNone}
         </p>
       </header>
+
+      {dueNow.length > 0 && (
+        <section className="mb-5 rounded-2xl border border-destructive/40 bg-destructive/5 p-3 shadow-soft">
+          <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-destructive">
+            <AlertTriangle className="size-4" />
+            {t.dueNow}
+          </h2>
+          <ul className="space-y-2">
+            {dueNow.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.title}</p>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <span>{r.due_at ? formatDay(new Date(r.due_at), lang, true) : "—"}</span>
+                    {r.due_at && new Date(r.due_at) < dayStart && <Badge variant="destructive">{t.overdue}</Badge>}
+                    {isRepeating(r.recurrence) && (
+                      <Badge variant="outline">{r.recurrence === "monthly" ? t.monthly : t.yearly}</Badge>
+                    )}
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" disabled={complete.isPending} onClick={() => complete.mutate(r)}>
+                  {doneLabel(r)}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard
           icon={<CalendarClock className="size-4" />}
           label={t.openTasks}
-          value={String(data?.reminders.length ?? 0)}
+          value={String(dueNow.length + upcoming.length)}
         />
         <StatCard
           icon={<Wallet className="size-4" />}
@@ -133,9 +192,9 @@ function TodayPage() {
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">{t.upcoming}</h2>
         {isLoading ? (
           <Skeleton className="h-24 w-full" />
-        ) : data?.reminders.length ? (
+        ) : upcoming.length ? (
           <ul className="space-y-2">
-            {data.reminders.map((r) => (
+            {upcoming.map((r) => (
               <li
                 key={r.id}
                 className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft"
@@ -147,8 +206,8 @@ function TodayPage() {
                     {r.due_at ? formatDay(new Date(r.due_at), lang, true) : "—"}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => complete.mutate(r.id)}>
-                  {t.markDone}
+                <Button size="sm" variant="outline" disabled={complete.isPending} onClick={() => complete.mutate(r)}>
+                  {doneLabel(r)}
                 </Button>
               </li>
             ))}
