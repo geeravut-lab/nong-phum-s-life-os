@@ -270,6 +270,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cron_ticks: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          job: string
+          started_at: string
+          summary: Json | null
+          tick: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          job: string
+          started_at?: string
+          summary?: Json | null
+          tick: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          job?: string
+          started_at?: string
+          summary?: Json | null
+          tick?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           amount: number | null
@@ -753,6 +780,54 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          digest_date: string | null
+          due_at: string | null
+          error: string | null
+          id: string
+          kind: string
+          reminder_id: string | null
+          reminder_ids: string[]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          digest_date?: string | null
+          due_at?: string | null
+          error?: string | null
+          id?: string
+          kind: string
+          reminder_id?: string | null
+          reminder_ids?: string[]
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          digest_date?: string | null
+          due_at?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          reminder_id?: string | null
+          reminder_ids?: string[]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           commission_rate: number
@@ -811,7 +886,12 @@ export type Database = {
           family_id: string | null
           id: string
           is_shared: boolean
+          last_completed_at: string | null
           notes: string | null
+          notified_at: string | null
+          notify_at: string | null
+          notify_attempts: number
+          notify_error: string | null
           priority: string
           recurrence: string
           source_document_id: string | null
@@ -826,7 +906,12 @@ export type Database = {
           family_id?: string | null
           id?: string
           is_shared?: boolean
+          last_completed_at?: string | null
           notes?: string | null
+          notified_at?: string | null
+          notify_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           priority?: string
           recurrence?: string
           source_document_id?: string | null
@@ -841,7 +926,12 @@ export type Database = {
           family_id?: string | null
           id?: string
           is_shared?: boolean
+          last_completed_at?: string | null
           notes?: string | null
+          notified_at?: string | null
+          notify_at?: string | null
+          notify_attempts?: number
+          notify_error?: string | null
           priority?: string
           recurrence?: string
           source_document_id?: string | null
