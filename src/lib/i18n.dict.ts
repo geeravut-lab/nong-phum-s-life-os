@@ -67,6 +67,7 @@ const th = {
   docFailedHint: "ไฟล์ถูกเก็บไว้แล้ว ลองอ่านใหม่หรือลบทิ้งได้",
   docRetry: "ลองใหม่",
   docRetrying: "กำลังอ่านใหม่…",
+  docFailedRemovalIn: (days: number) => (days <= 0 ? "จะถูกลบวันนี้" : `จะถูกลบใน ${days} วัน`),
   // admin
   navAdmin: "ผู้ดูแลระบบ",
   adminTitle: "ตั้งค่า AI",
@@ -428,6 +429,8 @@ const en = {
   docFailedHint: "The file is saved. You can try again or delete it.",
   docRetry: "Try again",
   docRetrying: "Reading again…",
+  docFailedRemovalIn: (days: number) =>
+    days <= 0 ? "Will be removed today" : `Will be removed in ${days} day${days === 1 ? "" : "s"}`,
   // admin
   navAdmin: "Admin",
   adminTitle: "AI settings",

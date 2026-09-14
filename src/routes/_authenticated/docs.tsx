@@ -18,6 +18,7 @@ import { analyzeDocument } from "@/lib/lifeos.functions";
 import { DocumentAnalysisError, intakeDocument, retryDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 import { bangkokDateAtHour } from "@/lib/time";
+import { daysUntilFailedDocRemoved } from "@/lib/retention";
 
 const MAX_UPLOAD_MB = 10;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
@@ -188,6 +189,10 @@ function DocsPage() {
                   <h2 className="font-medium">{d.title}</h2>
                   {d.status === "pending" && <Badge variant="outline">{t.docStatusPending}</Badge>}
                   {d.status === "failed" && <Badge variant="destructive">{t.docStatusFailed}</Badge>}
+                  {/* The tick removes failed rows after FAILED_DOC_RETENTION_DAYS; say so before it happens. */}
+                  {d.status === "failed" && (
+                    <Badge variant="outline">{t.docFailedRemovalIn(daysUntilFailedDocRemoved(d.updated_at))}</Badge>
+                  )}
                   {d.status === "ready" && <Badge variant="secondary">{catLabel(d.category, lang)}</Badge>}
                   {d.due_date && (
                     <Badge variant="outline">
