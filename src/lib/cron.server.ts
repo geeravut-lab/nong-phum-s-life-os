@@ -17,7 +17,22 @@
 //   * files before rows — a documents row is deleted only after its storage
 //     object is gone, so a crash in between leaves a row without a file
 //     (harmless, deleted next tick) rather than a file without a row
+//
+// Reminder engine (phase 1.3 step 3). Per occurrence, exactly once:
+//   1. claim  — UPDATE reminders SET notified_at = now() WHERE id = ? AND
+//               notified_at IS NULL, RETURNING; zero rows = someone else won
+//   2. log    — one notification_log row; 'immediate' for priority = 'high',
+//               otherwise appended to the user's 'digest' row for today.
+//               channel = 'none' until a LINE link exists (step 4).
+// A recurring reminder is NOT advanced here. It stays open — and visibly
+// overdue on Today — until the user marks it done, which moves it to the next
+// occurrence (src/lib/recurrence.ts). The one exception is rolloverStale():
+// if a whole period passes with the occurrence still not completed, the tick
+// advances it anyway so a user who only ever reads the notification (never
+// opens the app) keeps getting one per period instead of falling silent.
 import { supabaseAdmin } from "../integrations/supabase/client.server";
+import { isRepeating, lastOccurrenceAtOrBefore, nextOccurrence } from "./recurrence";
+import { todayInBangkok } from "./time";
 import {
   AI_EVENT_RETENTION_DAYS,
   CRON_TICK_RETENTION_DAYS,
@@ -31,6 +46,8 @@ const JOB = "tick";
 const TIME_BUDGET_MS = 24_000;
 // Documents are deleted one at a time (storage call + row), so cap per tick.
 const DOC_BATCH = 20;
+// Reminders are claimed one at a time (claim + log), same cap.
+const REMINDER_BATCH = 20;
 
 export type TickSummary = Record<string, number | string>;
 
@@ -71,6 +88,10 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
   let error: string | null = null;
   try {
     const steps: Array<[string, () => Promise<number>]> = [
+      // Reminders first: a notification a few seconds late matters more than
+      // a stale ai_events row surviving one more tick.
+      ["reminders_rolled_over", () => rolloverStale(now, overBudget)],
+      ["reminders_notified", () => notifyDue(now, overBudget, summary)],
       ["ai_events_deleted", () => deleteOlderThan("ai_events", "created_at", agoIso(now, AI_EVENT_RETENTION_DAYS * DAY))],
       ["failed_docs_deleted", () => deleteDocuments("failed", agoIso(now, FAILED_DOC_RETENTION_DAYS * DAY), summary)],
       ["pending_docs_deleted", () => deleteDocuments("pending", agoIso(now, PENDING_DOC_RETENTION_HOURS * HOUR), summary)],
@@ -148,4 +169,144 @@ async function deleteDocuments(status: "failed" | "pending", cutoff: string, sum
     deleted += 1;
   }
   return deleted;
+}
+
+type DueReminder = {
+  id: string;
+  user_id: string;
+  title: string;
+  due_at: string | null;
+  notify_at: string | null;
+  priority: string;
+  recurrence: string;
+  notified_at: string | null;
+};
+
+const REMINDER_COLUMNS = "id, user_id, title, due_at, notify_at, priority, recurrence, notified_at";
+
+/**
+ * Open reminders whose COALESCE(notify_at, due_at) has passed and that nobody
+ * has claimed yet. Claim each, then write the log row. Returns how many were
+ * claimed by this run.
+ */
+async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSummary): Promise<number> {
+  const nowIso = now.toISOString();
+  const { data: rows, error } = await supabaseAdmin
+    .from("reminders")
+    .select(REMINDER_COLUMNS)
+    .eq("status", "open")
+    .is("notified_at", null)
+    .or(`notify_at.lte.${nowIso},and(notify_at.is.null,due_at.lte.${nowIso})`)
+    .order("due_at", { ascending: true })
+    .limit(REMINDER_BATCH);
+  if (error) throw new Error(`reminders select: ${error.message}`);
+
+  let claimed = 0;
+  for (const r of (rows ?? []) as DueReminder[]) {
+    if (overBudget()) {
+      summary["stopped_early_at"] = "reminders_notified";
+      break;
+    }
+    // Atomic claim: the WHERE repeats the "not yet notified" condition, so of
+    // two runs racing for the same row exactly one gets it back.
+    const { data: won, error: claimErr } = await supabaseAdmin
+      .from("reminders")
+      .update({ notified_at: nowIso })
+      .eq("id", r.id)
+      .is("notified_at", null)
+      .select("id");
+    if (claimErr) throw new Error(`reminders claim ${r.id}: ${claimErr.message}`);
+    if (!won?.length) continue;
+    claimed += 1;
+
+    // channel 'none': nothing can be delivered yet, the row records that the
+    // occurrence came due. Step 4 turns this into a LINE push when the user
+    // has a link.
+    if (r.priority === "high") {
+      const { error: logErr } = await supabaseAdmin.from("notification_log").insert({
+        user_id: r.user_id,
+        kind: "immediate",
+        reminder_id: r.id,
+        due_at: r.due_at ?? nowIso,
+        reminder_ids: [r.id],
+        channel: "none",
+        status: "skipped",
+      });
+      // 23505 = this occurrence was logged by a run that died after sending;
+      // the claim above already prevents a second delivery, so just move on.
+      if (logErr && logErr.code !== "23505") throw new Error(`notification_log insert: ${logErr.message}`);
+    } else {
+      await appendToDigest(r.user_id, r.id, todayInBangkok(now));
+    }
+  }
+  return claimed;
+}
+
+/**
+ * One digest row per user per Bangkok day accumulates every non-urgent
+ * reminder that came due that day. Insert first (it is the claim on the day);
+ * on conflict, append to the existing row's reminder_ids.
+ */
+async function appendToDigest(userId: string, reminderId: string, digestDate: string): Promise<void> {
+  const { error: insErr } = await supabaseAdmin.from("notification_log").insert({
+    user_id: userId,
+    kind: "digest",
+    digest_date: digestDate,
+    reminder_ids: [reminderId],
+    channel: "none",
+    status: "skipped",
+  });
+  if (!insErr) return;
+  if (insErr.code !== "23505") throw new Error(`digest insert: ${insErr.message}`);
+
+  const { data: existing, error: selErr } = await supabaseAdmin
+    .from("notification_log")
+    .select("id, reminder_ids")
+    .eq("kind", "digest")
+    .eq("user_id", userId)
+    .eq("digest_date", digestDate)
+    .single();
+  if (selErr) throw new Error(`digest select: ${selErr.message}`);
+  if (existing.reminder_ids.includes(reminderId)) return;
+  const { error: updErr } = await supabaseAdmin
+    .from("notification_log")
+    .update({ reminder_ids: [...existing.reminder_ids, reminderId] })
+    .eq("id", existing.id);
+  if (updErr) throw new Error(`digest append: ${updErr.message}`);
+}
+
+/**
+ * Recurring reminders that were notified but never completed for a whole
+ * period: move them to the latest occurrence at or before now and clear the
+ * claim, so notifyDue (which runs right after) tells the user again. The
+ * candidate query over-selects by period length; the exact check is in JS.
+ */
+async function rolloverStale(now: Date, overBudget: () => boolean): Promise<number> {
+  const { data: rows, error } = await supabaseAdmin
+    .from("reminders")
+    .select(REMINDER_COLUMNS)
+    .eq("status", "open")
+    .not("notified_at", "is", null)
+    .in("recurrence", ["monthly", "yearly"])
+    .lte("due_at", new Date(now.getTime() - 28 * DAY).toISOString())
+    .order("due_at", { ascending: true })
+    .limit(REMINDER_BATCH);
+  if (error) throw new Error(`reminders rollover select: ${error.message}`);
+
+  let rolled = 0;
+  for (const r of (rows ?? []) as DueReminder[]) {
+    if (overBudget() || !r.due_at || !isRepeating(r.recurrence)) continue;
+    const due = new Date(r.due_at);
+    // Only once the next occurrence in the series has itself arrived.
+    if (nextOccurrence(due, r.recurrence, due).getTime() > now.getTime()) continue;
+    const catchUp = lastOccurrenceAtOrBefore(due, r.recurrence, now);
+    const { error: updErr } = await supabaseAdmin
+      .from("reminders")
+      .update({ due_at: catchUp.toISOString(), notify_at: null, notified_at: null, notify_attempts: 0, notify_error: null })
+      .eq("id", r.id)
+      .eq("due_at", r.due_at); // no-op if the user touched it meanwhile
+    if (updErr) throw new Error(`reminders rollover ${r.id}: ${updErr.message}`);
+    rolled += 1;
+  }
+  return rolled;
 }
