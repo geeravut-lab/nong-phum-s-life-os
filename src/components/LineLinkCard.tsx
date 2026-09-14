@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LINE_STATE_STORAGE_KEY } from "@/lib/line-link-state";
 import { getLineLink, startLineLink, unlinkLine } from "@/lib/line.functions";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
@@ -34,9 +33,7 @@ export function LineLinkCard() {
 
   const connect = useMutation({
     mutationFn: async () => {
-      const { url, state } = await start({ data: { origin: window.location.origin } });
-      // The callback page compares this before it talks to the server.
-      window.sessionStorage.setItem(LINE_STATE_STORAGE_KEY, state);
+      const { url } = await start({ data: { origin: window.location.origin } });
       window.location.href = url;
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),

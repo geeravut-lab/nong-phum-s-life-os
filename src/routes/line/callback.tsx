@@ -3,7 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { finishLineLink, type LineLinkOutcome } from "@/lib/line.functions";
-import { LINE_STATE_STORAGE_KEY } from "@/lib/line-link-state";
 import { useI18n } from "@/lib/i18n";
 import { PhumMark } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,13 @@ import { Button } from "@/components/ui/button";
 //   /line/callback?code=…&state=…[&friendship_status_changed=true|false]
 //   /line/callback?error=access_denied&error_description=…&state=…
 // The page relays code + state to the server once. The server owns every
-// check that matters (state bound to the signed-in user, ID token verified
-// with LINE); the sessionStorage comparison here only stops a foreign link
-// from even reaching it. Same shape as the Aivora SSO callback.
+// check that matters: the state was minted by a signed-in user and finishLink
+// refuses it unless it belongs to the caller, which closes login-CSRF in both
+// directions. There is deliberately NO browser-side state comparison: on a
+// phone, LINE Login switches to the LINE app and comes back in a NEW tab, so
+// anything kept in sessionStorage by the starting tab is not here (seen
+// 2026-09-14 as client_state_mismatch on Android). Same shape as the Aivora
+// SSO callback.
 
 export const Route = createFileRoute("/line/callback")({
   ssr: false,
@@ -44,9 +47,6 @@ function LineCallbackPage() {
     // Scrub the one-time code from the address bar before anything awaits.
     window.history.replaceState(null, "", "/line/callback");
 
-    const expectedState = window.sessionStorage.getItem(LINE_STATE_STORAGE_KEY);
-    window.sessionStorage.removeItem(LINE_STATE_STORAGE_KEY);
-
     const run = async () => {
       if (lineError) {
         setStatus({ step: "failed", code: lineError === "access_denied" ? "line_denied" : "line_error" });
@@ -54,10 +54,6 @@ function LineCallbackPage() {
       }
       if (!code || !state) {
         setStatus({ step: "failed", code: "state_invalid" });
-        return;
-      }
-      if (!expectedState || expectedState !== state) {
-        setStatus({ step: "failed", code: "client_state_mismatch" });
         return;
       }
       const { data } = await supabase.auth.getSession();
@@ -134,7 +130,6 @@ export function lineErrorText(code: string, t: ReturnType<typeof useI18n>["t"]):
       return t.lineErrDenied;
     case "state_invalid":
     case "state_expired":
-    case "client_state_mismatch":
       return t.lineErrState;
     case "state_mismatch":
       return t.lineErrOtherAccount;
