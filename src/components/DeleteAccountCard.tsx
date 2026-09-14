@@ -95,6 +95,7 @@ export function DeleteAccountCard() {
                       {(p.counts.helper_profiles > 0 || p.counts.jobs > 0) && <li>{t.deleteItemHelpMe}</li>}
                       {p.counts.benefit_profiles > 0 && <li>{t.deleteItemBenefits}</li>}
                       {p.isSsoUser && <li>{t.deleteItemSso}</li>}
+                      {p.isLineLinked && <li>{t.deleteItemLine}</li>}
                     </ul>
                     {p.ownedFamilies
                       .filter((f) => f.otherMembers > 0)

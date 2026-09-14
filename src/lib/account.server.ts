@@ -38,6 +38,7 @@ export type DeletionPreview = {
   /** Families this user is a plain member of; they simply leave. */
   memberOfFamilies: number;
   isSsoUser: boolean;
+  isLineLinked: boolean;
 };
 
 /** Everything the confirmation dialog needs, read with the caller's own client (RLS-scoped). */
@@ -71,8 +72,9 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
   const storageFiles = (await listUserFiles(userId)).length;
 
   const { data: link } = await supabaseAdmin.from("aivora_links").select("aivora_user_id").eq("user_id", userId).maybeSingle();
+  const { data: line } = await supabaseAdmin.from("line_links").select("user_id").eq("user_id", userId).maybeSingle();
 
-  return { counts, storageFiles, ownedFamilies, memberOfFamilies, isSsoUser: !!link };
+  return { counts, storageFiles, ownedFamilies, memberOfFamilies, isSsoUser: !!link, isLineLinked: !!line };
 }
 
 async function listUserFiles(userId: string): Promise<string[]> {

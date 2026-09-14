@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DeleteAccountCard } from "@/components/DeleteAccountCard";
+import { LineLinkCard } from "@/components/LineLinkCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n, type Lang } from "@/lib/i18n";
 
@@ -118,6 +119,8 @@ function SettingsPage() {
           </div>
           <Switch checked={dark} onCheckedChange={toggleTheme} aria-label={t.theme} />
         </section>
+
+        <LineLinkCard />
 
         <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
           <h2 className="text-sm font-semibold">{t.privacy}</h2>

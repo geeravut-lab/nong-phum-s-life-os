@@ -23,6 +23,7 @@ import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
+import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -94,6 +95,11 @@ const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const LineCallbackRoute = LineCallbackRouteImport.update({
+  id: '/line/callback',
+  path: '/line/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SsoCallbackRoute = SsoCallbackRouteImport.update({
   id: '/sso/callback',
   path: '/sso/callback',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
 }
 export interface FileRoutesById {
@@ -148,6 +156,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
+  '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
 }
 export interface FileRouteTypes {
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/today'
+    | '/line/callback'
     | '/sso/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/today'
+    | '/line/callback'
     | '/sso/callback'
   id:
     | '__root__'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
+    | '/line/callback'
     | '/sso/callback'
   fileRoutesById: FileRoutesById
 }
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   MicTestRoute: typeof MicTestRoute
+  LineCallbackRoute: typeof LineCallbackRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
 }
 
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/line/callback': {
+      id: '/line/callback'
+      path: '/line/callback'
+      fullPath: '/line/callback'
+      preLoaderRoute: typeof LineCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sso/callback': {
       id: '/sso/callback'
       path: '/sso/callback'
@@ -354,6 +374,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   MicTestRoute: MicTestRoute,
+  LineCallbackRoute: LineCallbackRoute,
   SsoCallbackRoute: SsoCallbackRoute,
 }
 export const routeTree = rootRouteImport

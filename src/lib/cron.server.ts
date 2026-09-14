@@ -100,6 +100,8 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
         () => deleteOlderThan("notification_log", "created_at", agoIso(now, NOTIFICATION_LOG_RETENTION_DAYS * DAY)),
       ],
       ["cron_ticks_deleted", () => deleteOlderThan("cron_ticks", "started_at", agoIso(now, CRON_TICK_RETENTION_DAYS * DAY))],
+      // Abandoned LINE link flows: the state is useless once expired.
+      ["line_states_deleted", () => deleteOlderThan("line_link_states", "expires_at", now.toISOString())],
     ];
     for (const [key, step] of steps) {
       if (overBudget()) {
@@ -123,7 +125,7 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
   return { skipped: false, tick, summary, error };
 }
 
-type RetentionTable = "ai_events" | "notification_log" | "cron_ticks";
+type RetentionTable = "ai_events" | "notification_log" | "cron_ticks" | "line_link_states";
 
 /** Plain row retention: delete everything whose timestamp column is before the cutoff. */
 async function deleteOlderThan(table: RetentionTable, column: string, cutoff: string): Promise<number> {
