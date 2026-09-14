@@ -18,7 +18,7 @@
 | 4 | **1.7** | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว | ✅ 2026-09-14 | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict |
 | 5 | **1.2 + 1.8 (schema)** | Data integrity & deletion path + คำถามเชิง schema เรื่องเวลา | ✅ 2026-09-14 (เหลือ: โอน owner ครอบครัว → ก่อนมีครอบครัวจริง) | งาน schema ยิ่งมีข้อมูลจริงมากยิ่งเติม FK ย้อนหลังยาก · การตัดสินใจเรื่อง attachments (1.9) ต้องทำในรอบนี้ |
 | 6 | **1.9** | แนบไฟล์ | ⏳ | ต้องรอ FK จาก 1.2 |
-| 7 | **1.3** | Scheduler + LINE notification + Recurring reminder | ⏳ | ทั้งสามใช้ cron runner ตัวเดียวกัน |
+| 7 | **1.3** | Scheduler + LINE notification + Recurring reminder | 🔄 สำรวจ + ข้อ 0 เสร็จ 2026-09-14 | ทั้งสามใช้ cron runner ตัวเดียวกัน — Netlify Scheduled Function พิสูจน์แล้ว |
 | 8 | **1.10** | เสียง | ⏳ | ต้องรอ 1.1 คุม quota ได้ก่อน เพราะวิธีที่ปลอดภัยใช้ RPD ×2 · และต้องผ่านด่าน `/mic-test` บนมือถือจริงก่อน |
 | 9 | **1.4** | Payment rails | ⏳ | ใหญ่และเป็นอิสระ |
 | 10 | **1.5** | งานค้างเล็ก ๆ | ⏳ | Help Me rating UI, `.validator()` deprecation, bundle 600 kB |
@@ -204,15 +204,34 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 # 1.3 Scheduler + LINE notification + Recurring reminder
 
-สามงานนี้ใช้ cron runner ตัวเดียวกัน
+สามงานนี้ใช้ cron runner ตัวเดียวกัน — สร้าง runner ก่อนด้วยงานที่ง่ายที่สุด (ล้าง) แล้วค่อยเสียบ engine กับ LINE
 
-- [ ] เลือกวิธีตั้งเวลา: Netlify Scheduled Functions หรือ `pg_cron` + `pg_net` ฝั่ง Supabase — **ต้องเทียบข้อดีข้อเสียก่อนเลือก อย่าเดา**
-- [ ] LINE Messaging API (ไม่ใช่ LINE Notify ซึ่งปิดบริการแล้ว)
-- [ ] `reminders` ยังไม่มีคอลัมน์ `notified` / `sent_at` ต้องเพิ่ม
-- [ ] Recurring engine — `recurrence` (none/monthly/yearly) มี UI และเก็บลง DB แล้ว แต่ไม่มีโค้ดอ่านไปประมวลผลเลย reminder ที่ตั้งเป็น monthly จะไม่ถูกเลื่อนไปงวดถัดไป
-- [ ] งานล้าง `ai_events` เก่ากว่า 30 วัน
+## ที่ตัดสินใจแล้ว (รอบสำรวจ 2026-09-14 — ทุกข้อจากเอกสารทางการ ไม่เดา)
 
-> **หมายเหตุเรื่องการเชื่อมกับ Aivora Hub:** Life OS เป็นหนึ่งในแอปที่เปิดจาก LINE Launcher ซึ่งใช้ Firebase Auth ส่วน Life OS ใช้ Supabase Auth — ต้องตัดสินใจว่า Life OS อยู่ในชุด "business apps" ที่ผู้ใช้ล็อกอินเองที่แต่ละแอป หรือจะทำสะพานเชื่อม SSO ซึ่งเป็นงานใหญ่กว่ามาก **อย่าเพิ่งตัดสินใจตอนนี้ ยกไปคุยตอนเริ่ม 1.3**
+- [x] **Scheduler = Netlify Scheduled Function** `netlify/functions/tick.mts` ทุก 5 นาที (cron เป็น UTC) — พิสูจน์แล้ว `f28ae4b`: deploy ร่วมกับ `server` ของ vite plugin ได้ `function_schedules` ขึ้นใน deploy API และ log `[tick] alive` ขึ้นตามเวลา (ดูด้วย `netlify logs --url https://lavieos.netlify.app` หรือหน้า Functions ใน UI)
+  - ทำไมไม่ใช่ `pg_cron` + `pg_net`: งานทั้งสามต้องยิง HTTP ออก (LINE) และลบไฟล์ผ่าน Storage API ซึ่งเป็นโค้ด Node ที่มีโครงอยู่แล้ว · `pg_net` timeout default 2 วิ, response เก็บ 6 ชม., secret ต้องไปอยู่ใน Postgres · free project ของ Supabase ถูก pause ได้ถ้าเงียบ 7 วัน = cron ตายเงียบ · ทดสอบ pg_cron ในเครื่องต้อง Docker ซึ่งไม่มี
+  - ราคาที่จ่าย: **30 วินาทีต่อ tick** (free plan ไม่มี background function) → ทุกงานเป็น batch เล็ก + idempotent · ทดสอบในเครื่องทำได้แค่ `netlify functions:invoke tick` (Netlify Dev ไม่รันตาม schedule)
+- [x] **LINE ผ่าน Messaging API ของ OA ใน provider `Aivora Launcher`** — provider ตัวเดียวบรรจุทั้ง LINE Login channel (ที่ hub ใช้) และ Messaging API channel → LINE user id **ตรงกัน** (เอกสาร LINE: user id ต่างกันเฉพาะข้าม provider) → **ตัด account link / webhook ทิ้งได้ทั้งก้อน**
+  - ต้องแก้ **ฝั่ง Aivora hub (คนละ repo)** ให้ส่ง `line_user_id` มาใน SSO exchange payload — ตอนนี้ payload มีแค่ `id, display_name, avatar_url, email, roles` และ `id` เป็น Firebase uid ไม่ใช่ LINE id · ฝั่ง Life OS เก็บลง `aivora_links.line_user_id` (migration แยกตอนทำ LINE)
+  - ผู้ใช้ต้อง **follow OA ก่อน** push ถึงจะถึง — ถ้ายังไม่ follow LINE ตอบ 4xx ให้ mark แล้วไม่ยิงซ้ำ
+  - token: channel access token แบบ **long-lived** (indefinite, มีเฉพาะ Messaging API channel) เก็บเป็น Netlify env `LINE_CHANNEL_ACCESS_TOKEN` ห้ามมี prefix `VITE_`
+  - ผู้ใช้ที่ไม่ได้มาทาง SSO / ไม่มี LINE id → **in-app เท่านั้น** (`notification_log.channel = none`) ไม่ส่งอีเมล (SMTP ของ Supabase มีไว้ auth เท่านั้น)
+- [x] **โควตา OA 300 ข้อความ/เดือน → LINE มี 2 โหมด**: `immediate` ส่งทันทีเฉพาะ `priority = high` · `digest` สรุปวันละครั้งต่อผู้ใช้สำหรับที่เหลือ · เมื่อใกล้เต็ม หยุด digest ก่อน เก็บที่เหลือให้ immediate
+  - นับโควตาจาก `notification_log` (`channel=line AND status=sent` ในเดือนนี้ มี partial index) — ไม่มีตารางตัวนับแยก เพราะ log คือ ledger อยู่แล้ว ตัวนับแยกต้อง update ซ้ำทุกครั้งที่ส่ง + reset รายเดือน = state ที่เพี้ยนได้ · ตัวเลขทางการคือ `GET /v2/bot/message/quota/consumption` ของ LINE (`totalUsage` อาจอัปเดตช้า) tick อ่านครั้งเดียวต่อรอบ เก็บใน `cron_ticks.summary` แล้วใช้ค่าที่**มากกว่า**ระหว่างสองแหล่งตัดสิน · retention ของ `notification_log` ต้อง ≥ 2 เดือน (ตั้ง 90 วัน)
+  - ยังไม่ยืนยันจากเอกสาร: push 1 ครั้งที่มีหลาย message object นับกี่ข้อความ — ทดสอบยิงจริง 1 ครั้งแล้วอ่าน `totalUsage` จะได้คำตอบ
+- [x] **Recurring = advance in place**: งวดถึง → ส่ง → `due_at` += 1 เดือน/ปี (คำนวณเวลาไทย) → reset `notified_at` คง `status=open` · ประวัติอยู่ใน `notification_log` · ปุ่ม "ทำเสร็จ" ของ reminder recurring ต้องเลื่อนงวดแทนปิด (ตอนนี้ set done = recurring ตาย)
+- [x] **กันส่งซ้ำ 3 ชั้น**: (1) claim `UPDATE reminders SET notified_at = now() WHERE id = $1 AND notified_at IS NULL RETURNING` (2) partial unique ใน `notification_log` — `(reminder_id, due_at) WHERE kind=immediate` และ `(user_id, digest_date) WHERE kind=digest` (3) `cron_ticks (job, tick)` PK = lock ต่อนาที กัน Netlify ยิงซ้อน/Run now
+- [x] **retry**: 3 ครั้ง ห่างกันตาม tick เฉพาะ 5xx/timeout · 4xx ไม่ retry (token ผิด → หยุดทั้งระบบ + แจ้ง, ผู้ใช้บล็อก/ไม่ follow → mark)
+- [x] **งานล้าง**: `ai_events` > 30 วัน · `documents` failed > 30 วัน (badge บอกวันลบในหน้า Docs) · pending > 1 ชม. (แท็บปิดกลางทาง) — ทั้งสองลบไฟล์ผ่าน Storage API **ก่อน** ลบแถว · `notification_log` > 90 วัน · `cron_ticks` > 30 วัน · `account_deletions` ไม่ลบ
+
+## ลำดับทำ
+
+- [x] 0 — scheduled function เปล่า พิสูจน์ schedule + log `f28ae4b`
+- [ ] 1 — migration: คอลัมน์ใน `reminders` (`notify_at, notified_at, notify_attempts, notify_error, last_completed_at`) + CHECK `recurrence` + `notification_log` (รองรับ 2 โหมด) + `cron_ticks`
+- [ ] 2 — งานล้างใน tick + badge วันลบในหน้า Docs
+- [ ] 3 — recurring engine + `channel=none` + ปุ่ม done ของ recurring + แถบ in-app
+- [ ] 4 — LINE: (พี่) OA/token/follow · (hub repo) ส่ง `line_user_id` · (ที่นี่) `aivora_links.line_user_id` + push 2 โหมด + quota guard + retry
+- [ ] ลบ `ai_events` เก่ากว่า 30 วัน (ค้างจาก 1.1.7) → อยู่ในข้อ 2
 
 ---
 
