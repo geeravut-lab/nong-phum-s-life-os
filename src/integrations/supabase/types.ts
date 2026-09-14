@@ -780,6 +780,60 @@ export type Database = {
           },
         ]
       }
+      line_link_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      line_links: {
+        Row: {
+          blocked_at: string | null
+          display_name: string | null
+          friend_checked_at: string | null
+          is_friend: boolean
+          line_user_id: string
+          linked_at: string
+          picture_url: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          display_name?: string | null
+          friend_checked_at?: string | null
+          is_friend?: boolean
+          line_user_id: string
+          linked_at?: string
+          picture_url?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string | null
+          display_name?: string | null
+          friend_checked_at?: string | null
+          is_friend?: boolean
+          line_user_id?: string
+          linked_at?: string
+          picture_url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_log: {
         Row: {
           attempts: number
