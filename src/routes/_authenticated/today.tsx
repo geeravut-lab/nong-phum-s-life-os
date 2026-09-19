@@ -52,7 +52,7 @@ function TodayPage() {
           .order("due_at", { ascending: true })
           .limit(6),
         supabase.from("expenses").select("amount").gte("spent_on", monthStart),
-        supabase.from("documents").select("id", { count: "exact", head: true }),
+        supabase.from("documents").select("id", { count: "exact", head: true }).eq("kind", "analyzed"),
       ]);
       return {
         name: profile.data?.display_name ?? "",

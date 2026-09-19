@@ -68,7 +68,7 @@ function FamilyPage() {
     queryKey: ["family-shared", familyId],
     queryFn: async () => {
       const [docs, tasks, exp] = await Promise.all([
-        supabase.from("documents").select("id, title, due_date").eq("is_shared", true),
+        supabase.from("documents").select("id, title, due_date").eq("is_shared", true).eq("kind", "analyzed"),
         supabase.from("reminders").select("id, title, due_at").eq("is_shared", true),
         supabase.from("expenses").select("id, title, amount, spent_on").eq("is_shared", true),
       ]);

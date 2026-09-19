@@ -22,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 import { completeReminder } from "@/lib/reminder-actions";
+import { AttachmentControl } from "@/components/AttachmentControl";
+import { loadLinkedDocs } from "@/lib/attachments";
 import { isRepeating } from "@/lib/recurrence";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
@@ -66,6 +68,14 @@ function TasksPage() {
         .order("due_at", { ascending: true });
       return data ?? [];
     },
+  });
+
+  const linkedIds = (tasks ?? []).map((r) => r.source_document_id);
+  const { data: linkedDocs } = useQuery({
+    queryKey: ["linked-docs", "tasks", linkedIds.filter(Boolean).sort()],
+    queryFn: () => loadLinkedDocs(linkedIds),
+    enabled: !!tasks,
+    staleTime: 4 * 60_000,
   });
 
   const add = async (e: React.FormEvent) => {
@@ -218,6 +228,14 @@ function TasksPage() {
                       {r.recurrence === "monthly" ? t.monthly : t.yearly}
                     </Badge>
                   )}
+                </div>
+                <div className="mt-1.5">
+                  <AttachmentControl
+                    table="reminders"
+                    rowId={r.id}
+                    doc={(r.source_document_id && linkedDocs?.[r.source_document_id]) || null}
+                    onChanged={() => qc.invalidateQueries()}
+                  />
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

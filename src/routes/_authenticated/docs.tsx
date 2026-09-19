@@ -39,9 +39,12 @@ function DocsPage() {
   const { data: docs, isLoading } = useQuery({
     queryKey: ["documents"],
     queryFn: async () => {
+      // Receipts attached to expenses/incomes/reminders (kind = 'attachment')
+      // live with their rows, not in the vault.
       const { data } = await supabase
         .from("documents")
         .select("*")
+        .eq("kind", "analyzed")
         .order("created_at", { ascending: false });
       return data ?? [];
     },

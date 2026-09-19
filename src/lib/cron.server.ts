@@ -115,6 +115,7 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
         () => deleteOlderThan("notification_log", "created_at", agoIso(now, NOTIFICATION_LOG_RETENTION_DAYS * DAY)),
       ],
       ["cron_ticks_deleted", () => deleteOlderThan("cron_ticks", "started_at", agoIso(now, CRON_TICK_RETENTION_DAYS * DAY))],
+      ["orphan_attachments_deleted", () => deleteOrphanAttachments(now, overBudget, summary)],
       // Abandoned LINE link flows: the state is useless once expired.
       ["line_states_deleted", () => deleteOlderThan("line_link_states", "expires_at", now.toISOString())],
     ];
@@ -384,4 +385,62 @@ async function claimForDigest(line: LineContext, overBudget: () => boolean): Pro
     }
   }
   return claimed;
+}
+
+/**
+ * Attachments (documents.kind = 'attachment', phase 1.9) exist only for the
+ * expense / income / reminder that points at them. The foreign keys run the
+ * other way (row → document, ON DELETE SET NULL), so deleting the owning row
+ * — from any future UI, the SQL editor, anywhere — would leave the receipt
+ * behind with nothing pointing at it. This step removes such files after a
+ * day's grace (a just-uploaded file may not be linked yet), file first, then
+ * row, like the other document cleanups.
+ */
+async function deleteOrphanAttachments(now: Date, overBudget: () => boolean, summary: TickSummary): Promise<number> {
+  const { data: rows, error } = await supabaseAdmin
+    .from("documents")
+    .select("id, storage_path")
+    .eq("kind", "attachment")
+    .eq("status", "ready")
+    .lt("created_at", agoIso(now, 1 * DAY))
+    .order("created_at", { ascending: true })
+    .limit(DOC_BATCH);
+  if (error) throw new Error(`orphan attachments select: ${error.message}`);
+
+  let deleted = 0;
+  for (const doc of rows ?? []) {
+    if (overBudget()) {
+      summary["stopped_early_at"] = "orphan_attachments_deleted";
+      break;
+    }
+    let referenced = false;
+    for (const table of ["expenses", "incomes", "reminders"] as const) {
+      const { count, error: cErr } = await supabaseAdmin
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("source_document_id", doc.id);
+      if (cErr) throw new Error(`orphan check ${table}: ${cErr.message}`);
+      if ((count ?? 0) > 0) {
+        referenced = true;
+        break;
+      }
+    }
+    if (referenced) continue;
+    if (doc.storage_path) {
+      const { error: rmErr } = await supabaseAdmin.storage.from("documents").remove([doc.storage_path]);
+      if (rmErr) {
+        console.error(`[tick] could not remove orphan attachment ${doc.storage_path}: ${rmErr.message}`);
+        summary["doc_errors"] = Number(summary["doc_errors"] ?? 0) + 1;
+        continue;
+      }
+    }
+    const { error: delErr } = await supabaseAdmin.from("documents").delete().eq("id", doc.id);
+    if (delErr) {
+      console.error(`[tick] could not delete orphan attachment row ${doc.id}: ${delErr.message}`);
+      summary["doc_errors"] = Number(summary["doc_errors"] ?? 0) + 1;
+      continue;
+    }
+    deleted += 1;
+  }
+  return deleted;
 }

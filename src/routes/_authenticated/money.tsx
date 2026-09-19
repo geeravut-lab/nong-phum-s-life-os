@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { AttachmentControl } from "@/components/AttachmentControl";
+import { loadLinkedDocs } from "@/lib/attachments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -60,11 +62,21 @@ function MoneyPage() {
     },
   });
 
+  // Receipts / source documents the visible rows point at (1.9).
+  const linkedIds = [...(expenses ?? []), ...(incomes ?? [])].map((r) => r.source_document_id);
+  const { data: linkedDocs } = useQuery({
+    queryKey: ["linked-docs", "money", linkedIds.filter(Boolean).sort()],
+    queryFn: () => loadLinkedDocs(linkedIds),
+    enabled: !!expenses && !!incomes,
+    staleTime: 4 * 60_000, // thumbnails are 5-minute signed URLs
+  });
+
   const rows = useMemo(() => {
     return (tab === "expense" ? (expenses ?? []) : (incomes ?? [])).map((r) => ({
       id: r.id,
       title: r.title,
       category: r.category,
+      sourceDocumentId: r.source_document_id,
       amount: Number(r.amount ?? 0),
       date:
         tab === "expense"
@@ -227,6 +239,14 @@ function MoneyPage() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {catLabel(r.category, lang)} · {r.date}
                     </p>
+                    <div className="mt-1.5">
+                      <AttachmentControl
+                        table={tab === "expense" ? "expenses" : "incomes"}
+                        rowId={r.id}
+                        doc={(r.sourceDocumentId && linkedDocs?.[r.sourceDocumentId]) || null}
+                        onChanged={() => qc.invalidateQueries()}
+                      />
+                    </div>
                   </div>
                   <p className="shrink-0 text-sm font-semibold">
                     {formatMoney(r.amount)} {t.baht}
