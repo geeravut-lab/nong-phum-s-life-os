@@ -20,10 +20,17 @@ export function lineChannelToken(): string | null {
   return process.env["LINE_CHANNEL_ACCESS_TOKEN"] || null;
 }
 
-/** Where the card's button goes: the LIFF URL when a LIFF app exists (opens inside LINE), else the plain site. */
+/**
+ * Where the card's button goes. Default: the site in the phone's own browser,
+ * not LINE's in-app one — `openExternalBrowser=1` is LINE's documented query
+ * parameter for that (docs "Using LINE features with the LINE URL scheme",
+ * read 2026-09-19); the in-app browser broke some features for the owner.
+ * With LINE_LIFF_ID set the button opens the LIFF app instead; the docs say
+ * the parameter has no effect on LIFF URLs, so the two are either/or.
+ */
 export function appOpenUrl(path = "/today"): string {
   const liff = process.env["LINE_LIFF_ID"];
-  return liff ? `https://liff.line.me/${liff}${path}` : `https://lavieos.netlify.app${path}`;
+  return liff ? `https://liff.line.me/${liff}${path}` : `https://lavieos.netlify.app${path}?openExternalBrowser=1`;
 }
 
 async function call(path: string, init: RequestInit & { token: string }): Promise<Response> {
