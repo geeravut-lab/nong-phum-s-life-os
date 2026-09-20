@@ -368,6 +368,78 @@ export type Database = {
           },
         ]
       }
+      donation_settings: {
+        Row: {
+          enabled: boolean
+          id: boolean
+          promptpay_id: string | null
+          purpose: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id?: boolean
+          promptpay_id?: string | null
+          purpose?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: boolean
+          promptpay_id?: string | null
+          purpose?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      donations: {
+        Row: {
+          amount_baht: number
+          anonymous: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          promptpay_id: string
+          ref: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_baht: number
+          anonymous?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          promptpay_id: string
+          ref?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_baht?: number
+          anonymous?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          promptpay_id?: string
+          ref?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
