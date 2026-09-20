@@ -1,5 +1,5 @@
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -402,6 +402,8 @@ function AdminPage() {
 
       <LineQuotaCard />
 
+      <SupportHubCard />
+
       {/* ---- Events ---- */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.adminEventsTitle}</h2>
@@ -567,5 +569,34 @@ function LineQuotaCard() {
         </div>
       )}
     </section>
+  );
+}
+
+// Link card to /admin/support with the one number that matters at a glance.
+// Loaded once by React Query — no re-render loop is possible here, unlike the
+// hand-rolled state in the source playbook.
+function SupportHubCard() {
+  const { t } = useI18n();
+  const pending = useQuery({
+    queryKey: ["donations-pending-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase.from("donations").select("id", { count: "exact", head: true }).eq("status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  return (
+    <Link
+      to="/admin/support"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.adminSupportCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {pending.data === undefined ? "…" : t.adminSupportPendingCount(pending.data)}
+        </p>
+      </div>
+      {!!pending.data && <Badge variant="destructive">{pending.data}</Badge>}
+    </Link>
   );
 }

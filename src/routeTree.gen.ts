@@ -21,10 +21,12 @@ import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated/helpme'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
+import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -85,6 +87,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -105,6 +112,12 @@ const SsoCallbackRoute = SsoCallbackRouteImport.update({
   path: '/sso/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminSupportRoute =
+  AuthenticatedAdminSupportRouteImport.update({
+    id: '/admin_/support',
+    path: '/admin/support',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -118,10 +131,12 @@ export interface FileRoutesByFullPath {
   '/helpme': typeof AuthenticatedHelpmeRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/support': typeof AuthenticatedAdminSupportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -135,10 +150,12 @@ export interface FileRoutesByTo {
   '/helpme': typeof AuthenticatedHelpmeRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/support': typeof AuthenticatedAdminSupportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -154,10 +171,12 @@ export interface FileRoutesById {
   '/_authenticated/helpme': typeof AuthenticatedHelpmeRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -173,10 +192,12 @@ export interface FileRouteTypes {
     | '/helpme'
     | '/money'
     | '/settings'
+    | '/support'
     | '/tasks'
     | '/today'
     | '/line/callback'
     | '/sso/callback'
+    | '/admin/support'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,10 +211,12 @@ export interface FileRouteTypes {
     | '/helpme'
     | '/money'
     | '/settings'
+    | '/support'
     | '/tasks'
     | '/today'
     | '/line/callback'
     | '/sso/callback'
+    | '/admin/support'
   id:
     | '__root__'
     | '/'
@@ -208,10 +231,12 @@ export interface FileRouteTypes {
     | '/_authenticated/helpme'
     | '/_authenticated/money'
     | '/_authenticated/settings'
+    | '/_authenticated/support'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
     | '/line/callback'
     | '/sso/callback'
+    | '/_authenticated/admin_/support'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -309,6 +334,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/support': {
+      id: '/_authenticated/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AuthenticatedSupportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -337,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SsoCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin_/support': {
+      id: '/_authenticated/admin_/support'
+      path: '/admin/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -349,8 +388,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHelpmeRoute: typeof AuthenticatedHelpmeRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
+  AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -362,8 +403,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHelpmeRoute: AuthenticatedHelpmeRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
+  AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

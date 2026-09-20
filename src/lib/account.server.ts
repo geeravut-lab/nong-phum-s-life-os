@@ -39,6 +39,7 @@ export type DeletionPreview = {
   memberOfFamilies: number;
   isSsoUser: boolean;
   isLineLinked: boolean;
+  donations: number;
 };
 
 /** Everything the confirmation dialog needs, read with the caller's own client (RLS-scoped). */
@@ -73,8 +74,9 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
 
   const { data: link } = await supabaseAdmin.from("aivora_links").select("aivora_user_id").eq("user_id", userId).maybeSingle();
   const { data: line } = await supabaseAdmin.from("line_links").select("user_id").eq("user_id", userId).maybeSingle();
+  const { count: donations } = await supabaseAdmin.from("donations").select("id", { count: "exact", head: true }).eq("user_id", userId);
 
-  return { counts, storageFiles, ownedFamilies, memberOfFamilies, isSsoUser: !!link, isLineLinked: !!line };
+  return { counts, storageFiles, ownedFamilies, memberOfFamilies, isSsoUser: !!link, isLineLinked: !!line, donations: donations ?? 0 };
 }
 
 async function listUserFiles(userId: string): Promise<string[]> {
@@ -124,6 +126,16 @@ export async function deleteAccount(db: Db, userId: string): Promise<{ removedFi
   if (files.length > 0) {
     const { error } = await supabaseAdmin.storage.from("documents").remove(files);
     if (error) throw new Error(`could not remove ${files.length} storage file(s): ${error.message}`);
+  }
+
+  // b2. Donations are an income ledger with no FK to the user: the rows stay
+  //     (the money did arrive) but nothing personal remains on them.
+  {
+    const { error } = await supabaseAdmin
+      .from("donations")
+      .update({ display_name: "ผู้ใช้ที่ลบบัญชีแล้ว", email: null, anonymous: true })
+      .eq("user_id", userId);
+    if (error) throw new Error(`could not anonymise donations: ${error.message}`);
   }
 
   // c. Audit row — the only trace that survives.

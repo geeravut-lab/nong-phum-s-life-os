@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
   FileText,
   HandHelping,
+  Heart,
   ShieldCheck,
   Home,
   ListTodo,
@@ -45,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/family", label: t.navFamily, icon: Users },
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
     { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
+    { to: "/support", label: t.navSupport, icon: Heart },
   ] as const;
 
   const primaryNav = nav.slice(0, 4);
