@@ -22,6 +22,7 @@
 | 8 | **1.10** | เสียง | ⏳ | ต้องรอ 1.1 คุม quota ได้ก่อน เพราะวิธีที่ปลอดภัยใช้ RPD ×2 · และต้องผ่านด่าน `/mic-test` บนมือถือจริงก่อน |
 | 9 | **1.4** | Payment rails | ⏳ | ใหญ่และเป็นอิสระ |
 | 10 | **1.5** | งานค้างเล็ก ๆ | ⏳ | Help Me rating UI, `.validator()` deprecation, bundle 600 kB |
+| 11 | **1.11** | สนับสนุน (บริจาคพร้อมเพย์) | ✅ 2026-09-20 | ตาม playbook Harmony · แยกจาก 1.4 ซึ่งเป็น gateway/escrow ของ HelpMe |
 
 > 1.3 / 1.10 / 1.4 ไม่พึ่งพากัน สลับลำดับกันเองได้ตามความจำเป็นตอนนั้น
 >
@@ -451,6 +452,37 @@ documents (1) ──source_document_id──▶ reminders (n)   ON DELETE SET NU
 - [ ] **ลบ `src/routes/mic-test.tsx` เมื่อจบงานนี้**
 
 ---
+
+# 1.11 สนับสนุน (บริจาคพร้อมเพย์) ✅ 2026-09-20 `a3ca3d3` + `2a10ea9`
+
+ทำตาม `KNOWLEDGE_donation_support_admin_ui.md` (Harmony) — copy ฉบับปรับแล้ว (ไม่มีประโยค "ไม่ปลดล็อกฟีเจอร์") · ทุกอย่างสองภาษา
+
+## หลักการที่ enforce ที่ DB ไม่ใช่แค่ UI
+
+- `donations` (ledger, **ไม่มี FK** ไป auth.users แบบ `account_deletions`): INSERT policy บังคับ `user_id = auth.uid() AND status = 'pending' AND 1 ≤ amount ≤ 100000 AND confirmed_* IS NULL` · SELECT own หรือ admin · UPDATE admin เท่านั้น · **ไม่ GRANT DELETE** · snapshot `promptpay_id` ทุกแถว
+- `donation_settings` แถวเดียว: `promptpay_id` CHECK 10/13/15 หลัก, `enabled`, `purpose` หลายบรรทัด · admin แก้ · ผู้ใช้อ่าน
+- **ไม่แตะ `user_roles`/สิทธิ์ใด ๆ** ทั้งฟีเจอร์ — ยืนยันรับเงินเปลี่ยนแค่ตัวเลขในรายงาน (ทดสอบ: roles ของผู้บริจาคก่อน/หลังยืนยันเท่ากัน)
+- ลบบัญชี (1.2): แถว donation **คงไว้** แต่ anonymise (ชื่อ→"ผู้ใช้ที่ลบบัญชีแล้ว", อีเมล→NULL) แจ้งใน preview
+
+## หน้า
+
+- `/support` (เมนู "สนับสนุน" ♥): intro → purpose จาก settings (บรรทัดละหัวข้อ) → ยังไม่เปิด = notice (+admin เห็นลิงก์ตั้งค่า) → ยอดด่วน 50/100/300/500 + กรอกเอง (`placeholder` ไม่ใช่ `value`, inputMode numeric) → QR `promptpay.io/{digits}/{amount.toFixed(2)}` **บนพื้นขาวเสมอ** (inline style) + fallback ผูกด้วย JS listener → แจ้งโอน (ref ≤40 ไม่บังคับ, ไม่ประสงค์ออกนาม = server ไม่เก็บอีเมล) → รายการของฉัน + badge
+- `/admin/support` (+ การ์ดใน `/admin` "ค้างตรวจสอบ N รายการ"): ตรวจสอบ (การ์ด: ยอด/ผู้บริจาค/อ้างอิง/เข้าพร้อมเพย์/เวลา · **"ยืนยันรับเงิน" ขวา "ไม่พบรายการ" ซ้าย** ไม่ใช้คำว่า "อนุมัติ" · dialog ยืนยัน · settle ผ่าน server fn `.eq('status','pending')` + stamp `confirmed_by`) · รายงาน (confirmed เท่านั้น โหลดครั้งเดียว 500 กรองในหน่วยความจำ 7/30/90/ทั้งหมด/กำหนดเอง เวลาไทย · ยอดรวม/เฉลี่ย/ผู้บริจาคไม่ซ้ำ · ตาราง 50 แถว overflow-x · **CSV มี BOM**) · ตั้งค่า (เลขพร้อมเพย์ + สวิตช์ + purpose textarea + hint)
+
+## ทดสอบแล้ว (บัญชีชั่วคราว ลบแล้ว)
+
+RLS ผ่าน JWT ผู้ใช้จริง 16 กรณี: ผู้ใช้แก้ settings ไม่ได้ · insert `confirmed` / ยอด 100001 / 0 / −5 / audit columns / user_id คนอื่น → ปฏิเสธ · pending ผ่าน · ผู้ใช้ update/delete แถวตัวเองไม่ได้ · admin ยืนยัน + `confirmed_by` ถูก · roles ไม่เปลี่ยน · รายงานนับ 100 ไม่ใช่ 220 (pending/rejected ไม่รวม) · ลบบัญชี → 3 แถวคง anonymise · UI: not-enabled → admin ตั้งค่า → QR บนพื้นขาวในธีมมืด → fallback → แจ้งโอนไม่ประสงค์ออกนาม → admin ยืนยัน → รายงาน ฿100/1 → CSV bytes EF BB BF
+
+## ที่เจ้าของต้องทำเอง
+
+- ใส่**เลขพร้อมเพย์จริง** + purpose ใน `/admin/support` แล้วกดเปิด (settings ตอนนี้ว่าง/ปิด — ฟอร์มจะยังไม่แสดงให้ผู้ใช้) · ทดสอบสแกน QR ด้วยแอปธนาคารจริง 1 ครั้ง
+
+## ข้อจำกัด (ตาม playbook §6)
+
+QR static + ผู้ใช้กรอกอ้างอิงเอง · ไม่มีกระทบยอดอัตโนมัติ · ไม่มีใบเสร็จทางกฎหมาย · ถ้ามีโมเดล freemium ในอนาคตต้องเขียน copy/policy ส่วนนี้ใหม่
+
+---
+
 
 # SSO — Aivora Hub (มีอยู่บน production แล้ว ตั้งแต่ 2026-09-13)
 
