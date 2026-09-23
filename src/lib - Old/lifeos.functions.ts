@@ -63,18 +63,3 @@ export const joinFamilyByCode = createServerFn({ method: "POST" })
     }
     return { ok: true as const, familyId: family.id, name: family.name };
   });
-
-const TranscribeInput = z.object({
-  base64: z.string().min(1),
-  mimeType: z.string().min(1),
-  lang: z.enum(["th", "en"]).default("th"),
-});
-
-/** Phase 1.10 — speech-to-text. Returns plain text for the client to send as a normal chat message. */
-export const transcribeAudio = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => TranscribeInput.parse(input))
-  .handler(async ({ data }) => {
-    const { transcribeAudio: run } = await import("./phum.server");
-    return run(data);
-  });

@@ -84,7 +84,7 @@ export function isProviderId(value: unknown): value is ProviderId {
   return typeof value === "string" && (PROVIDER_IDS as string[]).includes(value);
 }
 
-export function apiKeyFor(id: ProviderId): string | undefined {
+function apiKeyFor(id: ProviderId): string | undefined {
   const key = process.env[PROVIDERS[id].envKey];
   return key && key.trim() !== "" ? key : undefined;
 }
