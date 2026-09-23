@@ -31,7 +31,9 @@ import {
 export const Route = createFileRoute("/_authenticated/admin_/payments")({
   head: () => ({ meta: routeMeta("admin") }),
   beforeLoad: async ({ context }) => {
-    const { data } = await supabase.rpc("has_role", { _user_id: context.user.id, _role: "admin" });
+    const userId = (context as { user?: { id: string } }).user?.id;
+    if (!userId) throw redirect({ to: "/today" });
+    const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (data !== true) throw redirect({ to: "/today" });
   },
   component: AdminPaymentsPage,
@@ -88,10 +90,10 @@ function AdminPaymentsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : t.error),
   });
 
-  const pending = (queues.data?.pending ?? []) as PayRow[];
-  const held = (queues.data?.held ?? []) as PayRow[];
-  const payoutQ = (queues.data?.payout ?? []) as PayRow[];
-  const refunds = (queues.data?.partialRefunded ?? []) as PayRow[];
+  const pending = (queues.data?.pending ?? []) as unknown as PayRow[];
+  const held = (queues.data?.held ?? []) as unknown as PayRow[];
+  const payoutQ = (queues.data?.payout ?? []) as unknown as PayRow[];
+  const refunds = (queues.data?.partialRefunded ?? []) as unknown as PayRow[];
 
   return (
     <AppShell>

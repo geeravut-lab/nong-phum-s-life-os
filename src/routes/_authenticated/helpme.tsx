@@ -439,7 +439,7 @@ function RequesterTab() {
                     payer_ref: string | null;
                   }>;
                   const pay = pays[0];
-                  const st = pay?.payment_status ?? job.payment_status ?? null;
+                  const st = pay?.payment_status ?? (job as { payment_status?: string | null }).payment_status ?? null;
                   if (!st && (job.status === "matched" || job.status === "in_progress")) {
                     return (
                       <div className="mt-3">

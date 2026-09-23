@@ -27,6 +27,7 @@ import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
+import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -118,6 +119,12 @@ const AuthenticatedAdminSupportRoute =
     path: '/admin/support',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminPaymentsRoute =
+  AuthenticatedAdminPaymentsRouteImport.update({
+    id: '/admin_/payments',
+    path: '/admin/payments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -137,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -156,6 +165,8 @@ export interface FileRoutesByTo {
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,6 +188,7 @@ export interface FileRoutesById {
   '/line/callback': typeof LineCallbackRoute
   '/sso/callback': typeof SsoCallbackRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
+  '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/sso/callback'
     | '/admin/support'
+    | '/admin/payments'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,6 +230,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/sso/callback'
     | '/admin/support'
+    | '/admin/payments'
   id:
     | '__root__'
     | '/'
@@ -237,6 +251,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/sso/callback'
     | '/_authenticated/admin_/support'
+    | '/_authenticated/admin_/payments'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -376,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/payments': {
+      id: '/_authenticated/admin_/payments'
+      path: '/admin/payments'
+      fullPath: '/admin/payments'
+      preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -392,6 +414,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
+  AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -407,6 +430,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
+  AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -736,6 +736,97 @@ export type Database = {
           },
         ]
       }
+
+      job_payments: {
+        Row: {
+          amount: number
+          cancel_fee_pct: number
+          confirmed_by: string | null
+          created_at: string
+          helper_id: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          paid_at: string | null
+          payer_id: string
+          payer_ref: string | null
+          payment_status: string
+          payout_paid_at: string | null
+          payout_slip_path: string | null
+          payout_status: string | null
+          platform_fee: number
+          promptpay_id: string | null
+          provider_amount: number
+          released_at: string | null
+          service_ended: boolean
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount: number
+          cancel_fee_pct?: number
+          confirmed_by?: string | null
+          created_at?: string
+          helper_id?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          paid_at?: string | null
+          payer_id: string
+          payer_ref?: string | null
+          payment_status?: string
+          payout_paid_at?: string | null
+          payout_slip_path?: string | null
+          payout_status?: string | null
+          platform_fee?: number
+          promptpay_id?: string | null
+          provider_amount?: number
+          released_at?: string | null
+          service_ended?: boolean
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount?: number
+          cancel_fee_pct?: number
+          confirmed_by?: string | null
+          created_at?: string
+          helper_id?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payer_id?: string
+          payer_ref?: string | null
+          payment_status?: string
+          payout_paid_at?: string | null
+          payout_slip_path?: string | null
+          payout_status?: string | null
+          platform_fee?: number
+          promptpay_id?: string | null
+          provider_amount?: number
+          released_at?: string | null
+          service_ended?: boolean
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_payments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_payments_helper_id_fkey"
+            columns: ["helper_id"]
+            isOneToOne: false
+            referencedRelation: "helper_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_reviews: {
         Row: {
           comment: string | null
@@ -795,6 +886,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           location_text: string | null
+          payment_status: string | null
           platform_fee: number | null
           scheduled_at: string | null
           status: string
@@ -815,6 +907,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           location_text?: string | null
+          payment_status?: string | null
           platform_fee?: number | null
           scheduled_at?: string | null
           status?: string
@@ -835,6 +928,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           location_text?: string | null
+          payment_status?: string | null
           platform_fee?: number | null
           scheduled_at?: string | null
           status?: string
@@ -849,6 +943,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "helper_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_payments_job_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "job_payments"
+            referencedColumns: ["job_id"]
           },
         ]
       }
@@ -989,24 +1090,33 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          cancel_fee_pct: number
           commission_rate: number
           created_at: string
+          escrow_enabled: boolean
+          helpme_promptpay_id: string | null
           id: boolean
           revenue_mode: string
           service_fee: number
           updated_at: string
         }
         Insert: {
+          cancel_fee_pct?: number
           commission_rate?: number
           created_at?: string
+          escrow_enabled?: boolean
+          helpme_promptpay_id?: string | null
           id?: boolean
           revenue_mode?: string
           service_fee?: number
           updated_at?: string
         }
         Update: {
+          cancel_fee_pct?: number
           commission_rate?: number
           created_at?: string
+          escrow_enabled?: boolean
+          helpme_promptpay_id?: string | null
           id?: boolean
           revenue_mode?: string
           service_fee?: number
