@@ -17,6 +17,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { draftJob, matchHelpers, suggestHelperSkills } from "@/lib/marketplace.functions";
+import {
+  createJobPayment,
+  submitPaymentRef,
+  verifyJobService,
+  markServiceEnded,
+} from "@/lib/payment.functions";
 
 export const Route = createFileRoute("/_authenticated/helpme")({
   head: () => ({ meta: routeMeta("helpme") }),
@@ -73,12 +79,25 @@ function RequesterTab() {
   const qc = useQueryClient();
   const runDraft = useServerFn(draftJob);
   const runMatch = useServerFn(matchHelpers);
+  const runCreatePay = useServerFn(createJobPayment);
+  const runSubmitRef = useServerFn(submitPaymentRef);
+  const runVerify = useServerFn(verifyJobService);
 
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [matchesFor, setMatchesFor] = useState<string | null>(null);
   const [matches, setMatches] = useState<Awaited<ReturnType<typeof matchHelpers>>>([]);
+  const [reviewFor, setReviewFor] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payPanel, setPayPanel] = useState<
+    | { jobId: string; amount: number; qrUrl: string | null }
+    | null
+  >(null);
+  const [payRef, setPayRef] = useState("");
   const { data: settings } = useSettings();
 
   const { data: jobs } = useQuery({
@@ -86,7 +105,7 @@ function RequesterTab() {
     queryFn: async () => {
       const { data } = await supabase
         .from("jobs")
-        .select("*, job_offers(*)")
+        .select("*, job_offers(*), job_reviews(id, rating, comment, reviewer_id), job_payments(*)")
         .eq("user_id", user?.id ?? "")
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -167,9 +186,86 @@ function RequesterTab() {
   const setStatus = async (jobId: string, status: string) => {
     await supabase.from("jobs").update({ status }).eq("id", jobId);
     qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    if (status === "done") {
+      setReviewFor(jobId);
+      setReviewRating(5);
+      setReviewComment("");
+    }
   };
 
-  const feeLabel =
+  const submitReview = async (job: {
+    id: string;
+    assigned_helper_id: string | null;
+  }) => {
+    if (!user || !job.assigned_helper_id || reviewBusy) return;
+    if (reviewRating < 1 || reviewRating > 5) return;
+    setReviewBusy(true);
+    try {
+      const { error } = await supabase.from("job_reviews").insert({
+        job_id: job.id,
+        reviewer_id: user.id,
+        helper_id: job.assigned_helper_id,
+        rating: reviewRating,
+        comment: reviewComment.trim() || null,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      // helper_profiles.rating / jobs_done updated by DB trigger refresh_helper_rating
+      toast.success(t.reviewThanks);
+      setReviewFor(null);
+      setReviewComment("");
+      qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+
+
+  const startPay = async (jobId: string) => {
+    setPayBusy(true);
+    try {
+      const res = await runCreatePay({ data: { jobId } });
+      setPayPanel({ jobId, amount: res.amount, qrUrl: res.qrUrl });
+      setPayRef("");
+      qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
+  const submitRef = async () => {
+    if (!payPanel) return;
+    setPayBusy(true);
+    try {
+      await runSubmitRef({ data: { jobId: payPanel.jobId, payerRef: payRef.trim() } });
+      toast.success(t.payWaitingConfirm);
+      setPayPanel(null);
+      qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
+  const doVerify = async (jobId: string) => {
+    setPayBusy(true);
+    try {
+      await runVerify({ data: { jobId } });
+      toast.success(t.payReleased);
+      qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
+    const feeLabel =
     settings?.revenue_mode === "service_fee"
       ? `${settings?.service_fee} ${t.baht}`
       : `${settings?.commission_rate ?? 5}%`;
@@ -328,6 +424,199 @@ function RequesterTab() {
                 )}
               </div>
 
+              {(["matched", "in_progress", "done"] as const).includes(
+                job.status as "matched" | "in_progress" | "done",
+              ) &&
+                job.assigned_helper_id &&
+                (() => {
+                  const pays = (job.job_payments
+                    ? Array.isArray(job.job_payments)
+                      ? job.job_payments
+                      : [job.job_payments]
+                    : []) as Array<{
+                    payment_status: string;
+                    amount: number;
+                    payer_ref: string | null;
+                  }>;
+                  const pay = pays[0];
+                  const st = pay?.payment_status ?? job.payment_status ?? null;
+                  if (!st && (job.status === "matched" || job.status === "in_progress")) {
+                    return (
+                      <div className="mt-3">
+                        <Button size="sm" disabled={payBusy} onClick={() => startPay(job.id)}>
+                          {t.payNow}
+                        </Button>
+                      </div>
+                    );
+                  }
+                  if (st === "pending" || payPanel?.jobId === job.id) {
+                    const panel = payPanel?.jobId === job.id ? payPanel : null;
+                    return (
+                      <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-sm font-medium">{t.payWaitingConfirm}</p>
+                        {panel?.qrUrl ? (
+                          <>
+                            <p className="text-xs text-muted-foreground">{t.payQrHint}</p>
+                            <img
+                              src={panel.qrUrl}
+                              alt="PromptPay QR"
+                              className="mx-auto h-40 w-40 rounded-lg bg-white p-2"
+                            />
+                            <p className="text-center text-sm font-semibold">
+                              ฿{panel.amount.toLocaleString()}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">{t.payNoPromptPay}</p>
+                        )}
+                        {panel && (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder={t.payRefPlaceholder}
+                              value={payRef}
+                              onChange={(e) => setPayRef(e.target.value)}
+                            />
+                            <Button size="sm" disabled={payBusy} onClick={submitRef}>
+                              {t.paySubmitRef}
+                            </Button>
+                          </div>
+                        )}
+                        {!panel && st === "pending" && (
+                          <Button size="sm" variant="secondary" disabled={payBusy} onClick={() => startPay(job.id)}>
+                            {t.payNow}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  }
+                  if (st === "held") {
+                    return (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary">{t.payHeld}</Badge>
+                        <Button size="sm" disabled={payBusy} onClick={() => doVerify(job.id)}>
+                          {t.payVerifyService}
+                        </Button>
+                      </div>
+                    );
+                  }
+                  if (st === "released") {
+                    return (
+                      <Badge variant="secondary" className="mt-3">
+                        {t.payReleased}
+                      </Badge>
+                    );
+                  }
+                  return null;
+                })()}
+
+              {job.status === "done" &&
+                job.assigned_helper_id &&
+                (() => {
+                  const reviews = (job.job_reviews ?? []) as Array<{
+                    id: string;
+                    rating: number;
+                    comment: string | null;
+                    reviewer_id: string;
+                  }>;
+                  const mine = reviews.find((r) => r.reviewer_id === user?.id);
+                  if (mine) {
+                    return (
+                      <div className="mt-3 rounded-xl border border-border bg-muted/40 p-3 text-sm">
+                        <p className="font-medium">{t.yourRating}</p>
+                        <p className="mt-1 flex items-center gap-1">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                              key={i}
+                              className={
+                                i < mine.rating
+                                  ? "size-4 fill-amber-400 text-amber-400"
+                                  : "size-4 text-muted-foreground"
+                              }
+                            />
+                          ))}
+                          <span className="ml-1 text-muted-foreground">
+                            {mine.rating}/5
+                          </span>
+                        </p>
+                        {mine.comment && (
+                          <p className="mt-1 text-muted-foreground">{mine.comment}</p>
+                        )}
+                      </div>
+                    );
+                  }
+                  const open = reviewFor === job.id;
+                  return (
+                    <div className="mt-3 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+                      {!open ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setReviewFor(job.id);
+                            setReviewRating(5);
+                            setReviewComment("");
+                          }}
+                        >
+                          {t.reviewHelper}
+                        </Button>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium">{t.reviewHelper}</p>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button
+                                key={n}
+                                type="button"
+                                className="rounded p-1 hover:bg-muted"
+                                onClick={() => setReviewRating(n)}
+                                aria-label={`${n}`}
+                              >
+                                <Star
+                                  className={
+                                    n <= reviewRating
+                                      ? "size-6 fill-amber-400 text-amber-400"
+                                      : "size-6 text-muted-foreground"
+                                  }
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          <Textarea
+                            rows={2}
+                            placeholder={t.reviewCommentPlaceholder}
+                            value={reviewComment}
+                            onChange={(e) => setReviewComment(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              disabled={reviewBusy}
+                              onClick={() =>
+                                submitReview({
+                                  id: job.id,
+                                  assigned_helper_id: job.assigned_helper_id,
+                                })
+                              }
+                            >
+                              {reviewBusy ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                              ) : null}
+                              {t.submitReview}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setReviewFor(null)}
+                            >
+                              {t.cancelBtn}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+
               {matchesFor === job.id && (
                 <div className="mt-3 space-y-2">
                   {matches.length === 0 && (
@@ -415,6 +704,7 @@ function HelperTab() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runSkills = useServerFn(suggestHelperSkills);
+  const runMarkEnded = useServerFn(markServiceEnded);
 
   const [intro, setIntro] = useState("");
   const [busy, setBusy] = useState(false);
@@ -456,6 +746,32 @@ function HelperTab() {
     },
     enabled: !!user,
   });
+
+  const { data: assignedJobs } = useQuery({
+    queryKey: ["my-assigned-jobs", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data } = await supabase
+        .from("jobs")
+        .select("id, title, status, payment_status, job_payments(payment_status, service_ended)")
+        .eq("assigned_helper_id", profile.id)
+        .in("status", ["matched", "in_progress", "done"])
+        .order("updated_at", { ascending: false })
+        .limit(20);
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
+
+  const endService = async (jobId: string) => {
+    try {
+      await runMarkEnded({ data: { jobId } });
+      toast.success(t.payServiceEnded);
+      qc.invalidateQueries({ queryKey: ["my-assigned-jobs"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    }
+  };
 
   const { data: openJobs } = useQuery({
     queryKey: ["open-jobs"],
@@ -618,6 +934,38 @@ function HelperTab() {
         </div>
         <Button onClick={saveProfile}>{t.saveProfile}</Button>
       </section>
+
+      {(assignedJobs ?? []).length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">{t.payAssignedJobs ?? "งานของฉัน"}</h2>
+          {(assignedJobs ?? []).map((job: any) => {
+            const pays = job.job_payments
+              ? Array.isArray(job.job_payments)
+                ? job.job_payments
+                : [job.job_payments]
+              : [];
+            const pay = pays[0];
+            const held = (pay?.payment_status ?? job.payment_status) === "held";
+            const ended = !!pay?.service_ended;
+            return (
+              <article key={job.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+                <h3 className="font-medium">{job.title}</h3>
+                <p className="text-xs text-muted-foreground">{job.status}</p>
+                {held && !ended && (
+                  <Button className="mt-2" size="sm" onClick={() => endService(job.id)}>
+                    {t.payServiceEndedBtn}
+                  </Button>
+                )}
+                {ended && (
+                  <Badge className="mt-2" variant="secondary">
+                    {t.payServiceEnded}
+                  </Badge>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-semibold">{t.openJobs}</h2>

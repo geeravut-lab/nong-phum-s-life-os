@@ -403,6 +403,7 @@ function AdminPage() {
       <LineQuotaCard />
 
       <SupportHubCard />
+      <PaymentsHubCard />
 
       {/* ---- Events ---- */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -600,3 +601,46 @@ function SupportHubCard() {
     </Link>
   );
 }
+
+function PaymentsHubCard() {
+  const { t } = useI18n();
+  const pending = useQuery({
+    queryKey: ["job-payments-pending-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("job_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("payment_status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const payout = useQuery({
+    queryKey: ["job-payments-payout-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("job_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("payment_status", "released")
+        .eq("payout_status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const total = (pending.data ?? 0) + (payout.data ?? 0);
+  return (
+    <Link
+      to="/admin/payments"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.payAdminCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t.payAdminCardSub(pending.data ?? 0, payout.data ?? 0)}
+        </p>
+      </div>
+      {total > 0 && <Badge variant="destructive">{total}</Badge>}
+    </Link>
+  );
+}
+
