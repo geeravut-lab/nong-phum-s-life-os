@@ -4,6 +4,7 @@ import {
   HandHelping,
   Heart,
   MapPinned,
+  Feather,
   Scale,
   ShieldCheck,
   Home,
@@ -93,6 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
     { to: "/decide", label: t.navDecide, icon: Scale },
     { to: "/local", label: t.navLocal, icon: MapPinned },
+    { to: "/legacy", label: t.navLegacy, icon: Feather },
     { to: "/support", label: t.navSupport, icon: Heart },
   ] as const;
 

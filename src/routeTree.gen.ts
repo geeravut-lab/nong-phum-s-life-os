@@ -19,7 +19,9 @@ import { Route as AuthenticatedDecideRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedHelperDashboardRouteImport } from './routes/_authenticated/helper-dashboard'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
+import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
+import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
@@ -163,6 +165,17 @@ const AuthenticatedAdminPaymentsRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
+const AuthenticatedLegacyAfterRoute = AuthenticatedLegacyAfterRouteImport.update({
+  id: '/legacy_/after',
+  path: '/legacy/after',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const MemorialTokenRoute = MemorialTokenRouteImport.update({
+  id: '/memorial/$token',
+  path: '/memorial/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
@@ -188,7 +201,11 @@ export interface FileRoutesByFullPath {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
+  '/memorial/$token': typeof MemorialTokenRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
+  '/memorial/$token': typeof MemorialTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -215,7 +232,11 @@ export interface FileRoutesByTo {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
+  '/memorial/$token': typeof MemorialTokenRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
+  '/memorial/$token': typeof MemorialTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -467,6 +488,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/legacy_/after': {
+      id: '/_authenticated/legacy_/after'
+      path: '/legacy/after'
+      fullPath: '/legacy/after'
+      preLoaderRoute: typeof AuthenticatedLegacyAfterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/memorial/$token': {
+      id: '/memorial/$token'
+      path: '/memorial/$token'
+      fullPath: '/memorial/$token'
+      preLoaderRoute: typeof MemorialTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/local': {
       id: '/_authenticated/local'
       path: '/local'
@@ -532,6 +567,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
+  AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
+  MemorialTokenRoute: typeof MemorialTokenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -554,6 +591,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
+  AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
+  MemorialTokenRoute: MemorialTokenRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

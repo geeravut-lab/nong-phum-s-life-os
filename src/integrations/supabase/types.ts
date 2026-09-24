@@ -1257,6 +1257,268 @@ export type Database = {
         }
         Relationships: []
       }
+
+      death_cases: {
+        Row: {
+          admin_notes: string | null
+          confirmation_count: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          rejected_at: string | null
+          report_note: string
+          reported_by: string | null
+          required_confirmations: number
+          status: string
+          subject_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          confirmation_count?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          rejected_at?: string | null
+          report_note?: string
+          reported_by?: string | null
+          required_confirmations?: number
+          status?: string
+          subject_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          confirmation_count?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          rejected_at?: string | null
+          report_note?: string
+          reported_by?: string | null
+          required_confirmations?: number
+          status?: string
+          subject_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      death_confirmations: {
+        Row: {
+          case_id: string
+          confirmer_name: string
+          confirmer_user_id: string
+          created_at: string
+          decision: string
+          id: string
+          note: string
+        }
+        Insert: {
+          case_id: string
+          confirmer_name?: string
+          confirmer_user_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          note?: string
+        }
+        Update: {
+          case_id?: string
+          confirmer_name?: string
+          confirmer_user_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          note?: string
+        }
+        Relationships: []
+      }
+      memorials: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          death_case_id: string | null
+          id: string
+          is_public: boolean
+          share_token: string | null
+          story: string
+          subject_user_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          death_case_id?: string | null
+          id?: string
+          is_public?: boolean
+          share_token?: string | null
+          story?: string
+          subject_user_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          death_case_id?: string | null
+          id?: string
+          is_public?: boolean
+          share_token?: string | null
+          story?: string
+          subject_user_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      memorial_messages: {
+        Row: {
+          author_name: string
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          memorial_id: string
+        }
+        Insert: {
+          author_name: string
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          memorial_id: string
+        }
+        Update: {
+          author_name?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          memorial_id?: string
+        }
+        Relationships: []
+      }
+      digital_wreaths: {
+        Row: {
+          amount: number
+          created_at: string
+          from_name: string
+          id: string
+          memorial_id: string
+          message: string
+          payer_ref: string | null
+          payment_status: string
+          promptpay_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          from_name: string
+          id?: string
+          memorial_id: string
+          message?: string
+          payer_ref?: string | null
+          payment_status?: string
+          promptpay_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_name?: string
+          id?: string
+          memorial_id?: string
+          message?: string
+          payer_ref?: string | null
+          payment_status?: string
+          promptpay_id?: string | null
+        }
+        Relationships: []
+      }
+      funeral_plans: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          death_case_id: string | null
+          id: string
+          input: Json
+          packages: Json
+          selected_package: string | null
+          status: string
+          total_budget: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          death_case_id?: string | null
+          id?: string
+          input?: Json
+          packages?: Json
+          selected_package?: string | null
+          status?: string
+          total_budget?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          death_case_id?: string | null
+          id?: string
+          input?: Json
+          packages?: Json
+          selected_package?: string | null
+          status?: string
+          total_budget?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      funeral_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          installments: number
+          paid_at: string | null
+          payer_id: string
+          payer_ref: string | null
+          payment_status: string
+          plan_id: string
+          promptpay_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          installments?: number
+          paid_at?: string | null
+          payer_id: string
+          payer_ref?: string | null
+          payment_status?: string
+          plan_id: string
+          promptpay_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          installments?: number
+          paid_at?: string | null
+          payer_id?: string
+          payer_ref?: string | null
+          payment_status?: string
+          plan_id?: string
+          promptpay_id?: string | null
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           agreed_price: number | null
@@ -1487,6 +1749,7 @@ export type Database = {
           commission_rate: number
           created_at: string
           escrow_enabled: boolean
+          funeral_promptpay_id: string | null
           helpme_promptpay_id: string | null
           id: boolean
           revenue_mode: string
