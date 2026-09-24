@@ -1,8 +1,306 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-/** Report a death case for subjectUserId (deterministic; no AI). */
+function randomToken(len = 24): string {
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let s = "";
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < len; i++) s += chars[arr[i]! % chars.length];
+  return s;
+}
+
+function randomPlanCode(): string {
+  // 8 chars, easy to dictate (no 0/O/1/I)
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  const arr = new Uint8Array(8);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 8; i++) s += chars[arr[i]! % chars.length];
+  return s;
+}
+
+async function ensurePlanCode(userId: string): Promise<string> {
+  const { data: existing } = await supabaseAdmin
+    .from("legacy_profiles")
+    .select("plan_code")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing?.plan_code) return existing.plan_code as string;
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = randomPlanCode();
+    const { error } = await supabaseAdmin.from("legacy_profiles").upsert({
+      user_id: userId,
+      plan_code: code,
+    });
+    if (!error) return code;
+  }
+  throw new Error("Could not allocate plan code");
+}
+
+async function notifyVerifiersLine(subjectUserId: string, caseId: string) {
+  try {
+    const { lineChannelToken, appOpenUrl } = await import("./line-push.server");
+    const token = lineChannelToken();
+    if (!token) return;
+
+    const { data: contacts } = await supabaseAdmin
+      .from("legacy_contacts")
+      .select("linked_user_id, full_name")
+      .eq("user_id", subjectUserId)
+      .eq("is_verifier", true)
+      .eq("invite_status", "accepted");
+
+    const userIds = (contacts ?? [])
+      .map((c) => c.linked_user_id as string | null)
+      .filter((id): id is string => !!id);
+
+    if (!userIds.length) return;
+
+    const { data: links } = await supabaseAdmin
+      .from("line_links")
+      .select("user_id, line_user_id")
+      .in("user_id", userIds);
+
+    const openUrl = appOpenUrl("/legacy/after");
+    const text =
+      "Life OS — มีเคสต้องการการยืนยันจากคุณ\n" +
+      `กรุณาเปิด: ${openUrl}\n` +
+      `(รหัสเคส: ${caseId.slice(0, 8)}…)`;
+
+    for (const link of links ?? []) {
+      const to = link.line_user_id as string | null;
+      if (!to) continue;
+      await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          to,
+          messages: [{ type: "text", text }],
+        }),
+      }).catch(() => {});
+    }
+  } catch {
+    // non-fatal
+  }
+}
+
+/** Owner: ensure public plan code exists (for relatives to open a case without UUID). */
+export const ensureMyPlanCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const code = await ensurePlanCode(context.userId);
+    const origin =
+      process.env["APP_PUBLIC_URL"] ||
+      process.env["URL"] ||
+      "https://lavieos.netlify.app";
+    return {
+      planCode: code,
+      inviteBaseUrl: `${origin.replace(/\/$/, "")}/legacy/invite`,
+    };
+  });
+
+/** Owner: create/refresh invite link for a contact marked as verifier. */
+export const createVerifierInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ contactId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("legacy_contacts")
+      .select("id, user_id, is_verifier, full_name")
+      .eq("id", data.contactId)
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "contact not found");
+    if (row.user_id !== context.userId) throw new Error("Forbidden");
+    if (!row.is_verifier) throw new Error("Contact is not marked as verifier");
+
+    const token = randomToken(28);
+    const { error: upErr } = await context.supabase
+      .from("legacy_contacts")
+      .update({
+        invite_token: token,
+        invite_status: "pending",
+        linked_user_id: null,
+      })
+      .eq("id", data.contactId);
+    if (upErr) throw new Error(upErr.message);
+
+    const origin =
+      process.env["APP_PUBLIC_URL"] ||
+      process.env["URL"] ||
+      "https://lavieos.netlify.app";
+    const url = `${origin.replace(/\/$/, "")}/legacy/invite/${token}`;
+    return { token, url, contactName: row.full_name };
+  });
+
+/** Invitee: accept invite after login → bind linked_user_id. */
+export const acceptVerifierInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(8).max(64) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await supabaseAdmin
+      .from("legacy_contacts")
+      .select("id, user_id, full_name, is_verifier, invite_status, invite_token")
+      .eq("invite_token", data.token)
+      .maybeSingle();
+    if (error || !row) throw new Error("Invite not found or expired");
+    if (!row.is_verifier) throw new Error("Not a verifier invite");
+    if (row.invite_status === "revoked") throw new Error("Invite was revoked");
+    if (row.user_id === context.userId) {
+      throw new Error("You cannot accept your own verifier invite");
+    }
+
+    const { error: upErr } = await supabaseAdmin
+      .from("legacy_contacts")
+      .update({
+        linked_user_id: context.userId,
+        invite_status: "accepted",
+      })
+      .eq("id", row.id);
+    if (upErr) throw new Error(upErr.message);
+
+    // Peek subject plan code for the invitee
+    const { data: prof } = await supabaseAdmin
+      .from("legacy_profiles")
+      .select("plan_code, display_label")
+      .eq("user_id", row.user_id)
+      .maybeSingle();
+
+    return {
+      ok: true as const,
+      contactName: row.full_name,
+      subjectUserId: row.user_id as string,
+      planCode: (prof?.plan_code as string | null) ?? null,
+      displayLabel: (prof?.display_label as string | null) ?? "",
+    };
+  });
+
+/** Preview invite (authenticated) — for the accept page. */
+export const previewVerifierInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ token: z.string().min(8).max(64) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { data: row } = await supabaseAdmin
+      .from("legacy_contacts")
+      .select("full_name, is_verifier, invite_status, user_id")
+      .eq("invite_token", data.token)
+      .maybeSingle();
+    if (!row) return { found: false as const };
+    const { data: prof } = await supabaseAdmin
+      .from("legacy_profiles")
+      .select("display_label, plan_code")
+      .eq("user_id", row.user_id)
+      .maybeSingle();
+    return {
+      found: true as const,
+      contactName: row.full_name as string,
+      inviteStatus: row.invite_status as string,
+      isVerifier: row.is_verifier as boolean,
+      displayLabel: (prof?.display_label as string | null) ?? "",
+      planCode: (prof?.plan_code as string | null) ?? null,
+    };
+  });
+
+/** Open death case by public plan code (no UUID). */
+export const reportDeathByPlanCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        planCode: z.string().min(4).max(16),
+        note: z.string().max(2000).default(""),
+        requiredConfirmations: z.number().int().min(2).max(5).default(2),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const code = data.planCode.trim().toUpperCase();
+    const { data: prof, error: pErr } = await supabaseAdmin
+      .from("legacy_profiles")
+      .select("user_id, plan_code, display_label")
+      .eq("plan_code", code)
+      .maybeSingle();
+    if (pErr || !prof) throw new Error("Plan code not found");
+
+    const subjectUserId = prof.user_id as string;
+    if (subjectUserId === context.userId) {
+      throw new Error("You cannot open a case for yourself");
+    }
+
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+
+    // Must be linked verifier OR admin
+    if (!isAdmin) {
+      const { data: link } = await supabaseAdmin
+        .from("legacy_contacts")
+        .select("id")
+        .eq("user_id", subjectUserId)
+        .eq("linked_user_id", context.userId)
+        .eq("is_verifier", true)
+        .eq("invite_status", "accepted")
+        .maybeSingle();
+      if (!link) {
+        throw new Error(
+          "Not authorized: accept a verifier invite for this plan first",
+        );
+      }
+    }
+
+    const { data: existing } = await supabaseAdmin
+      .from("death_cases")
+      .select("id, status")
+      .eq("subject_user_id", subjectUserId)
+      .maybeSingle();
+    if (existing) {
+      return {
+        caseId: existing.id as string,
+        status: existing.status as string,
+        alreadyExists: true as const,
+        subjectUserId,
+        displayLabel: (prof.display_label as string) || code,
+      };
+    }
+
+    const { data: row, error } = await supabaseAdmin
+      .from("death_cases")
+      .insert({
+        subject_user_id: subjectUserId,
+        reported_by: context.userId,
+        report_note: data.note,
+        required_confirmations: data.requiredConfirmations,
+        status: "pending",
+      })
+      .select("id, status")
+      .single();
+    if (error) throw new Error(error.message);
+
+    void notifyVerifiersLine(subjectUserId, row.id as string);
+
+    return {
+      caseId: row.id as string,
+      status: row.status as string,
+      alreadyExists: false as const,
+      subjectUserId,
+      displayLabel: (prof.display_label as string) || code,
+    };
+  });
+
+/** Report by UUID (admin / advanced). Kept for compatibility. */
 export const reportDeathCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -16,34 +314,38 @@ export const reportDeathCase = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const uid = context.userId;
-    // Reporter should be admin OR listed as verifier contact for subject
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: uid,
       _role: "admin",
     });
     if (!isAdmin) {
-      const { data: contacts } = await context.supabase
+      const { data: link } = await supabaseAdmin
         .from("legacy_contacts")
-        .select("id, is_verifier, phone, email, full_name")
+        .select("id")
         .eq("user_id", data.subjectUserId)
-        .eq("is_verifier", true);
-      if (!contacts?.length) {
-        throw new Error("Not authorized: no verifier contacts for this user");
+        .eq("linked_user_id", uid)
+        .eq("is_verifier", true)
+        .eq("invite_status", "accepted")
+        .maybeSingle();
+      if (!link) {
+        throw new Error("Not authorized: linked verifier only (or use plan code)");
       }
-      // Soft check: any signed-in user who claims to be a verifier can report;
-      // multi-confirmation still required before status=confirmed.
     }
 
-    const { data: existing } = await context.supabase
+    const { data: existing } = await supabaseAdmin
       .from("death_cases")
       .select("id, status")
       .eq("subject_user_id", data.subjectUserId)
       .maybeSingle();
     if (existing) {
-      return { caseId: existing.id, status: existing.status, alreadyExists: true as const };
+      return {
+        caseId: existing.id as string,
+        status: existing.status as string,
+        alreadyExists: true as const,
+      };
     }
 
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await supabaseAdmin
       .from("death_cases")
       .insert({
         subject_user_id: data.subjectUserId,
@@ -55,7 +357,14 @@ export const reportDeathCase = createServerFn({ method: "POST" })
       .select("id, status")
       .single();
     if (error) throw new Error(error.message);
-    return { caseId: row.id, status: row.status, alreadyExists: false as const };
+
+    void notifyVerifiersLine(data.subjectUserId, row.id as string);
+
+    return {
+      caseId: row.id as string,
+      status: row.status as string,
+      alreadyExists: false as const,
+    };
   });
 
 export const confirmDeathCase = createServerFn({ method: "POST" })
@@ -71,9 +380,9 @@ export const confirmDeathCase = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: c, error } = await context.supabase
+    const { data: c, error } = await supabaseAdmin
       .from("death_cases")
-      .select("id, status, subject_user_id, required_confirmations, confirmation_count")
+      .select("id, status, subject_user_id, required_confirmations, confirmation_count, reported_by")
       .eq("id", data.caseId)
       .single();
     if (error || !c) throw new Error(error?.message ?? "case not found");
@@ -81,7 +390,26 @@ export const confirmDeathCase = createServerFn({ method: "POST" })
       throw new Error("Case is closed");
     }
 
-    const { error: insErr } = await context.supabase.from("death_confirmations").insert({
+    // Must be linked verifier, reporter, or admin
+    const { data: isAdmin } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) {
+      const { data: link } = await supabaseAdmin
+        .from("legacy_contacts")
+        .select("id")
+        .eq("user_id", c.subject_user_id)
+        .eq("linked_user_id", context.userId)
+        .eq("is_verifier", true)
+        .eq("invite_status", "accepted")
+        .maybeSingle();
+      if (!link && c.reported_by !== context.userId) {
+        throw new Error("Not authorized to confirm this case");
+      }
+    }
+
+    const { error: insErr } = await supabaseAdmin.from("death_confirmations").insert({
       case_id: data.caseId,
       confirmer_user_id: context.userId,
       confirmer_name: data.confirmerName,
@@ -90,10 +418,53 @@ export const confirmDeathCase = createServerFn({ method: "POST" })
     });
     if (insErr) throw new Error(insErr.message);
 
-    const { data: updated } = await context.supabase
+    const { data: updated } = await supabaseAdmin
       .from("death_cases")
       .select("id, status, confirmation_count, required_confirmations, confirmed_at")
       .eq("id", data.caseId)
       .single();
     return updated;
+  });
+
+/** Cases where current user is a linked verifier (or reporter). */
+export const listMyVerifierCases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: links } = await supabaseAdmin
+      .from("legacy_contacts")
+      .select("user_id, full_name")
+      .eq("linked_user_id", context.userId)
+      .eq("is_verifier", true)
+      .eq("invite_status", "accepted");
+
+    const subjectIds = (links ?? []).map((l) => l.user_id as string);
+    if (!subjectIds.length) return { cases: [] as const, duties: links ?? [] };
+
+    const { data: cases } = await supabaseAdmin
+      .from("death_cases")
+      .select(
+        "id, subject_user_id, status, confirmation_count, required_confirmations, report_note, created_at",
+      )
+      .in("subject_user_id", subjectIds)
+      .order("created_at", { ascending: false });
+
+    const { data: profiles } = await supabaseAdmin
+      .from("legacy_profiles")
+      .select("user_id, plan_code, display_label")
+      .in("user_id", subjectIds);
+
+    const labelByUser = new Map(
+      (profiles ?? []).map((p) => [
+        p.user_id as string,
+        (p.display_label as string) || (p.plan_code as string) || "",
+      ]),
+    );
+
+    return {
+      duties: links ?? [],
+      cases: (cases ?? []).map((c) => ({
+        ...c,
+        label: labelByUser.get(c.subject_user_id as string) ?? "",
+      })),
+    };
   });
