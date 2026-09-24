@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { legacyAssist } from "@/lib/legacy.functions";
+import { createVerifierInvite, ensureMyPlanCode } from "@/lib/death.functions";
 import {
   ASSET_KINDS,
   labelAssetKind,
@@ -67,6 +68,11 @@ function LegacyPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runAssist = useServerFn(legacyAssist);
+  const runInvite = useServerFn(createVerifierInvite);
+  const runPlanCode = useServerFn(ensureMyPlanCode);
+  const [planCodeInfo, setPlanCodeInfo] = useState<{ planCode: string; inviteBaseUrl: string } | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+
   const [tab, setTab] = useState<Tab>("hub");
   const [busy, setBusy] = useState(false);
 
@@ -90,7 +96,7 @@ function LegacyPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("legacy_contacts")
-        .select("*")
+        .select("id,user_id,full_name,relation,phone,email,priority,is_verifier,personal_message,invite_status,linked_user_id,invite_token,created_at")
         .eq("user_id", user!.id)
         .order("priority", { ascending: true });
       if (error) throw error;
@@ -473,6 +479,49 @@ function LegacyPage() {
         ))}
       </div>
 
+      
+      {tab === "hub" && (
+        <div className="mb-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <p className="text-sm font-medium">{t.planCodeTitle}</p>
+          <p className="text-xs text-muted-foreground">{t.planCodeHint}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const res = await runPlanCode();
+                  setPlanCodeInfo(res);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : t.error);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t.planCodeShow}
+            </Button>
+            {planCodeInfo && (
+              <>
+                <span className="font-mono text-lg font-semibold tracking-widest">{planCodeInfo.planCode}</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(planCodeInfo.planCode);
+                    toast.success(t.planCodeCopied);
+                  }}
+                >
+                  {t.planCodeCopy}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {tab === "hub" && (
         <div className="grid gap-3 sm:grid-cols-2">
           {[
@@ -515,6 +564,15 @@ function LegacyPage() {
 
       {tab === "contacts" && (
         <section className="space-y-4">
+          {inviteUrl && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs break-all">
+              <p className="mb-1 font-medium">{t.invLastLink}</p>
+              <a href={inviteUrl} className="text-primary underline" target="_blank" rel="noreferrer">
+                {inviteUrl}
+              </a>
+            </div>
+          )}
+
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
             <Label>{t.legacyContactName}</Label>
             <Input
@@ -571,12 +629,17 @@ function LegacyPage() {
                 key={c.id}
                 className="flex items-start justify-between gap-2 rounded-xl border border-border p-3 text-sm"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium">
                     #{c.priority} {c.full_name}
                     {c.is_verifier ? (
                       <Badge className="ml-2" variant="secondary">
                         {t.legacyContactVerifier}
+                      </Badge>
+                    ) : null}
+                    {(c as { invite_status?: string }).invite_status === "accepted" ? (
+                      <Badge className="ml-1" variant="default">
+                        {t.invLinked}
                       </Badge>
                     ) : null}
                   </p>
@@ -587,6 +650,30 @@ function LegacyPage() {
                   {c.personal_message ? (
                     <p className="mt-1 text-xs italic">{c.personal_message}</p>
                   ) : null}
+                  {c.is_verifier && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          const res = await runInvite({ data: { contactId: c.id } });
+                          setInviteUrl(res.url);
+                          void navigator.clipboard.writeText(res.url).catch(() => {});
+                          toast.success(t.invLinkCreated);
+                          void qc.invalidateQueries({ queryKey: ["legacy-contacts"] });
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : t.error);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {t.invCreateLink}
+                    </Button>
+                  )}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => delRow("legacy_contacts", c.id)}>
                   <Trash2 className="size-4" />

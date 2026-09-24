@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
+import { Route as AuthenticatedLegacyInviteTokenRouteImport } from './routes/_authenticated/legacy_.invite.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -190,6 +191,12 @@ const AuthenticatedLocalMerchantRoute =
     path: '/local/merchant',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLegacyInviteTokenRoute =
+  AuthenticatedLegacyInviteTokenRouteImport.update({
+    id: '/legacy_/invite/$token',
+    path: '/legacy/invite/$token',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -250,6 +258,7 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -282,6 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
   '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/_authenticated/legacy_/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/legacy/after'
     | '/local/merchant'
+    | '/legacy/invite/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/legacy/after'
     | '/local/merchant'
+    | '/legacy/invite/$token'
   id:
     | '__root__'
     | '/'
@@ -375,6 +387,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/support'
     | '/_authenticated/legacy_/after'
     | '/_authenticated/local_/merchant'
+    | '/_authenticated/legacy_/invite/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -592,6 +605,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLocalMerchantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/legacy_/invite/$token': {
+      id: '/_authenticated/legacy_/invite/$token'
+      path: '/legacy/invite/$token'
+      fullPath: '/legacy/invite/$token'
+      preLoaderRoute: typeof AuthenticatedLegacyInviteTokenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -618,6 +638,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
   AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
+  AuthenticatedLegacyInviteTokenRoute: typeof AuthenticatedLegacyInviteTokenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -643,6 +664,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
   AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
+  AuthenticatedLegacyInviteTokenRoute: AuthenticatedLegacyInviteTokenRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

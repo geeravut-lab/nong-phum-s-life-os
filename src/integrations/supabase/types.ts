@@ -1264,8 +1264,10 @@ export type Database = {
           body_donation: string
           consent_at: string | null
           created_at: string
+          display_label: string
           notes: string
           organ_donation: string
+          plan_code: string | null
           social_intent: string
           updated_at: string
           user_id: string
@@ -1274,8 +1276,10 @@ export type Database = {
           body_donation?: string
           consent_at?: string | null
           created_at?: string
+          display_label?: string
           notes?: string
           organ_donation?: string
+          plan_code?: string | null
           social_intent?: string
           updated_at?: string
           user_id: string
@@ -1284,8 +1288,10 @@ export type Database = {
           body_donation?: string
           consent_at?: string | null
           created_at?: string
+          display_label?: string
           notes?: string
           organ_donation?: string
+          plan_code?: string | null
           social_intent?: string
           updated_at?: string
           user_id?: string
@@ -1298,8 +1304,11 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          invite_status: string
+          invite_token: string | null
           is_verifier: boolean
           line_id: string | null
+          linked_user_id: string | null
           personal_message: string
           phone: string | null
           priority: number
@@ -1312,8 +1321,11 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          invite_status?: string
+          invite_token?: string | null
           is_verifier?: boolean
           line_id?: string | null
+          linked_user_id?: string | null
           personal_message?: string
           phone?: string | null
           priority?: number
@@ -1326,8 +1338,11 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          invite_status?: string
+          invite_token?: string | null
           is_verifier?: boolean
           line_id?: string | null
+          linked_user_id?: string | null
           personal_message?: string
           phone?: string | null
           priority?: number

@@ -21,7 +21,11 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
-import { confirmDeathCase, reportDeathCase } from "@/lib/death.functions";
+import {
+  confirmDeathCase,
+  listMyVerifierCases,
+  reportDeathByPlanCode,
+} from "@/lib/death.functions";
 import {
   createFuneralPayment,
   markFuneralPaid,
@@ -37,14 +41,15 @@ function LegacyAfterPage() {
   const { t, lang } = useI18n();
   const { user } = useAuthUser();
   const qc = useQueryClient();
-  const runReport = useServerFn(reportDeathCase);
+  const runReport = useServerFn(reportDeathByPlanCode);
+  const runList = useServerFn(listMyVerifierCases);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
   const runPay = useServerFn(createFuneralPayment);
   const runMarkPaid = useServerFn(markFuneralPaid);
 
   const [busy, setBusy] = useState(false);
-  const [subjectId, setSubjectId] = useState("");
+  const [planCode, setPlanCode] = useState("");
   const [reportNote, setReportNote] = useState("");
   const [confirmName, setConfirmName] = useState("");
   const [confirmNote, setConfirmNote] = useState("");
@@ -104,19 +109,26 @@ function LegacyAfterPage() {
     },
   });
 
+  const dutiesQ = useQuery({
+    queryKey: ["verifier-duties", user?.id],
+    enabled: !!user,
+    queryFn: async () => runList(),
+  });
+
   const onReport = async () => {
-    if (!subjectId.trim()) return;
+    if (!planCode.trim()) return;
     setBusy(true);
     try {
       const res = await runReport({
         data: {
-          subjectUserId: subjectId.trim(),
+          planCode: planCode.trim(),
           note: reportNote,
           requiredConfirmations: 2,
         },
       });
       toast.success(res.alreadyExists ? t.p6CaseExists : t.p6CaseCreated);
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
+      void qc.invalidateQueries({ queryKey: ["verifier-duties"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.error);
     } finally {
@@ -229,14 +241,15 @@ function LegacyAfterPage() {
       <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="font-semibold">{t.p6DeathTitle}</h2>
         <p className="text-xs text-muted-foreground">{t.p6DeathHint}</p>
+        <p className="text-xs text-muted-foreground">{t.p6PlanCodeHint}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label>{t.p6SubjectUserId}</Label>
+            <Label>{t.p6PlanCode}</Label>
             <Input
-              className="mt-1 font-mono text-xs"
-              value={subjectId}
-              onChange={(e) => setSubjectId(e.target.value)}
-              placeholder="uuid ของผู้ใช้ในระบบ"
+              className="mt-1 font-mono tracking-widest uppercase"
+              value={planCode}
+              onChange={(e) => setPlanCode(e.target.value.toUpperCase())}
+              placeholder="ABCD2345"
             />
           </div>
           <div className="sm:col-span-2">
@@ -249,10 +262,34 @@ function LegacyAfterPage() {
             />
           </div>
         </div>
-        <Button disabled={busy || !subjectId.trim()} onClick={onReport}>
+        <Button disabled={busy || planCode.trim().length < 4} onClick={onReport}>
           {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
           {t.p6ReportBtn}
         </Button>
+
+        {(dutiesQ.data?.cases?.length ?? 0) > 0 && (
+          <div className="border-t border-border pt-3">
+            <p className="mb-2 text-xs font-medium">{t.p6MyDuties}</p>
+            <ul className="space-y-2">
+              {(dutiesQ.data?.cases ?? []).map((c: {
+                id: string;
+                status: string;
+                confirmation_count: number;
+                required_confirmations: number;
+                label: string;
+                report_note: string;
+              }) => (
+                <li key={c.id} className="rounded-lg border border-border p-2 text-xs">
+                  <span className="font-medium">{c.label || c.id.slice(0, 8)}</span>
+                  <Badge className="ml-2" variant="secondary">
+                    {c.status} ({c.confirmation_count}/{c.required_confirmations})
+                  </Badge>
+                  {c.report_note ? <p className="mt-1 text-muted-foreground">{c.report_note}</p> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="border-t border-border pt-3">
           <Label>{t.p6ConfirmName}</Label>
