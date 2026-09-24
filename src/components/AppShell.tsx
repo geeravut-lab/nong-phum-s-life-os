@@ -16,7 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -59,21 +59,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { unreadByNav, totalUnread } = useInboxBadges();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  // Mark path notifications as read when user visits that section
+  const activeNavBase = useMemo(() => {
+    if (!pathname) return "";
+    if (pathname.startsWith("/helpme") || pathname.startsWith("/helper-dashboard")) return "/helpme";
+    if (pathname.startsWith("/local")) return "/local";
+    if (pathname.startsWith("/admin")) return "/admin";
+    return pathname;
+  }, [pathname]);
+
+  // Hide red dots for the section the user is already viewing
+  const visibleUnreadByNav = useMemo(() => {
+    const map = new Map(unreadByNav);
+    if (activeNavBase) map.delete(activeNavBase);
+    return map;
+  }, [unreadByNav, activeNavBase]);
+
+  // Mark as read when entering a section OR when new notifs arrive while already there
   useEffect(() => {
-    if (!user?.id || !pathname) return;
-    const base =
-      pathname.startsWith("/helpme") || pathname.startsWith("/helper-dashboard")
-        ? "/helpme"
-        : pathname.startsWith("/local")
-          ? "/local"
-          : pathname.startsWith("/admin")
-            ? "/admin"
-            : pathname;
-    void markNotificationsReadForPath(user.id, base).then(() => {
+    if (!user?.id || !activeNavBase) return;
+    void markNotificationsReadForPath(user.id, activeNavBase).then(() => {
       void qc.invalidateQueries({ queryKey: ["app-notifications", user.id] });
     });
-  }, [pathname, user?.id]);
+  }, [activeNavBase, user?.id, totalUnread, qc]);
 
   const nav = [
     { to: "/today", label: t.navToday, icon: Home },
@@ -101,7 +108,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent";
   const activeClass = "bg-primary/10 text-primary";
 
-  const hasBadge = (to: string) => (unreadByNav.get(to) ?? 0) > 0;
+  const hasBadge = (to: string) => (visibleUnreadByNav.get(to) ?? 0) > 0;
+  const visibleTotal = useMemo(() => {
+    let n = 0;
+    for (const v of visibleUnreadByNav.values()) n += v;
+    return n;
+  }, [visibleUnreadByNav]);
   const moreHasBadge = moreNav.some((i) => hasBadge(i.to)) || hasBadge("/admin");
 
   return (
@@ -111,7 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/today" className="flex items-center gap-2">
             <PhumMark />
             <span className="font-semibold tracking-tight">{t.appName}</span>
-            {totalUnread > 0 && (
+            {visibleTotal > 0 && (
               <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
             )}
           </Link>

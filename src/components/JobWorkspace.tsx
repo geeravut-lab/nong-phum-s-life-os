@@ -33,6 +33,8 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const messages = useQuery({
     queryKey: ["job-messages", jobId],
@@ -68,6 +70,18 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
       void supabase.removeChannel(channel);
     };
   }, [jobId, enabled, qc]);
+
+  // Keep latest message pinned above the input
+  useEffect(() => {
+    if (!enabled) return;
+    const el = listRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages.data, enabled, jobId]);
+
 
   if (!enabled) return null;
 
@@ -244,7 +258,10 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
             live
           </Badge>
         </p>
-        <div className="mb-2 max-h-56 space-y-2 overflow-y-auto rounded-xl bg-muted/40 p-3">
+        <div
+          ref={listRef}
+          className="mb-2 flex max-h-56 flex-col gap-2 overflow-y-auto rounded-xl bg-muted/40 p-3"
+        >
           {(messages.data ?? []).length === 0 && (
             <p className="text-xs text-muted-foreground">{t.jobChatEmpty}</p>
           )}
@@ -264,6 +281,7 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
               </div>
             );
           })}
+          <div ref={bottomRef} aria-hidden className="h-px w-full shrink-0" />
         </div>
         <div className="flex gap-2">
           <Input
