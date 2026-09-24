@@ -690,6 +690,17 @@ const th = {
   benSaveProfile: "บันทึกโปรไฟล์",
   benHasSso: "มีประกันสังคม",
   benMatches: "สิทธิที่อาจเกี่ยวข้อง",
+
+  localOpenNow: "เปิดอยู่ตอนนี้",
+  localClosed: "ปิดแล้ว",
+  localMap: "แผนที่",
+  localDirections: "เส้นทาง",
+  localReview: "รีวิว",
+  localReviewTitle: "ให้คะแนนสถานที่นี้",
+  localReviewPlaceholder: "ความคิดเห็น (ไม่บังคับ)",
+  localReviewSubmit: "ส่งรีวิว",
+  localReviewSaved: "บันทึกรีวิวแล้ว",
+  localPromoted: "แนะนำ",
 } as const;
 
 // Thai is the source of truth. `satisfies` on `en` makes a missing or extra key a
@@ -1378,6 +1389,17 @@ const en = {
   benSaveProfile: "Save profile",
   benHasSso: "Has social security",
   benMatches: "Matching benefits",
+
+  localOpenNow: "Open now",
+  localClosed: "Closed",
+  localMap: "Map",
+  localDirections: "Directions",
+  localReview: "Review",
+  localReviewTitle: "Rate this place",
+  localReviewPlaceholder: "Comment (optional)",
+  localReviewSubmit: "Submit review",
+  localReviewSaved: "Review saved",
+  localPromoted: "Featured",
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };

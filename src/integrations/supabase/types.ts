@@ -41,6 +41,46 @@ export type Database = {
   }
   public: {
     Tables: {
+
+      app_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          href: string | null
+          id: string
+          kind: string
+          read_at: string | null
+          ref_id: string | null
+          ref_table: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          href?: string | null
+          id?: string
+          kind?: string
+          read_at?: string | null
+          ref_id?: string | null
+          ref_table?: string | null
+          title?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          href?: string | null
+          id?: string
+          kind?: string
+          read_at?: string | null
+          ref_id?: string | null
+          ref_table?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_deletions: {
         Row: {
           aivora_user_id: string | null
@@ -451,6 +491,7 @@ export type Database = {
         Row: {
           amount: number
           category: string
+          community_note: string | null
           created_at: string
           due_date: string | null
           family_id: string | null
@@ -580,6 +621,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           is_active: boolean
+          is_promoted: boolean
           is_verified: boolean
           jobs_done: number
           lat: number | null
@@ -599,6 +641,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
+          is_promoted?: boolean
           is_verified?: boolean
           jobs_done?: number
           lat?: number | null
@@ -618,6 +661,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           is_active?: boolean
+          is_promoted?: boolean
           is_verified?: boolean
           jobs_done?: number
           lat?: number | null
@@ -633,6 +677,7 @@ export type Database = {
         Row: {
           amount: number
           category: string
+          community_note: string | null
           created_at: string
           family_id: string | null
           id: string
@@ -1072,10 +1117,12 @@ export type Database = {
           address: string | null
           area: string | null
           category: string
+          community_note: string | null
           created_at: string
           description: string
           id: string
           is_active: boolean
+          is_promoted: boolean
           is_verified: boolean
           lat: number | null
           lng: number | null
@@ -1099,6 +1146,7 @@ export type Database = {
           description?: string
           id?: string
           is_active?: boolean
+          is_promoted?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
@@ -1122,6 +1170,7 @@ export type Database = {
           description?: string
           id?: string
           is_active?: boolean
+          is_promoted?: boolean
           is_verified?: boolean
           lat?: number | null
           lng?: number | null
@@ -1218,6 +1267,7 @@ export type Database = {
           budget_max: number | null
           budget_min: number | null
           category: string
+          community_note: string | null
           created_at: string
           description: string | null
           id: string

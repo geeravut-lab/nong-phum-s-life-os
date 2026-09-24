@@ -1,16 +1,28 @@
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { MapPin, Search, Store, Tag, Loader2, Star } from "lucide-react";
+import {
+  ExternalLink,
+  MapPin,
+  Navigation,
+  Search,
+  Star,
+  Store,
+  Tag,
+  Loader2,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { parseLocalQuery } from "@/lib/local.functions";
 import {
@@ -19,6 +31,7 @@ import {
   type LocalPlace,
   type LocalSearchIntent,
 } from "@/lib/local.shared";
+import { directionsUrl, isOpenNow, mapsUrl } from "@/lib/local-hours";
 
 export const Route = createFileRoute("/_authenticated/local")({
   head: () => ({ meta: routeMeta("local") }),
@@ -27,12 +40,18 @@ export const Route = createFileRoute("/_authenticated/local")({
 
 function LocalPage() {
   const { t, lang } = useI18n();
+  const { user } = useAuthUser();
+  const qc = useQueryClient();
   const runParse = useServerFn(parseLocalQuery);
 
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<LocalSearchIntent | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [openOnly, setOpenOnly] = useState(false);
+  const [reviewPlaceId, setReviewPlaceId] = useState<string | null>(null);
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
 
   const placesQ = useQuery({
     queryKey: ["local-places"],
@@ -41,10 +60,14 @@ function LocalPage() {
         .from("local_places")
         .select("*")
         .eq("is_active", true)
+        .order("is_promoted", { ascending: false })
         .order("rating", { ascending: false })
         .limit(100);
       if (error) throw error;
-      return (data ?? []) as unknown as LocalPlace[];
+      return (data ?? []) as unknown as (LocalPlace & {
+        is_promoted?: boolean;
+        community_note?: string | null;
+      })[];
     },
   });
 
@@ -63,26 +86,39 @@ function LocalPage() {
 
   const ranked = useMemo(() => {
     const places = placesQ.data ?? [];
-    if (!intent) {
-      return places.map((p) => ({
-        ...p,
-        distanceKm:
-          coords && p.lat != null && p.lng != null
-            ? rankPlaces([p], {
-                categories: [],
-                tags: [],
-                budgetMax: null,
-                areaHint: null,
-                withKids: false,
-                openEvening: false,
-                querySummary: "",
-              }, coords.lat, coords.lng)[0]?.distanceKm ?? null
-            : null,
-        score: Number(p.rating) * 10,
-      }));
+    let list = places;
+    if (openOnly) {
+      list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
     }
-    return rankPlaces(places, intent, coords?.lat ?? null, coords?.lng ?? null);
-  }, [placesQ.data, intent, coords]);
+    if (!intent) {
+      return list
+        .map((p) => {
+          let distanceKm: number | null = null;
+          if (coords && p.lat != null && p.lng != null) {
+            const R = 6371;
+            const dLat = ((p.lat - coords.lat) * Math.PI) / 180;
+            const dLng = ((p.lng - coords.lng) * Math.PI) / 180;
+            const s =
+              Math.sin(dLat / 2) ** 2 +
+              Math.cos((coords.lat * Math.PI) / 180) *
+                Math.cos((p.lat * Math.PI) / 180) *
+                Math.sin(dLng / 2) ** 2;
+            distanceKm = 2 * R * Math.asin(Math.sqrt(s));
+          }
+          const promoBoost = p.is_promoted ? 50 : 0;
+          return {
+            ...p,
+            distanceKm,
+            score: promoBoost + Number(p.rating) * 10 - (distanceKm ?? 0),
+          };
+        })
+        .sort((a, b) => b.score - a.score);
+    }
+    return rankPlaces(list, intent, coords?.lat ?? null, coords?.lng ?? null).map((p) => ({
+      ...p,
+      score: p.score + (p.is_promoted ? 40 : 0),
+    }));
+  }, [placesQ.data, intent, coords, openOnly]);
 
   const dealsByPlace = useMemo(() => {
     const m = new Map<string, LocalDeal[]>();
@@ -125,6 +161,28 @@ function LocalPage() {
     }
   };
 
+  const submitReview = async () => {
+    if (!user || !reviewPlaceId) return;
+    const { error } = await supabase.from("place_reviews").upsert(
+      {
+        place_id: reviewPlaceId,
+        user_id: user.id,
+        rating: reviewStars,
+        comment: reviewComment.trim() || null,
+      },
+      { onConflict: "place_id,user_id" },
+    );
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t.localReviewSaved);
+    setReviewPlaceId(null);
+    setReviewComment("");
+    setReviewStars(5);
+    void qc.invalidateQueries({ queryKey: ["local-places"] });
+  };
+
   const placeName = (p: LocalPlace) =>
     lang === "en" && p.name_en ? p.name_en : p.name;
 
@@ -144,7 +202,6 @@ function LocalPage() {
         </Link>
       </header>
 
-      {/* AI search */}
       <section className="mb-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <p className="text-sm font-medium">{t.localSearchPrompt}</p>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -170,6 +227,14 @@ function LocalPage() {
             <MapPin className="mr-1 size-3.5" />
             {t.localUseLocation}
           </Button>
+          <Button
+            size="sm"
+            variant={openOnly ? "default" : "outline"}
+            onClick={() => setOpenOnly((v) => !v)}
+          >
+            <Clock className="mr-1 size-3.5" />
+            {t.localOpenNow}
+          </Button>
           {coords && (
             <Badge variant="secondary">
               {coords.lat.toFixed(3)}, {coords.lng.toFixed(3)}
@@ -181,14 +246,10 @@ function LocalPage() {
             {intent.querySummary}
             {intent.budgetMax != null ? ` · ≤ ฿${intent.budgetMax}` : ""}
             {intent.withKids ? ` · ${t.localKids}` : ""}
-            {intent.categories.length
-              ? ` · ${intent.categories.join(", ")}`
-              : ""}
           </p>
         )}
       </section>
 
-      {/* Active deals strip */}
       {(dealsQ.data ?? []).length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
@@ -214,7 +275,6 @@ function LocalPage() {
         </section>
       )}
 
-      {/* Places */}
       <section className="space-y-3">
         <h2 className="font-semibold">{t.localPlacesTitle}</h2>
         {placesQ.isLoading ? (
@@ -222,8 +282,14 @@ function LocalPage() {
         ) : ranked.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t.localEmpty}</p>
         ) : (
-          ranked.slice(0, 30).map((p) => {
+          ranked.slice(0, 40).map((p) => {
             const deals = dealsByPlace.get(p.id) ?? [];
+            const open = isOpenNow(p.open_hours as Record<string, string>);
+            const map = mapsUrl(p.lat, p.lng, placeName(p));
+            const dir =
+              coords && p.lat != null && p.lng != null
+                ? directionsUrl(coords.lat, coords.lng, p.lat, p.lng)
+                : null;
             return (
               <article
                 key={p.id}
@@ -231,24 +297,44 @@ function LocalPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-medium">{placeName(p)}</h3>
+                    <h3 className="font-medium">
+                      {placeName(p)}
+                      {p.is_promoted ? (
+                        <Badge className="ml-2 align-middle" variant="secondary">
+                          {t.localPromoted}
+                        </Badge>
+                      ) : null}
+                    </h3>
                     <p className="text-xs text-muted-foreground">
                       {p.category}
                       {p.area ? ` · ${p.area}` : ""}
-                      {p.distanceKm != null
-                        ? ` · ${p.distanceKm.toFixed(1)} km`
-                        : ""}
+                      {p.distanceKm != null ? ` · ${p.distanceKm.toFixed(1)} km` : ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 text-sm">
-                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                    {Number(p.rating).toFixed(1)}
-                    <span className="text-xs text-muted-foreground">
-                      ({p.review_count})
+                  <div className="flex flex-col items-end gap-1 text-sm">
+                    <span className="flex items-center gap-1">
+                      <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                      {Number(p.rating).toFixed(1)}
+                      <span className="text-xs text-muted-foreground">({p.review_count})</span>
                     </span>
+                    {open === true && (
+                      <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">
+                        {t.localOpenNow}
+                      </Badge>
+                    )}
+                    {open === false && (
+                      <Badge variant="outline" className="text-[10px]">
+                        {t.localClosed}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>
+                {p.community_note ? (
+                  <p className="mt-1 text-xs italic text-muted-foreground">
+                    “{p.community_note}”
+                  </p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(p.tags ?? []).slice(0, 6).map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs">
@@ -274,11 +360,77 @@ function LocalPage() {
                     ))}
                   </ul>
                 )}
-                {p.price_level != null && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {"฿".repeat(p.price_level)}
-                    {"฿".repeat(Math.max(0, 4 - p.price_level)).replace(/฿/g, "·")}
-                  </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {map && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={map} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-1 size-3.5" />
+                        {t.localMap}
+                      </a>
+                    </Button>
+                  )}
+                  {dir && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={dir} target="_blank" rel="noreferrer">
+                        <Navigation className="mr-1 size-3.5" />
+                        {t.localDirections}
+                      </a>
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setReviewPlaceId(p.id);
+                      setReviewStars(5);
+                      setReviewComment("");
+                    }}
+                  >
+                    <Star className="mr-1 size-3.5" />
+                    {t.localReview}
+                  </Button>
+                </div>
+                {reviewPlaceId === p.id && (
+                  <div className="mt-3 space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                    <p className="text-sm font-medium">{t.localReviewTitle}</p>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setReviewStars(n)}
+                          className="p-0.5"
+                          aria-label={`${n}`}
+                        >
+                          <Star
+                            className={`size-6 ${
+                              n <= reviewStars
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      rows={2}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder={t.localReviewPlaceholder}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={submitReview}>
+                        {t.localReviewSubmit}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setReviewPlaceId(null)}
+                      >
+                        {t.cancel}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </article>
             );

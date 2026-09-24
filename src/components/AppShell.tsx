@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   FileText,
   HandHelping,
@@ -15,12 +15,18 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import {
+  markNotificationsReadForPath,
+  useInboxBadges,
+} from "@/hooks/useInboxBadges";
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
@@ -33,11 +39,41 @@ export function PhumMark({ className = "size-9" }: { className?: string }) {
   );
 }
 
+function NavDot({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <span
+      className="absolute -right-0.5 -top-0.5 size-2.5 animate-pulse rounded-full bg-red-500 ring-2 ring-background"
+      aria-hidden
+    />
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
+  const { user } = useAuthUser();
+  const qc = useQueryClient();
+  const { unreadByNav, totalUnread } = useInboxBadges();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  // Mark path notifications as read when user visits that section
+  useEffect(() => {
+    if (!user?.id || !pathname) return;
+    const base =
+      pathname.startsWith("/helpme") || pathname.startsWith("/helper-dashboard")
+        ? "/helpme"
+        : pathname.startsWith("/local")
+          ? "/local"
+          : pathname.startsWith("/admin")
+            ? "/admin"
+            : pathname;
+    void markNotificationsReadForPath(user.id, base).then(() => {
+      void qc.invalidateQueries({ queryKey: ["app-notifications", user.id] });
+    });
+  }, [pathname, user?.id]);
 
   const nav = [
     { to: "/today", label: t.navToday, icon: Home },
@@ -62,17 +98,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const linkClass =
-    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent";
+    "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent";
   const activeClass = "bg-primary/10 text-primary";
+
+  const hasBadge = (to: string) => (unreadByNav.get(to) ?? 0) > 0;
+  const moreHasBadge = moreNav.some((i) => hasBadge(i.to)) || hasBadge("/admin");
 
   return (
     <div className="min-h-screen bg-background md:flex">
-      {/* Desktop sidebar — scrollable when nav exceeds viewport */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
         <div className="shrink-0 border-b border-border p-4">
           <Link to="/today" className="flex items-center gap-2">
             <PhumMark />
             <span className="font-semibold tracking-tight">{t.appName}</span>
+            {totalUnread > 0 && (
+              <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
+            )}
           </Link>
         </div>
 
@@ -84,7 +125,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               className={linkClass}
               activeProps={{ className: activeClass }}
             >
-              <item.icon className="size-4 shrink-0" />
+              <span className="relative">
+                <item.icon className="size-4 shrink-0" />
+                <NavDot show={hasBadge(item.to)} />
+              </span>
               <span className="truncate">{item.label}</span>
             </Link>
           ))}
@@ -93,7 +137,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="shrink-0 space-y-1 border-t border-border p-3">
           {isAdmin ? (
             <Link to="/admin" className={linkClass} activeProps={{ className: activeClass }}>
-              <ShieldEllipsis className="size-4 shrink-0" />
+              <span className="relative">
+                <ShieldEllipsis className="size-4 shrink-0" />
+                <NavDot show={hasBadge("/admin")} />
+              </span>
               <span className="truncate">{t.navAdmin}</span>
             </Link>
           ) : null}
@@ -112,30 +159,34 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
 
-        {/* Mobile bottom nav */}
         <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
           {primaryNav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
+              className="relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
               activeProps={{ className: "text-primary" }}
             >
-              <item.icon className="size-5" />
+              <span className="relative">
+                <item.icon className="size-5" />
+                <NavDot show={hasBadge(item.to)} />
+              </span>
               <span className="max-w-full truncate px-0.5">{item.label}</span>
             </Link>
           ))}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
+            className="relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
           >
-            <MoreHorizontal className="size-5" />
+            <span className="relative">
+              <MoreHorizontal className="size-5" />
+              <NavDot show={moreHasBadge} />
+            </span>
             <span className="max-w-full truncate px-0.5">{t.navMore}</span>
           </button>
         </nav>
 
-        {/* Mobile "More" sheet — scrollable; Admin pinned near top of secondary actions */}
         <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
           <SheetContent
             side="left"
@@ -158,7 +209,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     className={linkClass}
                     activeProps={{ className: activeClass }}
                   >
-                    <item.icon className="size-4 shrink-0" />
+                    <span className="relative">
+                      <item.icon className="size-4 shrink-0" />
+                      <NavDot show={hasBadge(item.to)} />
+                    </span>
                     <span className="truncate">{item.label}</span>
                   </Link>
                 ))}
@@ -173,7 +227,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   className={linkClass}
                   activeProps={{ className: activeClass }}
                 >
-                  <ShieldEllipsis className="size-4 shrink-0" />
+                  <span className="relative">
+                    <ShieldEllipsis className="size-4 shrink-0" />
+                    <NavDot show={hasBadge("/admin")} />
+                  </span>
                   <span className="truncate">{t.navAdmin}</span>
                 </Link>
               ) : null}
