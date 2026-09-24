@@ -689,7 +689,6 @@ const th = {
   benVerified: "ตรวจล่าสุด",
   benSaveProfile: "บันทึกโปรไฟล์",
   benHasSso: "มีประกันสังคม",
-  benHasWelfare: "มีบัตรสวัสดิการแห่งรัฐ",
   benMatches: "สิทธิที่อาจเกี่ยวข้อง",
 } as const;
 
@@ -1378,7 +1377,6 @@ const en = {
   benVerified: "Verified",
   benSaveProfile: "Save profile",
   benHasSso: "Has social security",
-  benHasWelfare: "Has welfare card",
   benMatches: "Matching benefits",
 } satisfies Dict;
 
