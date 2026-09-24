@@ -47,5 +47,11 @@ export const suggestJobPrice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { suggestJobPrice: run } = await import("./marketplace.server");
-    return run(data);
+    return run({
+      title: data.title,
+      description: data.description ?? null,
+      category: data.category ?? null,
+      locationText: data.locationText ?? null,
+      lang: data.lang,
+    });
   });

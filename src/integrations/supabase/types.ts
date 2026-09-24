@@ -692,37 +692,52 @@ export type Database = {
       job_offers: {
         Row: {
           created_at: string
+          eta_hours: number | null
+          expires_at: string | null
           helper_id: string
           helper_user_id: string
           id: string
           job_id: string
           match_score: number | null
           message: string | null
+          parent_offer_id: string | null
           price: number | null
+          reject_reason: string | null
+          round: number
           status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          eta_hours?: number | null
+          expires_at?: string | null
           helper_id: string
           helper_user_id: string
           id?: string
           job_id: string
           match_score?: number | null
           message?: string | null
+          parent_offer_id?: string | null
           price?: number | null
+          reject_reason?: string | null
+          round?: number
           status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          eta_hours?: number | null
+          expires_at?: string | null
           helper_id?: string
           helper_user_id?: string
           id?: string
           job_id?: string
           match_score?: number | null
           message?: string | null
+          parent_offer_id?: string | null
           price?: number | null
+          reject_reason?: string | null
+          round?: number
           status?: string
           updated_at?: string
         }
@@ -1570,8 +1585,11 @@ export type Database = {
         Insert: {
           benefit_id: string
           created_at?: string
+          deadline_at?: string | null
           id?: string
           note?: string | null
+          notes?: string | null
+          remind?: boolean
           status?: string
           updated_at?: string
           user_id: string
@@ -1579,7 +1597,10 @@ export type Database = {
         Update: {
           benefit_id?: string
           created_at?: string
+          deadline_at?: string | null
           id?: string
+          notes?: string | null
+          remind?: boolean
           note?: string | null
           status?: string
           updated_at?: string
@@ -1621,6 +1642,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_job_party: { Args: { p_job_id: string; p_uid: string }; Returns: boolean }
+      is_blocked_by: { Args: { p_viewer: string; p_other: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

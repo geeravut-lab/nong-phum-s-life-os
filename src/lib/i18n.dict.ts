@@ -691,8 +691,6 @@ const th = {
   benHasSso: "มีประกันสังคม",
   benHasWelfare: "มีบัตรสวัสดิการแห่งรัฐ",
   benMatches: "สิทธิที่อาจเกี่ยวข้อง",
-  saved: "บันทึกแล้ว",
-  save: "บันทึก",
 } as const;
 
 // Thai is the source of truth. `satisfies` on `en` makes a missing or extra key a
@@ -1382,8 +1380,6 @@ const en = {
   benHasSso: "Has social security",
   benHasWelfare: "Has welfare card",
   benMatches: "Matching benefits",
-  saved: "Saved",
-  save: "Save",
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };

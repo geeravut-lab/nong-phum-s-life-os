@@ -467,6 +467,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/local': {
+      id: '/_authenticated/local'
+      path: '/local'
+      fullPath: '/local'
+      preLoaderRoute: typeof AuthenticatedLocalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/local_/merchant': {
+      id: '/_authenticated/local_/merchant'
+      path: '/local/merchant'
+      fullPath: '/local/merchant'
+      preLoaderRoute: typeof AuthenticatedLocalMerchantRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/decide': {
+      id: '/_authenticated/decide'
+      path: '/decide'
+      fullPath: '/decide'
+      preLoaderRoute: typeof AuthenticatedDecideRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/helper-dashboard': {
+      id: '/_authenticated/helper-dashboard'
+      path: '/helper-dashboard'
+      fullPath: '/helper-dashboard'
+      preLoaderRoute: typeof AuthenticatedHelperDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin_/marketplace': {
+      id: '/_authenticated/admin_/marketplace'
+      path: '/admin/marketplace'
+      fullPath: '/admin/marketplace'
+      preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin_/safety': {
+      id: '/_authenticated/admin_/safety'
+      path: '/admin/safety'
+      fullPath: '/admin/safety'
+      preLoaderRoute: typeof AuthenticatedAdminSafetyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
