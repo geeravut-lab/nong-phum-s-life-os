@@ -34,7 +34,7 @@ export const planFuneral = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase
       .from("funeral_plans")
       .insert({
-        user_id: context.user.id,
+        user_id: context.userId,
         input: data,
         packages: packages.packages,
         status: "draft",
@@ -63,7 +63,7 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
       .eq("id", data.planId)
       .single();
     if (error || !plan) throw new Error(error?.message ?? "plan not found");
-    if (plan.user_id !== context.user.id) throw new Error("Forbidden");
+    if (plan.user_id !== context.userId) throw new Error("Forbidden");
 
     const pkgs = (plan.packages as Array<{ id: string; totalBudget: number }>) ?? [];
     const selected = pkgs.find((p) => p.id === data.packageId);
@@ -97,7 +97,7 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
       .from("funeral_payments")
       .insert({
         plan_id: data.planId,
-        payer_id: context.user.id,
+        payer_id: context.userId,
         amount,
         installments: data.installments,
         payment_status: "pending",
@@ -124,7 +124,7 @@ export const markFuneralPaid = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const isAdmin = await context.supabase.rpc("has_role", {
-      _user_id: context.user.id,
+      _user_id: context.userId,
       _role: "admin",
     });
     const { data: pay, error } = await context.supabase
@@ -133,7 +133,7 @@ export const markFuneralPaid = createServerFn({ method: "POST" })
       .eq("id", data.paymentId)
       .single();
     if (error || !pay) throw new Error(error?.message ?? "not found");
-    if (pay.payer_id !== context.user.id && !isAdmin.data) throw new Error("Forbidden");
+    if (pay.payer_id !== context.userId && !isAdmin.data) throw new Error("Forbidden");
 
     await context.supabase
       .from("funeral_payments")

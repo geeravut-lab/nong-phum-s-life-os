@@ -18,6 +18,6 @@ export const legacyAssist = createServerFn({ method: "POST" })
     return extractLegacyFromText({
       message: data.message,
       lang: data.lang,
-      contextHint: data.contextHint,
+      ...(data.contextHint ? { contextHint: data.contextHint } : {}),
     });
   });

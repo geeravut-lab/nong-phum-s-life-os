@@ -1258,6 +1258,196 @@ export type Database = {
         Relationships: []
       }
 
+
+      legacy_profiles: {
+        Row: {
+          body_donation: string
+          consent_at: string | null
+          created_at: string
+          notes: string
+          organ_donation: string
+          social_intent: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_donation?: string
+          consent_at?: string | null
+          created_at?: string
+          notes?: string
+          organ_donation?: string
+          social_intent?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_donation?: string
+          consent_at?: string | null
+          created_at?: string
+          notes?: string
+          organ_donation?: string
+          social_intent?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      legacy_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_verifier: boolean
+          line_id: string | null
+          personal_message: string
+          phone: string | null
+          priority: number
+          relation: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          is_verifier?: boolean
+          line_id?: string | null
+          personal_message?: string
+          phone?: string | null
+          priority?: number
+          relation?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_verifier?: boolean
+          line_id?: string | null
+          personal_message?: string
+          phone?: string | null
+          priority?: number
+          relation?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      legacy_assets: {
+        Row: {
+          beneficiary_hint: string | null
+          created_at: string
+          details: string
+          estimated_value: number | null
+          id: string
+          is_liability: boolean
+          kind: string
+          location_hint: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          beneficiary_hint?: string | null
+          created_at?: string
+          details?: string
+          estimated_value?: number | null
+          id?: string
+          is_liability?: boolean
+          kind?: string
+          location_hint?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          beneficiary_hint?: string | null
+          created_at?: string
+          details?: string
+          estimated_value?: number | null
+          id?: string
+          is_liability?: boolean
+          kind?: string
+          location_hint?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      legacy_wishes: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          section: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          section?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          section?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      legacy_checklist: {
+        Row: {
+          assignee_hint: string | null
+          created_at: string
+          id: string
+          is_done: boolean
+          notes: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignee_hint?: string | null
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          notes?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignee_hint?: string | null
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          notes?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       death_cases: {
         Row: {
           admin_notes: string | null
@@ -1957,6 +2147,7 @@ export type Database = {
     Functions: {
       is_job_party: { Args: { p_job_id: string; p_uid: string }; Returns: boolean }
       is_blocked_by: { Args: { p_viewer: string; p_other: string }; Returns: boolean }
+      legacy_seed_checklist: { Args: { p_user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

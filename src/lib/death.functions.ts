@@ -15,7 +15,7 @@ export const reportDeathCase = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const uid = context.user.id;
+    const uid = context.userId;
     // Reporter should be admin OR listed as verifier contact for subject
     const { data: isAdmin } = await context.supabase.rpc("has_role", {
       _user_id: uid,
@@ -83,7 +83,7 @@ export const confirmDeathCase = createServerFn({ method: "POST" })
 
     const { error: insErr } = await context.supabase.from("death_confirmations").insert({
       case_id: data.caseId,
-      confirmer_user_id: context.user.id,
+      confirmer_user_id: context.userId,
       confirmer_name: data.confirmerName,
       decision: data.decision,
       note: data.note,

@@ -21,6 +21,7 @@ import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
+import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
@@ -165,6 +166,11 @@ const AuthenticatedAdminPaymentsRoute =
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
+const AuthenticatedLegacyRoute = AuthenticatedLegacyRouteImport.update({
+  id: '/legacy',
+  path: '/legacy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLegacyAfterRoute = AuthenticatedLegacyAfterRouteImport.update({
   id: '/legacy_/after',
   path: '/legacy/after',
@@ -201,9 +207,11 @@ export interface FileRoutesByFullPath {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/memorial/$token': typeof MemorialTokenRoute
 }
@@ -232,9 +240,11 @@ export interface FileRoutesByTo {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/memorial/$token': typeof MemorialTokenRoute
 }
@@ -488,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/legacy': {
+      id: '/_authenticated/legacy'
+      path: '/legacy'
+      fullPath: '/legacy'
+      preLoaderRoute: typeof AuthenticatedLegacyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/legacy_/after': {
       id: '/_authenticated/legacy_/after'
       path: '/legacy/after'
@@ -567,6 +584,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
+  AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
   MemorialTokenRoute: typeof MemorialTokenRoute
 }
@@ -591,6 +609,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
+  AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
   MemorialTokenRoute: MemorialTokenRoute,
 }
