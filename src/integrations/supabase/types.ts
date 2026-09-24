@@ -20,6 +20,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_job_party: { Args: { p_job_id: string; p_uid: string }; Returns: boolean }
+      is_blocked_by: { Args: { p_viewer: string; p_other: string }; Returns: boolean }
       graphql: {
         Args: {
           extensions?: Json
@@ -195,6 +197,11 @@ export type Database = {
       benefits: {
         Row: {
           category: string
+          deadline_day: number | null
+          deadline_month: number | null
+          deadline_note: string | null
+          source_name: string | null
+          verified_at: string | null
           created_at: string
           eligibility: Json
           est_value: number | null
@@ -827,6 +834,178 @@ export type Database = {
           },
         ]
       }
+
+      job_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          job_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          job_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      job_evidence: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          mime_type: string | null
+          note: string | null
+          storage_path: string
+          title: string
+          uploader_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          mime_type?: string | null
+          note?: string | null
+          storage_path: string
+          title?: string
+          uploader_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          mime_type?: string | null
+          note?: string | null
+          storage_path?: string
+          title?: string
+          uploader_id?: string
+        }
+        Relationships: []
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      safety_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          details: string | null
+          id: string
+          is_emergency: boolean
+          job_id: string | null
+          reason: string
+          reporter_id: string
+          status: string
+          target_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          is_emergency?: boolean
+          job_id?: string | null
+          reason: string
+          reporter_id: string
+          status?: string
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          is_emergency?: boolean
+          job_id?: string | null
+          reason?: string
+          reporter_id?: string
+          status?: string
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      decisions: {
+        Row: {
+          board: Json
+          chosen_option_id: string | null
+          context: Json
+          created_at: string
+          id: string
+          outcome: string | null
+          outcome_notes: string | null
+          question: string
+          recommendation: string | null
+          status: string
+          template: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          board?: Json
+          chosen_option_id?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          outcome_notes?: string | null
+          question: string
+          recommendation?: string | null
+          status?: string
+          template?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          board?: Json
+          chosen_option_id?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          outcome?: string | null
+          outcome_notes?: string | null
+          question?: string
+          recommendation?: string | null
+          status?: string
+          template?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       job_reviews: {
         Row: {
           comment: string | null
@@ -1019,6 +1198,8 @@ export type Database = {
           agreed_price: number | null
           ai_extract: Json
           assigned_helper_id: string | null
+          booked_at: string | null
+          booking_notes: string | null
           budget_max: number | null
           budget_min: number | null
           category: string
@@ -1028,6 +1209,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           location_text: string | null
+          no_show: boolean
           payment_status: string | null
           platform_fee: number | null
           scheduled_at: string | null
@@ -1040,6 +1222,8 @@ export type Database = {
           agreed_price?: number | null
           ai_extract?: Json
           assigned_helper_id?: string | null
+          booked_at?: string | null
+          booking_notes?: string | null
           budget_max?: number | null
           budget_min?: number | null
           category?: string
@@ -1061,6 +1245,8 @@ export type Database = {
           agreed_price?: number | null
           ai_extract?: Json
           assigned_helper_id?: string | null
+          booked_at?: string | null
+          booking_notes?: string | null
           budget_max?: number | null
           budget_min?: number | null
           category?: string
@@ -1371,6 +1557,9 @@ export type Database = {
       user_benefits: {
         Row: {
           benefit_id: string
+          deadline_at: string | null
+          notes: string | null
+          remind: boolean
           created_at: string
           id: string
           note: string | null

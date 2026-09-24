@@ -15,6 +15,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MicTestRouteImport } from './routes/mic-test'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
+import { Route as AuthenticatedDecideRouteImport } from './routes/_authenticated/decide'
+import { Route as AuthenticatedHelperDashboardRouteImport } from './routes/_authenticated/helper-dashboard'
+import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
+import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
@@ -68,6 +72,27 @@ const AuthenticatedLocalRoute = AuthenticatedLocalRouteImport.update({
 const AuthenticatedLocalMerchantRoute = AuthenticatedLocalMerchantRouteImport.update({
   id: '/local_/merchant',
   path: '/local/merchant',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedDecideRoute = AuthenticatedDecideRouteImport.update({
+  id: '/decide',
+  path: '/decide',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHelperDashboardRoute = AuthenticatedHelperDashboardRouteImport.update({
+  id: '/helper-dashboard',
+  path: '/helper-dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminMarketplaceRoute = AuthenticatedAdminMarketplaceRouteImport.update({
+  id: '/admin_/marketplace',
+  path: '/admin/marketplace',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminSafetyRoute = AuthenticatedAdminSafetyRouteImport.update({
+  id: '/admin_/safety',
+  path: '/admin/safety',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
@@ -146,6 +171,10 @@ export interface FileRoutesByFullPath {
   '/benefits': typeof AuthenticatedBenefitsRoute
   '/local': typeof AuthenticatedLocalRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/decide': typeof AuthenticatedDecideRoute
+  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
+  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -169,6 +198,10 @@ export interface FileRoutesByTo {
   '/benefits': typeof AuthenticatedBenefitsRoute
   '/local': typeof AuthenticatedLocalRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/decide': typeof AuthenticatedDecideRoute
+  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
+  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -194,6 +227,10 @@ export interface FileRoutesById {
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
   '/_authenticated/local': typeof AuthenticatedLocalRoute
   '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
+  '/_authenticated/decide': typeof AuthenticatedDecideRoute
+  '/_authenticated/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
+  '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
+  '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
@@ -218,6 +255,10 @@ export interface FileRouteTypes {
     | '/benefits'
     | '/local'
     | '/local/merchant'
+    | '/decide'
+    | '/helper-dashboard'
+    | '/admin/marketplace'
+    | '/admin/safety'
     | '/chat'
     | '/docs'
     | '/family'
@@ -240,6 +281,10 @@ export interface FileRouteTypes {
     | '/benefits'
     | '/local'
     | '/local/merchant'
+    | '/decide'
+    | '/helper-dashboard'
+    | '/admin/marketplace'
+    | '/admin/safety'
     | '/chat'
     | '/docs'
     | '/family'
@@ -430,6 +475,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
   AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
   AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
+  AuthenticatedDecideRoute: typeof AuthenticatedDecideRoute
+  AuthenticatedHelperDashboardRoute: typeof AuthenticatedHelperDashboardRoute
+  AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
+  AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
@@ -448,6 +497,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
   AuthenticatedLocalRoute: AuthenticatedLocalRoute,
   AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
+  AuthenticatedDecideRoute: AuthenticatedDecideRoute,
+  AuthenticatedHelperDashboardRoute: AuthenticatedHelperDashboardRoute,
+  AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
+  AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,

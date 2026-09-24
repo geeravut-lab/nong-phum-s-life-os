@@ -20,8 +20,8 @@ export const analyzeDecision = createServerFn({ method: "POST" })
     const { buildDecisionBoard } = await import("./decision.server");
     return buildDecisionBoard({
       question: data.question,
-      template: data.template,
-      context: data.context,
+      template: data.template ?? null,
+      ...(data.context ? { context: data.context } : {}),
       lang: data.lang,
     });
   });

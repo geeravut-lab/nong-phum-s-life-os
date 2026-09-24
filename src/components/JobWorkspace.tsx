@@ -107,7 +107,7 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
     try {
       await submitSafetyReport({
         jobId,
-        targetUserId: counterpartyUserId,
+        targetUserId: counterpartyUserId ?? null,
         reason: emergency ? "emergency" : reportReason,
         details: emergency ? "Emergency alert from Help Me job chat" : reportDetails,
         isEmergency: emergency,
@@ -132,7 +132,7 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
       toast.success(t.blockDone);
       await submitSafetyReport({
         jobId,
-        targetUserId: counterpartyUserId,
+        targetUserId: counterpartyUserId ?? null,
         reason: "blocked",
         details: "User blocked from Help Me",
       }).catch(() => {});

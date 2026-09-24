@@ -18,8 +18,8 @@ export const interviewBenefits = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { interviewBenefitProfile } = await import("./benefits-ai.server");
     return interviewBenefitProfile({
-      message: data.message,
-      answers: data.answers,
+      message: data.message ?? null,
+      ...(data.answers ? { answers: data.answers } : {}),
       lang: data.lang,
     });
   });

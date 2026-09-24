@@ -14,7 +14,7 @@ import {
   type BenefitProfile,
   type BenefitRow,
   type MatchLevel,
-} from "@/lib/benefits";
+} from "@/lib/benefits"
 
 const STATUSES = ["interested", "in_progress", "received"] as const;
 type Status = (typeof STATUSES)[number];
@@ -70,7 +70,7 @@ export function BenefitChatCards() {
         occupation: p.occupation,
         province: p.province,
         household_size: p.household_size,
-        groups: p.groups ?? [],
+        groups: (p.groups ?? []) as BenefitProfile["groups"],
         has_social_security: p.has_social_security,
         has_welfare_card: p.has_welfare_card,
       }

@@ -304,16 +304,16 @@ export const updateMarketplaceSettings = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) => MarketplaceSettingsInput.parse(input))
   .handler(async ({ data, context }) => {
-    const payload: Record<string, unknown> = {
+    const payload = {
       revenue_mode: data.revenue_mode,
       commission_rate: data.commission_rate,
       service_fee: data.service_fee,
+      ...(data.cancel_fee_pct != null ? { cancel_fee_pct: data.cancel_fee_pct } : {}),
+      ...(data.escrow_enabled != null ? { escrow_enabled: data.escrow_enabled } : {}),
+      ...(data.helpme_promptpay_id !== undefined
+        ? { helpme_promptpay_id: data.helpme_promptpay_id }
+        : {}),
     };
-    if (data.cancel_fee_pct != null) payload.cancel_fee_pct = data.cancel_fee_pct;
-    if (data.escrow_enabled != null) payload.escrow_enabled = data.escrow_enabled;
-    if (data.helpme_promptpay_id !== undefined) {
-      payload.helpme_promptpay_id = data.helpme_promptpay_id;
-    }
     const { error } = await context.supabase
       .from("platform_settings")
       .update(payload)
