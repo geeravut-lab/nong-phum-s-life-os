@@ -61,70 +61,64 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/" });
   };
 
+  const linkClass =
+    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent";
+  const activeClass = "bg-primary/10 text-primary";
+
   return (
     <div className="min-h-screen bg-background md:flex">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-1 border-r border-border bg-sidebar p-4 md:flex">
-        <Link to="/today" className="mb-6 flex items-center gap-2">
-          <PhumMark />
-          <span className="font-semibold tracking-tight">{t.appName}</span>
-        </Link>
-        {nav.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            activeProps={{ className: "bg-primary/10 text-primary" }}
-          >
-            <item.icon className="size-4" />
-            {item.label}
+      {/* Desktop sidebar — scrollable when nav exceeds viewport */}
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+        <div className="shrink-0 border-b border-border p-4">
+          <Link to="/today" className="flex items-center gap-2">
+            <PhumMark />
+            <span className="font-semibold tracking-tight">{t.appName}</span>
           </Link>
-        ))}
-        <div className="mt-auto flex flex-col gap-1">
-          {isAdmin && (
+        </div>
+
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3">
+          {nav.map((item) => (
             <Link
-              to="/admin"
-              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent"
-              activeProps={{ className: "bg-primary/10 text-primary" }}
+              key={item.to}
+              to={item.to}
+              className={linkClass}
+              activeProps={{ className: activeClass }}
             >
-              <ShieldEllipsis className="size-4" />
-              {t.navAdmin}
+              <item.icon className="size-4 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </Link>
-          )}
-          <Link
-            to="/settings"
-            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent"
-            activeProps={{ className: "bg-primary/10 text-primary" }}
-          >
-            <Settings className="size-4" />
-            {t.navSettings}
+          ))}
+        </nav>
+
+        <div className="shrink-0 space-y-1 border-t border-border p-3">
+          {isAdmin ? (
+            <Link to="/admin" className={linkClass} activeProps={{ className: activeClass }}>
+              <ShieldEllipsis className="size-4 shrink-0" />
+              <span className="truncate">{t.navAdmin}</span>
+            </Link>
+          ) : null}
+          <Link to="/settings" className={linkClass} activeProps={{ className: activeClass }}>
+            <Settings className="size-4 shrink-0" />
+            <span className="truncate">{t.navSettings}</span>
           </Link>
-          <Button variant="ghost" size="sm" className="justify-start" onClick={signOut}>
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
             {t.signOut}
           </Button>
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur md:hidden">
-          <Link to="/today" className="flex items-center gap-2">
-            <PhumMark className="size-8" />
-            <span className="font-semibold">{t.appName}</span>
-          </Link>
-          <Link to="/settings" aria-label={t.navSettings}>
-            <Settings className="size-5 text-muted-foreground" />
-          </Link>
-        </header>
-
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-28 pt-5 md:pb-12 md:pt-8">
+      <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-5 md:px-6 md:py-8">
           {children}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
+        {/* Mobile bottom nav */}
+        <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
           {primaryNav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
+              className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
               activeProps={{ className: "text-primary" }}
             >
               <item.icon className="size-5" />
@@ -134,55 +128,73 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            className="flex flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
+            className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-muted-foreground"
           >
             <MoreHorizontal className="size-5" />
             <span className="max-w-full truncate px-0.5">{t.navMore}</span>
           </button>
         </nav>
 
+        {/* Mobile "More" sheet — scrollable; Admin pinned near top of secondary actions */}
         <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-          <SheetContent side="left" className="w-72 p-4">
-            <SheetHeader className="p-0">
+          <SheetContent
+            side="left"
+            className="flex h-dvh max-h-dvh w-[min(18rem,85vw)] flex-col gap-0 p-0"
+          >
+            <SheetHeader className="shrink-0 border-b border-border p-4">
               <SheetTitle className="flex items-center gap-2 text-left">
                 <PhumMark className="size-8" />
                 {t.appName}
               </SheetTitle>
             </SheetHeader>
-            <div className="mt-5 flex flex-col gap-1">
-              {moreNav.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMoreOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
-                  activeProps={{ className: "bg-primary/10 text-primary" }}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Link>
-              ))}
-              {isAdmin && (
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+              <div className="flex flex-col gap-1">
+                {moreNav.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMoreOpen(false)}
+                    className={linkClass}
+                    activeProps={{ className: activeClass }}
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="shrink-0 space-y-1 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              {isAdmin ? (
                 <Link
                   to="/admin"
                   onClick={() => setMoreOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
-                  activeProps={{ className: "bg-primary/10 text-primary" }}
+                  className={linkClass}
+                  activeProps={{ className: activeClass }}
                 >
-                  <ShieldEllipsis className="size-4" />
-                  {t.navAdmin}
+                  <ShieldEllipsis className="size-4 shrink-0" />
+                  <span className="truncate">{t.navAdmin}</span>
                 </Link>
-              )}
+              ) : null}
               <Link
                 to="/settings"
                 onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
-                activeProps={{ className: "bg-primary/10 text-primary" }}
+                className={linkClass}
+                activeProps={{ className: activeClass }}
               >
-                <Settings className="size-4" />
-                {t.navSettings}
+                <Settings className="size-4 shrink-0" />
+                <span className="truncate">{t.navSettings}</span>
               </Link>
-              <Button variant="ghost" size="sm" className="mt-2 justify-start" onClick={signOut}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  setMoreOpen(false);
+                  void signOut();
+                }}
+              >
                 {t.signOut}
               </Button>
             </div>
