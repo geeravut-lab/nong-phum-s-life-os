@@ -261,3 +261,100 @@ export const listAiEvents = createServerFn({ method: "GET" })
     if (error) throw error;
     return data ?? [];
   });
+
+const MarketplaceSettingsInput = z.object({
+  revenue_mode: z.enum(["commission", "service_fee"]),
+  commission_rate: z.number().min(0).max(50),
+  service_fee: z.number().min(0).max(100000),
+  cancel_fee_pct: z.number().min(0).max(100).optional(),
+  escrow_enabled: z.boolean().optional(),
+  helpme_promptpay_id: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{10}$|^[0-9]{13}$|^[0-9]{15}$/)
+    .nullable()
+    .optional(),
+});
+
+export const getMarketplaceSettings = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("platform_settings")
+      .select(
+        "revenue_mode, commission_rate, service_fee, cancel_fee_pct, escrow_enabled, helpme_promptpay_id, updated_at",
+      )
+      .eq("id", true)
+      .maybeSingle();
+    if (error) throw error;
+    return (
+      data ?? {
+        revenue_mode: "commission",
+        commission_rate: 5,
+        service_fee: 30,
+        cancel_fee_pct: 20,
+        escrow_enabled: true,
+        helpme_promptpay_id: null,
+        updated_at: null,
+      }
+    );
+  });
+
+export const updateMarketplaceSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) => MarketplaceSettingsInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const payload: Record<string, unknown> = {
+      revenue_mode: data.revenue_mode,
+      commission_rate: data.commission_rate,
+      service_fee: data.service_fee,
+    };
+    if (data.cancel_fee_pct != null) payload.cancel_fee_pct = data.cancel_fee_pct;
+    if (data.escrow_enabled != null) payload.escrow_enabled = data.escrow_enabled;
+    if (data.helpme_promptpay_id !== undefined) {
+      payload.helpme_promptpay_id = data.helpme_promptpay_id;
+    }
+    const { error } = await context.supabase
+      .from("platform_settings")
+      .update(payload)
+      .eq("id", true);
+    if (error) throw error;
+    return { ok: true as const };
+  });
+
+export const listSafetyReports = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("safety_reports")
+      .select(
+        "id, reporter_id, target_user_id, job_id, reason, details, status, is_emergency, admin_notes, created_at",
+      )
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    return data ?? [];
+  });
+
+export const updateSafetyReport = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["open", "reviewing", "resolved", "dismissed"]),
+        admin_notes: z.string().trim().max(2000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("safety_reports")
+      .update({
+        status: data.status,
+        admin_notes: data.admin_notes ?? null,
+      })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true as const };
+  });

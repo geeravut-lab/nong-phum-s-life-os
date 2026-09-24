@@ -872,6 +872,148 @@ export type Database = {
           },
         ]
       }
+
+      local_places: {
+        Row: {
+          address: string | null
+          area: string | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          lat: number | null
+          lng: number | null
+          name: string
+          name_en: string | null
+          open_hours: Json
+          owner_user_id: string | null
+          phone: string | null
+          price_level: number | null
+          rating: number
+          review_count: number
+          tags: string[]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          area?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          lat?: number | null
+          lng?: number | null
+          name: string
+          name_en?: string | null
+          open_hours?: Json
+          owner_user_id?: string | null
+          phone?: string | null
+          price_level?: number | null
+          rating?: number
+          review_count?: number
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          area?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          name_en?: string | null
+          open_hours?: Json
+          owner_user_id?: string | null
+          phone?: string | null
+          price_level?: number | null
+          rating?: number
+          review_count?: number
+          tags?: string[]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      local_deals: {
+        Row: {
+          budget_max: number | null
+          created_at: string
+          description: string
+          discount_label: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          place_id: string
+          starts_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          budget_max?: number | null
+          created_at?: string
+          description?: string
+          discount_label?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          place_id: string
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          budget_max?: number | null
+          created_at?: string
+          description?: string
+          discount_label?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          place_id?: string
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      place_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          place_id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          place_id: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          place_id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           agreed_price: number | null

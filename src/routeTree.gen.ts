@@ -15,6 +15,8 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MicTestRouteImport } from './routes/mic-test'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
+import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
+import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
@@ -56,6 +58,16 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
 const AuthenticatedBenefitsRoute = AuthenticatedBenefitsRouteImport.update({
   id: '/benefits',
   path: '/benefits',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLocalRoute = AuthenticatedLocalRouteImport.update({
+  id: '/local',
+  path: '/local',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLocalMerchantRoute = AuthenticatedLocalMerchantRouteImport.update({
+  id: '/local_/merchant',
+  path: '/local/merchant',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
@@ -132,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/mic-test': typeof MicTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
+  '/local': typeof AuthenticatedLocalRoute
+  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -153,6 +167,8 @@ export interface FileRoutesByTo {
   '/mic-test': typeof MicTestRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
+  '/local': typeof AuthenticatedLocalRoute
+  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/chat': typeof AuthenticatedChatRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
@@ -176,6 +192,8 @@ export interface FileRoutesById {
   '/mic-test': typeof MicTestRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
+  '/_authenticated/local': typeof AuthenticatedLocalRoute
+  '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
@@ -198,6 +216,8 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/admin'
     | '/benefits'
+    | '/local'
+    | '/local/merchant'
     | '/chat'
     | '/docs'
     | '/family'
@@ -218,6 +238,8 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/admin'
     | '/benefits'
+    | '/local'
+    | '/local/merchant'
     | '/chat'
     | '/docs'
     | '/family'
@@ -239,6 +261,8 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/_authenticated/admin'
     | '/_authenticated/benefits'
+    | '/_authenticated/local'
+    | '/_authenticated/local_/merchant'
     | '/_authenticated/chat'
     | '/_authenticated/docs'
     | '/_authenticated/family'
@@ -404,6 +428,8 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
+  AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
+  AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
@@ -420,6 +446,8 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
+  AuthenticatedLocalRoute: AuthenticatedLocalRoute,
+  AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,

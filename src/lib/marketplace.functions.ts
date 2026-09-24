@@ -31,3 +31,21 @@ export const matchHelpers = createServerFn({ method: "POST" })
     const { matchHelpersForJob } = await import("./marketplace.server");
     return matchHelpersForJob(context.supabase, data.jobId);
   });
+
+export const suggestJobPrice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        title: z.string().min(1).max(200),
+        description: z.string().max(2000).optional(),
+        category: z.string().max(40).optional(),
+        locationText: z.string().max(200).optional(),
+        lang: z.enum(["th", "en"]).default("th"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { suggestJobPrice: run } = await import("./marketplace.server");
+    return run(data);
+  });

@@ -3,6 +3,7 @@ import {
   FileText,
   HandHelping,
   Heart,
+  MapPinned,
   ShieldCheck,
   Home,
   ListTodo,
@@ -46,6 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/family", label: t.navFamily, icon: Users },
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
     { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
+    { to: "/local", label: t.navLocal, icon: MapPinned },
     { to: "/support", label: t.navSupport, icon: Heart },
   ] as const;
 

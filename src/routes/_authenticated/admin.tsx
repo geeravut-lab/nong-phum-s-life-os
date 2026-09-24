@@ -403,6 +403,8 @@ function AdminPage() {
       <LineQuotaCard />
 
       <SupportHubCard />
+      <MarketplaceHubCard />
+      <SafetyHubCard />
       <PaymentsHubCard />
 
       {/* ---- Events ---- */}
@@ -640,6 +642,50 @@ function PaymentsHubCard() {
         </p>
       </div>
       {total > 0 && <Badge variant="destructive">{total}</Badge>}
+    </Link>
+  );
+}
+
+function MarketplaceHubCard() {
+  const { t } = useI18n();
+  return (
+    <Link
+      to="/admin/marketplace"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.mktAdminCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.mktAdminCardSub}</p>
+      </div>
+    </Link>
+  );
+}
+
+function SafetyHubCard() {
+  const { t } = useI18n();
+  const open = useQuery({
+    queryKey: ["safety-open-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("safety_reports")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["open", "reviewing"]);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  return (
+    <Link
+      to="/admin/safety"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.safetyAdminCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {open.data === undefined ? "…" : t.safetyAdminOpenCount(open.data)}
+        </p>
+      </div>
+      {!!open.data && <Badge variant="destructive">{open.data}</Badge>}
     </Link>
   );
 }

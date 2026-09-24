@@ -224,3 +224,46 @@ export async function matchHelpersForJob(
 
   return matches.sort((a, b) => b.score - a.score).slice(0, 10);
 }
+
+/** AI + market heuristic: suggested price range for a job draft or free-text. */
+export async function suggestJobPrice(input: {
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  locationText?: string | null;
+  lang: "th" | "en";
+}): Promise<{ min: number; max: number; note: string }> {
+  const langName = input.lang === "en" ? "English" : "Thai";
+  const { object } = await withProviderFallback("chat", (model) =>
+    generateObject({
+      model,
+      schema: z.object({
+        min: z.number().describe("Suggested minimum budget in THB"),
+        max: z.number().describe("Suggested maximum budget in THB"),
+        note: z.string().describe("One short sentence explaining the range"),
+      }),
+      system: `${persona(input.lang)}
+You estimate fair local helper prices in Thailand (THB). Be realistic for 2024–2026
+Bangkok/regional rates. Answer free text in ${langName}. max >= min. Prefer ranges
+of 200–5000 THB for typical errands; higher only for skilled/urgent work.`,
+      prompt: `Category: ${input.category ?? "other"}
+Location: ${input.locationText ?? "Thailand"}
+Title: ${input.title}
+Description: ${input.description ?? ""}`,
+    }),
+  );
+  return object;
+}
+
+/** Mark pending offers past expires_at as expired (cron). */
+export async function expirePendingOffers(now: Date): Promise<number> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("job_offers")
+    .update({ status: "expired" })
+    .eq("status", "pending")
+    .lt("expires_at", now.toISOString())
+    .select("id");
+  if (error) throw new Error(`expire offers: ${error.message}`);
+  return data?.length ?? 0;
+}

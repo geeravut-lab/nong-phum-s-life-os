@@ -1,5 +1,5 @@
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
-import { draftJob, matchHelpers, suggestHelperSkills } from "@/lib/marketplace.functions";
+import { draftJob, matchHelpers, suggestHelperSkills, suggestJobPrice } from "@/lib/marketplace.functions";
+import { JobWorkspace } from "@/components/JobWorkspace";
 import {
   createJobPayment,
   submitPaymentRef,
@@ -79,6 +80,7 @@ function RequesterTab() {
   const qc = useQueryClient();
   const runDraft = useServerFn(draftJob);
   const runMatch = useServerFn(matchHelpers);
+  const runPrice = useServerFn(suggestJobPrice);
   const runCreatePay = useServerFn(createJobPayment);
   const runSubmitRef = useServerFn(submitPaymentRef);
   const runVerify = useServerFn(verifyJobService);
@@ -86,6 +88,7 @@ function RequesterTab() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [priceHint, setPriceHint] = useState<{ min: number; max: number; note: string } | null>(null);
   const [matchesFor, setMatchesFor] = useState<string | null>(null);
   const [matches, setMatches] = useState<Awaited<ReturnType<typeof matchHelpers>>>([]);
   const [reviewFor, setReviewFor] = useState<string | null>(null);
@@ -116,8 +119,27 @@ function RequesterTab() {
   const makeDraft = async () => {
     if (!text.trim()) return;
     setBusy(true);
+    setPriceHint(null);
     try {
-      setDraft(await runDraft({ data: { message: text.trim(), lang } }));
+      const d = await runDraft({ data: { message: text.trim(), lang } });
+      setDraft(d);
+      try {
+        const hint = await runPrice({
+          data: {
+            title: d.title,
+            description: d.description,
+            category: d.category,
+            locationText: d.locationText ?? undefined,
+            lang,
+          },
+        });
+        setPriceHint(hint);
+        if (d.budgetMin == null && d.budgetMax == null) {
+          setDraft({ ...d, budgetMin: hint.min, budgetMax: hint.max });
+        }
+      } catch {
+        /* price guidance optional */
+      }
     } catch {
       toast.error(t.error);
     } finally {
@@ -181,6 +203,50 @@ function RequesterTab() {
       .eq("id", jobId);
     toast.success(t.accepted);
     qc.invalidateQueries({ queryKey: ["my-jobs"] });
+  };
+
+  const rejectOffer = async (offerId: string, counterPrice?: number) => {
+    const { error } = await supabase
+      .from("job_offers")
+      .update({
+        status: "rejected",
+        reject_reason:
+          counterPrice != null && counterPrice > 0 ? `counter:${counterPrice}` : null,
+      })
+      .eq("id", offerId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(counterPrice ? t.counterSent : t.offerRejected);
+    qc.invalidateQueries({ queryKey: ["my-jobs"] });
+  };
+
+  const confirmBooking = async (jobId: string) => {
+    const { error } = await supabase
+      .from("jobs")
+      .update({ booked_at: new Date().toISOString(), status: "matched" })
+      .eq("id", jobId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t.bookingConfirmed);
+    qc.invalidateQueries({ queryKey: ["my-jobs"] });
+  };
+
+  const withdrawOffer = async (offerId: string) => {
+    const { error } = await supabase
+      .from("job_offers")
+      .update({ status: "withdrawn" })
+      .eq("id", offerId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t.offerWithdrawn);
+    qc.invalidateQueries({ queryKey: ["my-jobs"] });
+    qc.invalidateQueries({ queryKey: ["open-jobs"] });
   };
 
   const setStatus = async (jobId: string, status: string) => {
@@ -358,6 +424,11 @@ function RequesterTab() {
               ))}
             </ul>
           )}
+          {priceHint && (
+            <p className="text-sm text-muted-foreground">
+              {t.priceGuidance}: ฿{priceHint.min.toLocaleString()}–฿{priceHint.max.toLocaleString()} — {priceHint.note}
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             {draft.neededSkills.map((s) => (
               <Badge key={s} variant="secondary">
@@ -413,9 +484,14 @@ function RequesterTab() {
                   </Button>
                 )}
                 {job.status === "matched" && (
-                  <Button size="sm" onClick={() => setStatus(job.id, "in_progress")}>
-                    {t.markInProgress}
-                  </Button>
+                  <>
+                    <Button size="sm" variant="secondary" onClick={() => confirmBooking(job.id)}>
+                      {t.confirmBooking}
+                    </Button>
+                    <Button size="sm" onClick={() => setStatus(job.id, "in_progress")}>
+                      {t.markInProgress}
+                    </Button>
+                  </>
                 )}
                 {job.status === "in_progress" && (
                   <Button size="sm" onClick={() => setStatus(job.id, "done")}>
@@ -679,18 +755,63 @@ function RequesterTab() {
                       </p>
                     </div>
                     {o.status === "pending" && job.status === "open" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => acceptOffer(o.id, job.id, o.helper_id, o.price)}
-                      >
-                        {t.acceptOffer}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => acceptOffer(o.id, job.id, o.helper_id, o.price)}
+                        >
+                          {t.acceptOffer}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectOffer(o.id)}>
+                          {t.rejectOffer}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            const raw = window.prompt(t.counterPrompt, o.price != null ? String(o.price) : "");
+                            if (raw == null) return;
+                            const n = Number(raw);
+                            if (!Number.isFinite(n) || n <= 0) {
+                              toast.error(t.error);
+                              return;
+                            }
+                            void rejectOffer(o.id, n);
+                          }}
+                        >
+                          {t.counterOffer}
+                        </Button>
+                      </div>
                     ) : (
-                      <Badge variant="secondary">{o.status}</Badge>
+                      <Badge variant="secondary">
+                        {o.status === "accepted"
+                          ? t.offerStatusAccepted
+                          : o.status === "rejected"
+                            ? t.offerStatusRejected
+                            : o.status === "withdrawn"
+                              ? t.offerStatusWithdrawn
+                              : o.status}
+                      </Badge>
                     )}
                   </div>
                 ))}
               </div>
+              {(["matched", "in_progress", "done"] as const).includes(
+                job.status as "matched" | "in_progress" | "done",
+              ) && (
+                <JobWorkspace
+                  jobId={job.id}
+                  enabled
+                  counterpartyUserId={
+                    // helper_user_id is on offers; fall back null if not loaded
+                    (
+                      (job.job_offers as Array<{ helper_id: string; helper_user_id?: string; status: string }> | undefined)
+                        ?? []
+                    ).find((o) => o.status === "accepted" || o.helper_id === job.assigned_helper_id)
+                      ?.helper_user_id ?? null
+                  }
+                />
+              )}
             </article>
           );
         })}
@@ -705,6 +826,19 @@ function HelperTab() {
   const qc = useQueryClient();
   const runSkills = useServerFn(suggestHelperSkills);
   const runMarkEnded = useServerFn(markServiceEnded);
+
+  const withdrawOffer = async (offerId: string) => {
+    const { error } = await supabase
+      .from("job_offers")
+      .update({ status: "withdrawn" })
+      .eq("id", offerId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t.offerWithdrawn);
+    qc.invalidateQueries({ queryKey: ["my-offers"] });
+  };
 
   const [intro, setIntro] = useState("");
   const [busy, setBusy] = useState(false);
@@ -753,7 +887,7 @@ function HelperTab() {
       if (!profile?.id) return [];
       const { data } = await supabase
         .from("jobs")
-        .select("id, title, status, payment_status, job_payments(payment_status, service_ended)")
+        .select("id, user_id, title, status, payment_status, job_payments(payment_status, service_ended)")
         .eq("assigned_helper_id", profile.id)
         .in("status", ["matched", "in_progress", "done"])
         .order("updated_at", { ascending: false })
@@ -772,6 +906,21 @@ function HelperTab() {
       toast.error(e instanceof Error ? e.message : t.error);
     }
   };
+
+  const { data: myOffers } = useQuery({
+    queryKey: ["my-offers", profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data } = await supabase
+        .from("job_offers")
+        .select("id, job_id, price, message, status, jobs(title, status)")
+        .eq("helper_id", profile.id)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return data ?? [];
+    },
+    enabled: !!profile?.id,
+  });
 
   const { data: openJobs } = useQuery({
     queryKey: ["open-jobs"],
@@ -841,12 +990,15 @@ function HelperTab() {
 
   const sendOffer = async (jobId: string) => {
     if (!profile || !user) return;
+    const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
     const { error } = await supabase.from("job_offers").insert({
       job_id: jobId,
       helper_id: profile.id,
       helper_user_id: user.id,
       price: offerPrice ? Number(offerPrice) : null,
       message: offerMsg || null,
+      expires_at: expires,
+      round: 1,
     });
     if (error) {
       toast.error(error.message);
@@ -861,7 +1013,12 @@ function HelperTab() {
   return (
     <div className="space-y-6">
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="font-semibold">{t.helperProfile}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold">{t.helperProfile}</h2>
+          <Link to="/helper-dashboard" className="text-xs underline text-muted-foreground">
+            {t.providerDashTitle}
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">{t.helperIntro}</p>
         <Textarea
           value={intro}
@@ -961,9 +1118,29 @@ function HelperTab() {
                     {t.payServiceEnded}
                   </Badge>
                 )}
+                <JobWorkspace jobId={job.id} enabled counterpartyUserId={job.user_id ?? null} />
               </article>
             );
           })}
+        </section>
+      )}
+
+      {(myOffers ?? []).filter((o: any) => o.status === "pending").length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">{t.myPendingOffers}</h2>
+          {(myOffers ?? [])
+            .filter((o: any) => o.status === "pending")
+            .map((o: any) => (
+              <article key={o.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+                <h3 className="font-medium">{(o.jobs as any)?.title ?? o.job_id.slice(0, 8)}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {o.price != null ? `${o.price} ${t.baht}` : ""} {o.message ? `· ${o.message}` : ""}
+                </p>
+                <Button className="mt-2" size="sm" variant="outline" onClick={() => withdrawOffer(o.id)}>
+                  {t.withdrawOffer}
+                </Button>
+              </article>
+            ))}
         </section>
       )}
 

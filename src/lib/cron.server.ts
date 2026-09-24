@@ -117,6 +117,7 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
       ["cron_ticks_deleted", () => deleteOlderThan("cron_ticks", "started_at", agoIso(now, CRON_TICK_RETENTION_DAYS * DAY))],
       ["orphan_attachments_deleted", () => deleteOrphanAttachments(now, overBudget, summary)],
       ["escrow_auto_cancelled", () => autoCancelEscrow(now, overBudget, summary)],
+      ["expire_pending_offers", () => expireOffersStep(now, overBudget, summary)],
       // Abandoned LINE link flows: the state is useless once expired.
       ["line_states_deleted", () => deleteOlderThan("line_link_states", "expires_at", now.toISOString())],
     ];
@@ -410,6 +411,21 @@ async function autoCancelEscrow(now: Date, overBudget: () => boolean, summary: T
   } catch (err) {
     console.error("[tick] escrow auto-cancel:", err instanceof Error ? err.message : err);
     summary["escrow_auto_cancel_error"] = 1;
+    return 0;
+  }
+}
+
+
+async function expireOffersStep(now: Date, overBudget: () => boolean, summary: TickSummary): Promise<number> {
+  if (overBudget()) {
+    summary["stopped_early_at"] = "expire_pending_offers";
+    return 0;
+  }
+  try {
+    const { expirePendingOffers } = await import("./marketplace.server");
+    return await expirePendingOffers(now);
+  } catch (err) {
+    console.error("[tick] expire offers:", err instanceof Error ? err.message : err);
     return 0;
   }
 }
