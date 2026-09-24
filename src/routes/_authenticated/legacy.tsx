@@ -36,7 +36,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { legacyAssist } from "@/lib/legacy.functions";
-import { ASSET_KINDS, type AssetKind, type WishSection } from "@/lib/legacy.shared";
+import {
+  ASSET_KINDS,
+  labelAssetKind,
+  labelWishSection,
+  type AssetKind,
+  type WishSection,
+} from "@/lib/legacy.shared";
 
 export const Route = createFileRoute("/_authenticated/legacy")({
   head: () => ({ meta: routeMeta("legacy") }),
@@ -490,10 +496,14 @@ function LegacyPage() {
               <p className="mt-1 text-xs text-muted-foreground">{card.desc}</p>
             </button>
           ))}
-          <div className="rounded-2xl border border-dashed border-border p-4 sm:col-span-2">
+          <Link
+            to="/legacy/after"
+            className="block rounded-2xl border border-dashed border-border p-4 transition hover:border-primary/50 hover:bg-accent/30 sm:col-span-2"
+          >
             <p className="text-sm font-medium">{t.legacyPhase6Title}</p>
             <p className="mt-1 text-xs text-muted-foreground">{t.legacyPhase6Desc}</p>
-          </div>
+            <p className="mt-2 text-xs font-medium text-primary">{t.legacyOpenPhase6} →</p>
+          </Link>
           <p className="text-xs text-muted-foreground sm:col-span-2">
             {t.legacyDocsHint}{" "}
             <Link to="/docs" className="text-primary underline">
@@ -603,7 +613,7 @@ function LegacyPage() {
                   <SelectContent>
                     {ASSET_KINDS.map((k) => (
                       <SelectItem key={k} value={k}>
-                        {k}
+                        {labelAssetKind(t as unknown as Record<string, unknown>, k)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -656,7 +666,7 @@ function LegacyPage() {
                 <div>
                   <p className="font-medium">
                     {a.title}{" "}
-                    <Badge variant="outline">{a.kind}</Badge>
+                    <Badge variant="outline">{labelAssetKind(t as unknown as Record<string, unknown>, a.kind)}</Badge>
                     {a.is_liability ? (
                       <Badge variant="destructive" className="ml-1">
                         {t.legacyAssetLiability}
@@ -711,7 +721,7 @@ function LegacyPage() {
                         : (["life_story"] as WishSection[])
                 ).map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s}
+                    {labelWishSection(t as unknown as Record<string, unknown>, s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -779,7 +789,7 @@ function LegacyPage() {
                 <li key={w.id} className="rounded-xl border border-border p-3 text-sm">
                   <div className="flex justify-between gap-2">
                     <div>
-                      <Badge variant="outline">{w.section}</Badge>
+                      <Badge variant="outline">{labelWishSection(t as unknown as Record<string, unknown>, w.section)}</Badge>
                       {w.title ? <p className="mt-1 font-medium">{w.title}</p> : null}
                       <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{w.body}</p>
                     </div>

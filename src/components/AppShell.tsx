@@ -57,6 +57,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: isAdmin } = useIsAdmin();
   const { user } = useAuthUser();
   const qc = useQueryClient();
+
+  // Re-check admin role after login / user switch (no full page refresh needed)
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      void qc.invalidateQueries({ queryKey: ["is-admin"] });
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, [qc]);
+
   const { unreadByNav, totalUnread } = useInboxBadges();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
