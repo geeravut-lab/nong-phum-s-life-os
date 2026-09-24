@@ -300,9 +300,7 @@ function LegacyPage() {
   };
 
   // --- AI ---
-  const [aiMsg, setAiMsg] = useState("");
-  const [aiResult, setAiResult] = useState<Awaited<ReturnType<typeof extractWait>> | null>(null);
-  type extractWait = {
+  type LegacyAiResult = {
     summary: string;
     assets: Array<{
       kind: AssetKind;
@@ -315,6 +313,8 @@ function LegacyPage() {
     checklist: string[];
     followUpQuestions: string[];
   };
+  const [aiMsg, setAiMsg] = useState("");
+  const [aiResult, setAiResult] = useState<LegacyAiResult | null>(null);
 
   const runAi = async () => {
     if (aiMsg.trim().length < 3) return;
@@ -337,7 +337,7 @@ function LegacyPage() {
           contextHint: hintParts.join("\n").slice(0, 2800),
         },
       });
-      setAiResult(result as extractWait);
+      setAiResult(result as LegacyAiResult);
       toast.success(t.legacyAiDone);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.error);
@@ -393,10 +393,14 @@ function LegacyPage() {
   const saveSocial = async (field: "organ_donation" | "body_donation" | "social_intent", value: string) => {
     if (!user) return;
     await ensureProfile();
-    const { error } = await supabase.from("legacy_profiles").upsert({
-      user_id: user.id,
-      [field]: value,
-    });
+    const payload: {
+      user_id: string;
+      organ_donation?: string;
+      body_donation?: string;
+      social_intent?: string;
+    } = { user_id: user.id };
+    payload[field] = value;
+    const { error } = await supabase.from("legacy_profiles").upsert(payload);
     if (error) toast.error(error.message);
     else {
       toast.success(t.legacySaved);

@@ -13,30 +13,31 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MicTestRouteImport } from './routes/mic-test'
+import { Route as AuthenticatedOldChatRouteImport } from './routes/_authenticated/Old-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
-import { Route as AuthenticatedDecideRouteImport } from './routes/_authenticated/decide'
-import { Route as AuthenticatedHelperDashboardRouteImport } from './routes/_authenticated/helper-dashboard'
-import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
-import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
-import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
-import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
-import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
-import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
-import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
+import { Route as AuthenticatedDecideRouteImport } from './routes/_authenticated/decide'
 import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/docs'
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
+import { Route as AuthenticatedHelperDashboardRouteImport } from './routes/_authenticated/helper-dashboard'
 import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated/helpme'
+import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
+import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
+import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
-import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
+import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
+import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
+import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
+import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
+import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -57,6 +58,11 @@ const MicTestRoute = MicTestRouteImport.update({
   path: '/mic-test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedOldChatRoute = AuthenticatedOldChatRouteImport.update({
+  id: '/Old-chat',
+  path: '/Old-chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -67,40 +73,14 @@ const AuthenticatedBenefitsRoute = AuthenticatedBenefitsRouteImport.update({
   path: '/benefits',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedLocalRoute = AuthenticatedLocalRouteImport.update({
-  id: '/local',
-  path: '/local',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedLocalMerchantRoute = AuthenticatedLocalMerchantRouteImport.update({
-  id: '/local_/merchant',
-  path: '/local/merchant',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-
-const AuthenticatedDecideRoute = AuthenticatedDecideRouteImport.update({
-  id: '/decide',
-  path: '/decide',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedHelperDashboardRoute = AuthenticatedHelperDashboardRouteImport.update({
-  id: '/helper-dashboard',
-  path: '/helper-dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminMarketplaceRoute = AuthenticatedAdminMarketplaceRouteImport.update({
-  id: '/admin_/marketplace',
-  path: '/admin/marketplace',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminSafetyRoute = AuthenticatedAdminSafetyRouteImport.update({
-  id: '/admin_/safety',
-  path: '/admin/safety',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
   id: '/chat',
   path: '/chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDecideRoute = AuthenticatedDecideRouteImport.update({
+  id: '/decide',
+  path: '/decide',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDocsRoute = AuthenticatedDocsRouteImport.update({
@@ -113,9 +93,25 @@ const AuthenticatedFamilyRoute = AuthenticatedFamilyRouteImport.update({
   path: '/family',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHelperDashboardRoute =
+  AuthenticatedHelperDashboardRouteImport.update({
+    id: '/helper-dashboard',
+    path: '/helper-dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHelpmeRoute = AuthenticatedHelpmeRouteImport.update({
   id: '/helpme',
   path: '/helpme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLegacyRoute = AuthenticatedLegacyRouteImport.update({
+  id: '/legacy',
+  path: '/legacy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLocalRoute = AuthenticatedLocalRouteImport.update({
+  id: '/local',
+  path: '/local',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
@@ -148,15 +144,20 @@ const LineCallbackRoute = LineCallbackRouteImport.update({
   path: '/line/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MemorialTokenRoute = MemorialTokenRouteImport.update({
+  id: '/memorial/$token',
+  path: '/memorial/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SsoCallbackRoute = SsoCallbackRouteImport.update({
   id: '/sso/callback',
   path: '/sso/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAdminSupportRoute =
-  AuthenticatedAdminSupportRouteImport.update({
-    id: '/admin_/support',
-    path: '/admin/support',
+const AuthenticatedAdminMarketplaceRoute =
+  AuthenticatedAdminMarketplaceRouteImport.update({
+    id: '/admin_/marketplace',
+    path: '/admin/marketplace',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminPaymentsRoute =
@@ -165,88 +166,90 @@ const AuthenticatedAdminPaymentsRoute =
     path: '/admin/payments',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-
-const AuthenticatedLegacyRoute = AuthenticatedLegacyRouteImport.update({
-  id: '/legacy',
-  path: '/legacy',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedLegacyAfterRoute = AuthenticatedLegacyAfterRouteImport.update({
-  id: '/legacy_/after',
-  path: '/legacy/after',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const MemorialTokenRoute = MemorialTokenRouteImport.update({
-  id: '/memorial/$token',
-  path: '/memorial/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedAdminSafetyRoute =
+  AuthenticatedAdminSafetyRouteImport.update({
+    id: '/admin_/safety',
+    path: '/admin/safety',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSupportRoute =
+  AuthenticatedAdminSupportRouteImport.update({
+    id: '/admin_/support',
+    path: '/admin/support',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLegacyAfterRoute =
+  AuthenticatedLegacyAfterRouteImport.update({
+    id: '/legacy_/after',
+    path: '/legacy/after',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLocalMerchantRoute =
+  AuthenticatedLocalMerchantRouteImport.update({
+    id: '/local_/merchant',
+    path: '/local/merchant',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/mic-test': typeof MicTestRoute
+  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
-  '/local': typeof AuthenticatedLocalRoute
-  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
-  '/decide': typeof AuthenticatedDecideRoute
-  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
-  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
-  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/chat': typeof AuthenticatedChatRoute
+  '/decide': typeof AuthenticatedDecideRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/helpme': typeof AuthenticatedHelpmeRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
+  '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
+  '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
-  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
-  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
-  '/memorial/$token': typeof MemorialTokenRoute
-  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
-  '/legacy': typeof AuthenticatedLegacyRoute
-  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
-  '/memorial/$token': typeof MemorialTokenRoute
+  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/mic-test': typeof MicTestRoute
+  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
-  '/local': typeof AuthenticatedLocalRoute
-  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
-  '/decide': typeof AuthenticatedDecideRoute
-  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
-  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
-  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/chat': typeof AuthenticatedChatRoute
+  '/decide': typeof AuthenticatedDecideRoute
   '/docs': typeof AuthenticatedDocsRoute
   '/family': typeof AuthenticatedFamilyRoute
+  '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/helpme': typeof AuthenticatedHelpmeRoute
+  '/legacy': typeof AuthenticatedLegacyRoute
+  '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
+  '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
+  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
-  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
-  '/legacy': typeof AuthenticatedLegacyRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
-  '/memorial/$token': typeof MemorialTokenRoute
-  '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
-  '/legacy': typeof AuthenticatedLegacyRoute
-  '/legacy/after': typeof AuthenticatedLegacyAfterRoute
-  '/memorial/$token': typeof MemorialTokenRoute
+  '/local/merchant': typeof AuthenticatedLocalMerchantRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -254,27 +257,31 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/mic-test': typeof MicTestRoute
+  '/_authenticated/Old-chat': typeof AuthenticatedOldChatRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
-  '/_authenticated/local': typeof AuthenticatedLocalRoute
-  '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
-  '/_authenticated/decide': typeof AuthenticatedDecideRoute
-  '/_authenticated/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
-  '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
-  '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
+  '/_authenticated/decide': typeof AuthenticatedDecideRoute
   '/_authenticated/docs': typeof AuthenticatedDocsRoute
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
+  '/_authenticated/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/_authenticated/helpme': typeof AuthenticatedHelpmeRoute
+  '/_authenticated/legacy': typeof AuthenticatedLegacyRoute
+  '/_authenticated/local': typeof AuthenticatedLocalRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/line/callback': typeof LineCallbackRoute
+  '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
-  '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
+  '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
+  '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
+  '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
+  '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -282,76 +289,92 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/mic-test'
+    | '/Old-chat'
     | '/admin'
     | '/benefits'
-    | '/local'
-    | '/local/merchant'
-    | '/decide'
-    | '/helper-dashboard'
-    | '/admin/marketplace'
-    | '/admin/safety'
     | '/chat'
+    | '/decide'
     | '/docs'
     | '/family'
+    | '/helper-dashboard'
     | '/helpme'
+    | '/legacy'
+    | '/local'
     | '/money'
     | '/settings'
     | '/support'
     | '/tasks'
     | '/today'
     | '/line/callback'
+    | '/memorial/$token'
     | '/sso/callback'
-    | '/admin/support'
+    | '/admin/marketplace'
     | '/admin/payments'
+    | '/admin/safety'
+    | '/admin/support'
+    | '/legacy/after'
+    | '/local/merchant'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/mic-test'
+    | '/Old-chat'
     | '/admin'
     | '/benefits'
-    | '/local'
-    | '/local/merchant'
-    | '/decide'
-    | '/helper-dashboard'
-    | '/admin/marketplace'
-    | '/admin/safety'
     | '/chat'
+    | '/decide'
     | '/docs'
     | '/family'
+    | '/helper-dashboard'
     | '/helpme'
+    | '/legacy'
+    | '/local'
     | '/money'
     | '/settings'
     | '/support'
     | '/tasks'
     | '/today'
     | '/line/callback'
+    | '/memorial/$token'
     | '/sso/callback'
-    | '/admin/support'
+    | '/admin/marketplace'
     | '/admin/payments'
+    | '/admin/safety'
+    | '/admin/support'
+    | '/legacy/after'
+    | '/local/merchant'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/mic-test'
+    | '/_authenticated/Old-chat'
     | '/_authenticated/admin'
     | '/_authenticated/benefits'
-    | '/_authenticated/local'
-    | '/_authenticated/local_/merchant'
     | '/_authenticated/chat'
+    | '/_authenticated/decide'
     | '/_authenticated/docs'
     | '/_authenticated/family'
+    | '/_authenticated/helper-dashboard'
     | '/_authenticated/helpme'
+    | '/_authenticated/legacy'
+    | '/_authenticated/local'
     | '/_authenticated/money'
     | '/_authenticated/settings'
     | '/_authenticated/support'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
     | '/line/callback'
+    | '/memorial/$token'
     | '/sso/callback'
-    | '/_authenticated/admin_/support'
+    | '/_authenticated/admin_/marketplace'
     | '/_authenticated/admin_/payments'
+    | '/_authenticated/admin_/safety'
+    | '/_authenticated/admin_/support'
+    | '/_authenticated/legacy_/after'
+    | '/_authenticated/local_/merchant'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -360,6 +383,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   MicTestRoute: typeof MicTestRoute
   LineCallbackRoute: typeof LineCallbackRoute
+  MemorialTokenRoute: typeof MemorialTokenRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
 }
 
@@ -393,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MicTestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/Old-chat': {
+      id: '/_authenticated/Old-chat'
+      path: '/Old-chat'
+      fullPath: '/Old-chat'
+      preLoaderRoute: typeof AuthenticatedOldChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -414,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/decide': {
+      id: '/_authenticated/decide'
+      path: '/decide'
+      fullPath: '/decide'
+      preLoaderRoute: typeof AuthenticatedDecideRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/docs': {
       id: '/_authenticated/docs'
       path: '/docs'
@@ -428,11 +466,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/helper-dashboard': {
+      id: '/_authenticated/helper-dashboard'
+      path: '/helper-dashboard'
+      fullPath: '/helper-dashboard'
+      preLoaderRoute: typeof AuthenticatedHelperDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/helpme': {
       id: '/_authenticated/helpme'
       path: '/helpme'
       fullPath: '/helpme'
       preLoaderRoute: typeof AuthenticatedHelpmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/legacy': {
+      id: '/_authenticated/legacy'
+      path: '/legacy'
+      fullPath: '/legacy'
+      preLoaderRoute: typeof AuthenticatedLegacyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/local': {
+      id: '/_authenticated/local'
+      path: '/local'
+      fullPath: '/local'
+      preLoaderRoute: typeof AuthenticatedLocalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/money': {
@@ -477,6 +536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LineCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/memorial/$token': {
+      id: '/memorial/$token'
+      path: '/memorial/$token'
+      fullPath: '/memorial/$token'
+      preLoaderRoute: typeof MemorialTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sso/callback': {
       id: '/sso/callback'
       path: '/sso/callback'
@@ -484,11 +550,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SsoCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/admin_/support': {
-      id: '/_authenticated/admin_/support'
-      path: '/admin/support'
-      fullPath: '/admin/support'
-      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+    '/_authenticated/admin_/marketplace': {
+      id: '/_authenticated/admin_/marketplace'
+      path: '/admin/marketplace'
+      fullPath: '/admin/marketplace'
+      preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin_/payments': {
@@ -498,11 +564,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/legacy': {
-      id: '/_authenticated/legacy'
-      path: '/legacy'
-      fullPath: '/legacy'
-      preLoaderRoute: typeof AuthenticatedLegacyRouteImport
+    '/_authenticated/admin_/safety': {
+      id: '/_authenticated/admin_/safety'
+      path: '/admin/safety'
+      fullPath: '/admin/safety'
+      preLoaderRoute: typeof AuthenticatedAdminSafetyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin_/support': {
+      id: '/_authenticated/admin_/support'
+      path: '/admin/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/legacy_/after': {
@@ -512,20 +585,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLegacyAfterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/memorial/$token': {
-      id: '/memorial/$token'
-      path: '/memorial/$token'
-      fullPath: '/memorial/$token'
-      preLoaderRoute: typeof MemorialTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/local': {
-      id: '/_authenticated/local'
-      path: '/local'
-      fullPath: '/local'
-      preLoaderRoute: typeof AuthenticatedLocalRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/local_/merchant': {
       id: '/_authenticated/local_/merchant'
       path: '/local/merchant'
@@ -533,85 +592,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLocalMerchantRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/decide': {
-      id: '/_authenticated/decide'
-      path: '/decide'
-      fullPath: '/decide'
-      preLoaderRoute: typeof AuthenticatedDecideRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/helper-dashboard': {
-      id: '/_authenticated/helper-dashboard'
-      path: '/helper-dashboard'
-      fullPath: '/helper-dashboard'
-      preLoaderRoute: typeof AuthenticatedHelperDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin_/marketplace': {
-      id: '/_authenticated/admin_/marketplace'
-      path: '/admin/marketplace'
-      fullPath: '/admin/marketplace'
-      preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin_/safety': {
-      id: '/_authenticated/admin_/safety'
-      path: '/admin/safety'
-      fullPath: '/admin/safety'
-      preLoaderRoute: typeof AuthenticatedAdminSafetyRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedOldChatRoute: typeof AuthenticatedOldChatRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
-  AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
-  AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
-  AuthenticatedDecideRoute: typeof AuthenticatedDecideRoute
-  AuthenticatedHelperDashboardRoute: typeof AuthenticatedHelperDashboardRoute
-  AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
-  AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
+  AuthenticatedDecideRoute: typeof AuthenticatedDecideRoute
   AuthenticatedDocsRoute: typeof AuthenticatedDocsRoute
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
+  AuthenticatedHelperDashboardRoute: typeof AuthenticatedHelperDashboardRoute
   AuthenticatedHelpmeRoute: typeof AuthenticatedHelpmeRoute
+  AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
+  AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
-  AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
+  AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
-  AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
+  AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
+  AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
-  MemorialTokenRoute: typeof MemorialTokenRoute
+  AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedOldChatRoute: AuthenticatedOldChatRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
-  AuthenticatedLocalRoute: AuthenticatedLocalRoute,
-  AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
-  AuthenticatedDecideRoute: AuthenticatedDecideRoute,
-  AuthenticatedHelperDashboardRoute: AuthenticatedHelperDashboardRoute,
-  AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
-  AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
+  AuthenticatedDecideRoute: AuthenticatedDecideRoute,
   AuthenticatedDocsRoute: AuthenticatedDocsRoute,
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
+  AuthenticatedHelperDashboardRoute: AuthenticatedHelperDashboardRoute,
   AuthenticatedHelpmeRoute: AuthenticatedHelpmeRoute,
+  AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
+  AuthenticatedLocalRoute: AuthenticatedLocalRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
-  AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
+  AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
-  AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
+  AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
+  AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
-  MemorialTokenRoute: MemorialTokenRoute,
+  AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -623,6 +654,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   MicTestRoute: MicTestRoute,
   LineCallbackRoute: LineCallbackRoute,
+  MemorialTokenRoute: MemorialTokenRoute,
   SsoCallbackRoute: SsoCallbackRoute,
 }
 export const routeTree = rootRouteImport
