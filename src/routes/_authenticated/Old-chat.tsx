@@ -14,7 +14,7 @@ import { analyzeDocument, chatWithPhum } from "@/lib/lifeos.functions";
 import { applyPhumAction } from "@/lib/phum-actions";
 import { intakeDocument } from "@/lib/doc-intake";
 
-export const Route = createFileRoute("/_authenticated/chat")({
+export const Route = createFileRoute("/_authenticated/Old-chat")({
   head: () => ({ meta: routeMeta("chat") }),
   component: ChatPage,
 });

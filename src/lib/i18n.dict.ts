@@ -1521,7 +1521,6 @@ const en = {
   localReviewSaved: "Review saved",
   localPromoted: "Featured",
 
-  p6Title:
   navLegacy: "Legacy",
   meta_legacy_title: "Life Legacy | Nong Phum",
   meta_legacy_desc: "Plans and messages you want to leave for people you love",
@@ -1588,7 +1587,7 @@ const en = {
   legacyAiDone: "Draft ready — review before adding",
   legacyAiApply: "Add these to my plan",
   legacyAiApplied: "Added to legacy plan",
- "Life Legacy — After",
+  p6Title: "Life Legacy — After",
   p6Sub: "Death verification (multi-person), Memorial, wreaths, funeral planning",
   p6LegalNote: "Death verification is deterministic system rules — not AI — and is not a legal death certificate.",
   p6DeathTitle: "Death verification",
