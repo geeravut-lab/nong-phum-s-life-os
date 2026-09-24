@@ -31,7 +31,9 @@ export type LocalPlace = {
   phone: string | null;
   website: string | null;
   is_active: boolean;
+  is_promoted?: boolean;
   is_verified: boolean;
+  community_note?: string | null;
   rating: number;
   review_count: number;
 };

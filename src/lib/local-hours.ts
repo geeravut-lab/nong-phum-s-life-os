@@ -14,8 +14,8 @@ export function isOpenNow(
   now = new Date(),
 ): boolean | null {
   if (!openHours || typeof openHours !== "object") return null;
-  const open = openHours.open ?? openHours.start;
-  const close = openHours.close ?? openHours.end;
+  const open = openHours["open"] ?? openHours["start"];
+  const close = openHours["close"] ?? openHours["end"];
   if (!open || !close) return null;
   const o = parseHm(open);
   const c = parseHm(close);
@@ -32,7 +32,7 @@ export function isOpenNow(
 export function mapsUrl(lat: number | null, lng: number | null, name?: string): string | null {
   if (lat == null || lng == null) return null;
   const q = name ? encodeURIComponent(name) : `${lat},${lng}`;
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=&query=${q}`;
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query=${q}`;
 }
 
 export function directionsUrl(
