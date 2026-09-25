@@ -2,7 +2,7 @@ import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -24,7 +24,9 @@ import { useI18n } from "@/lib/i18n";
 import {
   confirmDeathCase,
   listMyVerifierCases,
+  listPostLifeActions,
   reportDeathByPlanCode,
+  updatePostLifeAction,
 } from "@/lib/death.functions";
 import {
   createFuneralPayment,
@@ -43,6 +45,9 @@ function LegacyAfterPage() {
   const qc = useQueryClient();
   const runReport = useServerFn(reportDeathByPlanCode);
   const runList = useServerFn(listMyVerifierCases);
+  const runPlaList = useServerFn(listPostLifeActions);
+  const runPlaUpdate = useServerFn(updatePostLifeAction);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
   const runPay = useServerFn(createFuneralPayment);
@@ -106,6 +111,23 @@ function LegacyAfterPage() {
         .limit(20);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+
+  // Auto-select first confirmed case for action plan
+  useEffect(() => {
+    const list = (casesQ.data as Array<{ id: string; status: string }> | undefined) ?? [];
+    const conf = list.find((c) => c.status === "confirmed");
+    if (conf && !selectedCaseId) setSelectedCaseId(conf.id);
+  }, [casesQ.data, selectedCaseId]);
+
+  const plaQ = useQuery({
+    queryKey: ["post-life-actions", selectedCaseId],
+    enabled: !!selectedCaseId,
+    queryFn: async () => {
+      if (!selectedCaseId) return { actions: [], caseStatus: "" };
+      return runPlaList({ data: { caseId: selectedCaseId } });
     },
   });
 
@@ -369,6 +391,145 @@ function LegacyAfterPage() {
               )}
             </article>
           ))
+        )}
+      </section>
+
+      
+      {/* Post-life action plan */}
+      <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.plaTitle}</h2>
+        <p className="text-xs text-muted-foreground">{t.plaSub}</p>
+        {!selectedCaseId && (
+          <p className="text-xs text-muted-foreground">{t.plaEmpty}</p>
+        )}
+        {selectedCaseId && plaQ.isLoading && (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        )}
+        {selectedCaseId && plaQ.data && (
+          <>
+            {(["24h", "3d", "later"] as const).map((phase) => {
+              const items = (plaQ.data.actions as Array<{
+                id: string;
+                phase: string;
+                title: string;
+                description: string;
+                status: string;
+                note: string;
+              }>).filter((a) => a.phase === phase);
+              if (!items.length) return null;
+              const label =
+                phase === "24h"
+                  ? t.plaPhase24h
+                  : phase === "3d"
+                    ? t.plaPhase3d
+                    : t.plaPhaseLater;
+              const done = items.filter((a) => a.status === "done").length;
+              return (
+                <div key={phase} className="space-y-2">
+                  <p className="text-xs font-medium">
+                    {label}{" "}
+                    <span className="text-muted-foreground">
+                      ({done}/{items.length})
+                    </span>
+                  </p>
+                  <ul className="space-y-2">
+                    {items.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex flex-col gap-2 rounded-xl border border-border p-3 text-sm sm:flex-row sm:items-start sm:justify-between"
+                      >
+                        <div>
+                          <p className={a.status === "done" ? "line-through opacity-70" : "font-medium"}>
+                            {a.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{a.description}</p>
+                          <Badge variant="outline" className="mt-1">
+                            {a.status}
+                          </Badge>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-1">
+                          {a.status !== "done" && (
+                            <Button
+                              size="sm"
+                              disabled={busy}
+                              onClick={async () => {
+                                setBusy(true);
+                                try {
+                                  await runPlaUpdate({
+                                    data: { actionId: a.id, status: "done" },
+                                  });
+                                  void qc.invalidateQueries({
+                                    queryKey: ["post-life-actions", selectedCaseId],
+                                  });
+                                } catch (e) {
+                                  toast.error(e instanceof Error ? e.message : t.error);
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                            >
+                              {t.plaDone}
+                            </Button>
+                          )}
+                          {a.status !== "skipped" && a.status !== "done" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={async () => {
+                                setBusy(true);
+                                try {
+                                  await runPlaUpdate({
+                                    data: { actionId: a.id, status: "skipped" },
+                                  });
+                                  void qc.invalidateQueries({
+                                    queryKey: ["post-life-actions", selectedCaseId],
+                                  });
+                                } catch (e) {
+                                  toast.error(e instanceof Error ? e.message : t.error);
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                            >
+                              {t.plaSkip}
+                            </Button>
+                          )}
+                          {(a.status === "done" || a.status === "skipped") && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={async () => {
+                                setBusy(true);
+                                try {
+                                  await runPlaUpdate({
+                                    data: { actionId: a.id, status: "open" },
+                                  });
+                                  void qc.invalidateQueries({
+                                    queryKey: ["post-life-actions", selectedCaseId],
+                                  });
+                                } catch (e) {
+                                  toast.error(e instanceof Error ? e.message : t.error);
+                                } finally {
+                                  setBusy(false);
+                                }
+                              }}
+                            >
+                              {t.plaReopen}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+            {(plaQ.data.actions as unknown[]).length === 0 && (
+              <p className="text-xs text-muted-foreground">{t.plaEmpty}</p>
+            )}
+          </>
         )}
       </section>
 

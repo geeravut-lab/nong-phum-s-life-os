@@ -1463,6 +1463,56 @@ export type Database = {
         }
         Relationships: []
       }
+      
+      post_life_actions: {
+        Row: {
+          id: string
+          case_id: string
+          subject_user_id: string
+          phase: string
+          sort_order: number
+          title: string
+          description: string
+          status: string
+          done_at: string | null
+          done_by: string | null
+          note: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          subject_user_id: string
+          phase: string
+          sort_order?: number
+          title: string
+          description?: string
+          status?: string
+          done_at?: string | null
+          done_by?: string | null
+          note?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          subject_user_id?: string
+          phase?: string
+          sort_order?: number
+          title?: string
+          description?: string
+          status?: string
+          done_at?: string | null
+          done_by?: string | null
+          note?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+
       death_cases: {
         Row: {
           admin_notes: string | null
