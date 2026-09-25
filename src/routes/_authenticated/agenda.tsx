@@ -218,8 +218,27 @@ function AgendaPage() {
           </Button>
           <span className="text-sm text-muted-foreground">
             {view === "month"
-              ? `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`
-              : formatDay(cursor, lang)}
+              ? cursor.toLocaleDateString(lang === "th" ? "th-TH" : "en-US", {
+                  month: "long",
+                  year: "numeric",
+                })
+              : view === "week"
+                ? (() => {
+                    const from = startOfDay(cursor);
+                    const day = from.getDay();
+                    from.setDate(from.getDate() - ((day + 6) % 7)); // Monday
+                    const to = new Date(from);
+                    to.setDate(to.getDate() + 6); // Sunday
+                    const loc = lang === "th" ? "th-TH" : "en-US";
+                    const fmt = (d: Date) =>
+                      d.toLocaleDateString(loc, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      });
+                    return `${fmt(from)} – ${fmt(to)}`;
+                  })()
+                : formatDay(cursor, lang)}
           </span>
         </div>
 

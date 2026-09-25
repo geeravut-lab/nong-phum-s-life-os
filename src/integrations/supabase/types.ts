@@ -732,6 +732,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_promoted: boolean
+          promoted_until: string | null
           is_verified: boolean
           jobs_done: number
           lat: number | null
@@ -752,6 +753,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_promoted?: boolean
+          promoted_until?: string | null
           is_verified?: boolean
           jobs_done?: number
           lat?: number | null
@@ -772,6 +774,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_promoted?: boolean
+          promoted_until?: string | null
           is_verified?: boolean
           jobs_done?: number
           lat?: number | null
@@ -1233,6 +1236,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_promoted: boolean
+          promoted_until: string | null
           is_verified: boolean
           lat: number | null
           lng: number | null
@@ -2189,12 +2193,80 @@ export type Database = {
         }
         Relationships: []
       }
+
+      privacy_audit_log: {
+        Row: {
+          id: string
+          user_id: string
+          action: string
+          detail: string
+          meta: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          action: string
+          detail?: string
+          meta?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          action?: string
+          detail?: string
+          meta?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan_tier: string
+          status: string
+          started_at: string
+          expires_at: string | null
+          notes: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_tier?: string
+          status?: string
+          started_at?: string
+          expires_at?: string | null
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_tier?: string
+          status?: string
+          started_at?: string
+          expires_at?: string | null
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+
       profiles: {
         Row: {
           created_at: string
           display_name: string | null
           id: string
           language: string
+          plan_expires_at: string | null
+          plan_tier: string
+          share_location_helpme: boolean
           updated_at: string
         }
         Insert: {
@@ -2202,6 +2274,9 @@ export type Database = {
           display_name?: string | null
           id: string
           language?: string
+          plan_expires_at?: string | null
+          plan_tier?: string
+          share_location_helpme?: boolean
           updated_at?: string
         }
         Update: {
@@ -2209,6 +2284,9 @@ export type Database = {
           display_name?: string | null
           id?: string
           language?: string
+          plan_expires_at?: string | null
+          plan_tier?: string
+          share_location_helpme?: boolean
           updated_at?: string
         }
         Relationships: []

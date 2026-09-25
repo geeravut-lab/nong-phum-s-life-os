@@ -60,8 +60,8 @@
 | AI Daily Brief | `/today` `/chat` | 🟡 |
 | Search & Personal Memory | `/chat` | 🟡 |
 | Recurring Tasks | `/tasks` | 🟡 |
-| Privacy Center / audit | `/settings` | 🟡 |
-| Monetization Free/Premium | — | ❌ |
+| Privacy Center / audit | `/settings` | ✅ R5 |
+| Monetization Free/Premium | `/settings` | ✅ skeleton R5 |
 
 ### 2.2 ช่วยฉันที → `/helpme` `/helper-dashboard` `/admin/*`
 
@@ -238,10 +238,10 @@
 ### Round 5 — Trust, Privacy, Monetization
 | งาน | รายละเอียด | สถานะ |
 |-----|------------|--------|
-| R5.1 | Privacy Center + audit log | ❌ |
-| R5.2 | Location sharing (ช่วยฉันที) แบบ opt-in | ❌ |
-| R5.3 | Premium / family plan skeleton | ❌ |
-| R5.4 | Promoted listing (Local / Helper) | ❌ |
+| R5.1 | Privacy Center + audit log | ✅ |
+| R5.2 | Location sharing (ช่วยฉันที) แบบ opt-in | ✅ |
+| R5.3 | Premium / family plan skeleton | ✅ |
+| R5.4 | Promoted listing (Local / Helper) | ✅ skeleton |
 
 ### Round 6 — เก็บกวาดคุณภาพ
 | งาน | รายละเอียด | สถานะ |
@@ -294,3 +294,11 @@
 - มอบหมายงานครอบครัว + app_notifications (`assignee_user_id` บน reminders)
 - Care Check-in (`family_checkins` + แจ้ง need_help/emergency)
 - Permission รายหมวด (`family_permissions` — owner ตั้งค่า)
+
+
+### 2026-09-25 — Round 5
+- Privacy Center + audit log (`privacy_audit_log`)
+- Location share opt-in for Help Me (`profiles.share_location_helpme`)
+- Premium / Family plan skeleton (`user_subscriptions` + trial)
+- Promoted listing flags on helper / local places
+- Agenda: week range Mon–Sun + month-year locale label
