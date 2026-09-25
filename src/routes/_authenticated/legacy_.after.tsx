@@ -29,6 +29,11 @@ import {
   updatePostLifeAction,
 } from "@/lib/death.functions";
 import {
+  generateDeathNotifyMessages,
+  listDeathNotifyMessages,
+  updateMemorialExtras,
+} from "@/lib/legacy-notify.functions";
+import {
   createFuneralPayment,
   markFuneralPaid,
   planFuneral,
@@ -47,6 +52,11 @@ function LegacyAfterPage() {
   const runList = useServerFn(listMyVerifierCases);
   const runPlaList = useServerFn(listPostLifeActions);
   const runPlaUpdate = useServerFn(updatePostLifeAction);
+  const runNotifyGen = useServerFn(generateDeathNotifyMessages);
+  const runNotifyList = useServerFn(listDeathNotifyMessages);
+  const runMemExtra = useServerFn(updateMemorialExtras);
+  const [videoDraft, setVideoDraft] = useState("");
+
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
@@ -106,7 +116,7 @@ function LegacyAfterPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("memorials")
-        .select("*")
+        .select("id,title,share_token,is_public,story,video_url,schedule_text,death_case_id,subject_user_id,created_at")
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
@@ -121,6 +131,15 @@ function LegacyAfterPage() {
     const conf = list.find((c) => c.status === "confirmed");
     if (conf && !selectedCaseId) setSelectedCaseId(conf.id);
   }, [casesQ.data, selectedCaseId]);
+
+  const notifyQ = useQuery({
+    queryKey: ["death-notify", selectedCaseId],
+    enabled: !!selectedCaseId,
+    queryFn: async () => {
+      if (!selectedCaseId) return { messages: [] };
+      return runNotifyList({ data: { caseId: selectedCaseId } });
+    },
+  });
 
   const plaQ = useQuery({
     queryKey: ["post-life-actions", selectedCaseId],
@@ -376,7 +395,7 @@ function LegacyAfterPage() {
           <p className="text-sm text-muted-foreground">{t.p6MemorialEmpty}</p>
         ) : (
           (memorialsQ.data ?? []).map((m) => (
-            <article key={m.id} className="rounded-xl border border-border p-3 text-sm">
+            <article key={m.id} className="space-y-2 rounded-xl border border-border p-3 text-sm">
               <p className="font-medium">{m.title}</p>
               {m.share_token && m.is_public ? (
                 <Link
@@ -387,14 +406,147 @@ function LegacyAfterPage() {
                   {t.p6OpenMemorial}
                 </Link>
               ) : (
-                <span className="text-xs text-muted-foreground">{t.p6MemorialPrivate}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{t.p6MemorialPrivate}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await runMemExtra({
+                          data: { memorialId: m.id, isPublic: true },
+                        });
+                        toast.success(t.r2MakePublic);
+                        void qc.invalidateQueries({ queryKey: ["memorials"] });
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : t.error);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {t.r2MakePublic}
+                  </Button>
+                </div>
               )}
+              <div className="space-y-1">
+                <Label className="text-xs">{t.r2Video}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    className="text-xs"
+                    placeholder="https://youtube.com/..."
+                    defaultValue={(m as { video_url?: string | null }).video_url ?? ""}
+                    onChange={(e) => setVideoDraft(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await runMemExtra({
+                          data: {
+                            memorialId: m.id,
+                            videoUrl: videoDraft || (m as { video_url?: string }).video_url || "",
+                          },
+                        });
+                        toast.success(t.r2VideoSaved);
+                        void qc.invalidateQueries({ queryKey: ["memorials"] });
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : t.error);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {t.r2VideoSave}
+                  </Button>
+                </div>
+              </div>
             </article>
           ))
         )}
       </section>
 
       
+
+      {/* R2: Personalized notify messages */}
+      <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.r2NotifyTitle}</h2>
+        <p className="text-xs text-muted-foreground">{t.r2NotifySub}</p>
+        <Button
+          size="sm"
+          disabled={busy || !selectedCaseId}
+          onClick={async () => {
+            if (!selectedCaseId) return;
+            setBusy(true);
+            try {
+              await runNotifyGen({ data: { caseId: selectedCaseId } });
+              toast.success(t.r2NotifyGenerate);
+              void qc.invalidateQueries({ queryKey: ["death-notify", selectedCaseId] });
+              void qc.invalidateQueries({ queryKey: ["memorials"] });
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : t.error);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+          {t.r2NotifyGenerate}
+        </Button>
+        {(notifyQ.data?.messages?.length ?? 0) === 0 ? (
+          <p className="text-xs text-muted-foreground">{t.r2NotifyEmpty}</p>
+        ) : (
+          <ul className="space-y-3">
+            {(notifyQ.data?.messages ?? []).map(
+              (msg: {
+                id: string;
+                contact_name: string;
+                channel_hint: string;
+                message_body: string;
+                memorial_url: string | null;
+              }) => (
+                <li key={msg.id} className="rounded-xl border border-border p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">{msg.contact_name}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(msg.message_body);
+                        toast.success(t.r2NotifyCopied);
+                      }}
+                    >
+                      {t.r2NotifyCopy}
+                    </Button>
+                  </div>
+                  {msg.channel_hint ? (
+                    <p className="text-xs text-muted-foreground">{msg.channel_hint}</p>
+                  ) : null}
+                  {msg.memorial_url ? (
+                    <a
+                      href={msg.memorial_url}
+                      className="text-xs text-primary underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {msg.memorial_url}
+                    </a>
+                  ) : null}
+                  <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/40 p-2 text-xs">
+                    {msg.message_body}
+                  </pre>
+                </li>
+              ),
+            )}
+          </ul>
+        )}
+      </section>
+
       {/* Post-life action plan */}
       <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.plaTitle}</h2>

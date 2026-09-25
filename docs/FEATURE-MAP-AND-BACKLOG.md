@@ -168,8 +168,8 @@
 | **Post-Life Action Plan (24h / 3d / later)** | ✅ R1 |
 | AI Funeral Planner + PromptPay | ✅ |
 | Memorial | ✅ |
-| Digital Wreath | 🟡 |
-| SMS / VDO อำลา / ข้อความรายบุคคล + QR งานศพ | ❌ (R2+) |
+| Digital Wreath | ✅ R2 |
+| ข้อความรายบุคคล + Memorial/กำหนดการ + Wreath PromptPay + VDO ลิงก์ | ✅ R2 · SMS ❌ |
 | LINE แจ้งเปิดเคส | 🟡 |
 
 ### 2.9 Platform
@@ -213,10 +213,10 @@
 ### Round 2 — Death communication ขยาย
 | งาน | รายละเอียด | สถานะ |
 |-----|------------|--------|
-| R2.1 | Template ข้อความแจ้งรายบุคคล (จาก contacts + plan) | ❌ |
-| R2.2 | แนบลิงก์ Memorial + กำหนดการจาก funeral plan | ❌ |
-| R2.3 | Digital Wreath ชำระเงินจริง (PromptPay) | ❌ |
-| R2.4 | VDO อำลา (อัปโหลด/ลิงก์) บน Memorial | ❌ |
+| R2.1 | Template ข้อความแจ้งรายบุคคล (จาก contacts + plan) | ✅ |
+| R2.2 | แนบลิงก์ Memorial + กำหนดการจาก funeral plan | ✅ |
+| R2.3 | Digital Wreath ชำระเงินจริง (PromptPay) | ✅ |
+| R2.4 | VDO อำลา (ลิงก์ YouTube/URL) บน Memorial | ✅ |
 | R2.5 | SMS gateway (ถ้ามี provider) — optional | ❌ |
 
 ### Round 3 — Document AI + Legacy เชื่อมข้อมูล
@@ -272,3 +272,11 @@
 1. ก่อนเริ่มงาน: ดูตาราง Round ที่เปิดอยู่ เปลี่ยน ❌ → 🔄  
 2. หลัง merge/deploy: เปลี่ยน 🔄 → ✅ และใส่หมายเหตุใน Changelog  
 3. เมื่อเปลี่ยนลำดับความสำคัญ: แก้ข้อ 4 แล้วลงวันที่ใน Changelog  
+
+
+### 2026-09-25 — Round 2
+- ข้อความแจ้งรายบุคคล (`death_notify_messages` + generate/list)
+- ลิงก์ Memorial + กำหนดการจาก funeral plan ในข้อความ
+- Digital Wreath PromptPay QR + mark paid
+- VDO อำลา (ลิงก์) + เปิดเผย memorial สาธารณะ
+- SMS gateway ยังไม่ทำ (optional ภายหลัง)

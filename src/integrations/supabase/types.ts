@@ -1513,6 +1513,44 @@ export type Database = {
         Relationships: []
       }
 
+
+      death_notify_messages: {
+        Row: {
+          id: string
+          case_id: string
+          contact_id: string | null
+          contact_name: string
+          channel_hint: string
+          message_body: string
+          memorial_url: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          contact_id?: string | null
+          contact_name: string
+          channel_hint?: string
+          message_body: string
+          memorial_url?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          contact_id?: string | null
+          contact_name?: string
+          channel_hint?: string
+          message_body?: string
+          memorial_url?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+
       death_cases: {
         Row: {
           admin_notes: string | null
@@ -1596,11 +1634,13 @@ export type Database = {
           death_case_id: string | null
           id: string
           is_public: boolean
+          schedule_text: string
           share_token: string | null
           story: string
           subject_user_id: string
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           cover_url?: string | null
@@ -1609,11 +1649,13 @@ export type Database = {
           death_case_id?: string | null
           id?: string
           is_public?: boolean
+          schedule_text?: string
           share_token?: string | null
           story?: string
           subject_user_id: string
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           cover_url?: string | null
@@ -1622,11 +1664,13 @@ export type Database = {
           death_case_id?: string | null
           id?: string
           is_public?: boolean
+          schedule_text?: string
           share_token?: string | null
           story?: string
           subject_user_id?: string
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: []
       }

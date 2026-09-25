@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import {
+  createWreathPaymentPublic,
+  markWreathPaid,
+} from "@/lib/legacy-notify.functions";
 
 export const Route = createFileRoute("/memorial/$token")({
   component: MemorialPublicPage,
@@ -17,10 +23,18 @@ function MemorialPublicPage() {
   const { token } = Route.useParams();
   const { t } = useI18n();
   const qc = useQueryClient();
+  const runWreath = useServerFn(createWreathPaymentPublic);
+  const runMarkPaid = useServerFn(markWreathPaid);
+
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [wreathAmt, setWreathAmt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [payInfo, setPayInfo] = useState<{
+    wreathId: string;
+    amount: number;
+    qrUrl: string | null;
+  } | null>(null);
 
   const memQ = useQuery({
     queryKey: ["memorial", token],
@@ -86,21 +100,33 @@ function MemorialPublicPage() {
   const postWreath = async () => {
     if (!memQ.data || !name.trim()) return;
     setBusy(true);
-    const amount = wreathAmt ? Number(wreathAmt) : 0;
-    const { error } = await supabase.from("digital_wreaths").insert({
-      memorial_id: memQ.data.id,
-      from_name: name.trim(),
-      message: body.trim(),
-      amount,
-      payment_status: amount > 0 ? "pending" : "none",
-    });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      const amount = wreathAmt ? Number(wreathAmt) : 0;
+      const res = await runWreath({
+        data: {
+          memorialId: memQ.data.id,
+          fromName: name.trim(),
+          message: body.trim(),
+          amount: Number.isFinite(amount) ? amount : 0,
+        },
+      });
       toast.success(t.p6WreathSent);
       setBody("");
       setWreathAmt("");
+      if (res.qrUrl) {
+        setPayInfo({
+          wreathId: res.wreathId,
+          amount: res.amount,
+          qrUrl: res.qrUrl,
+        });
+      } else {
+        setPayInfo(null);
+      }
       void qc.invalidateQueries({ queryKey: ["digital-wreaths", memQ.data.id] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -120,6 +146,8 @@ function MemorialPublicPage() {
   }
 
   const m = memQ.data;
+  const scheduleText = (m as { schedule_text?: string }).schedule_text;
+  const videoUrl = (m as { video_url?: string | null }).video_url;
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,6 +160,47 @@ function MemorialPublicPage() {
           <p className="mt-4 whitespace-pre-wrap text-center text-sm text-muted-foreground">
             {m.story}
           </p>
+        ) : null}
+
+        {videoUrl ? (
+          <div className="mt-6 overflow-hidden rounded-xl border border-border">
+            <p className="bg-muted/50 px-3 py-1.5 text-xs font-medium">{t.r2Video}</p>
+            {/youtube\.com|youtu\.be|vimeo\.com/.test(videoUrl) ? (
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  title="farewell"
+                  src={
+                    videoUrl.includes("watch?v=")
+                      ? videoUrl.replace("watch?v=", "embed/")
+                      : videoUrl.includes("youtu.be/")
+                        ? videoUrl.replace("youtu.be/", "www.youtube.com/embed/")
+                        : videoUrl
+                  }
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <a
+                href={videoUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block px-3 py-3 text-sm text-primary underline"
+              >
+                {videoUrl}
+              </a>
+            )}
+          </div>
+        ) : null}
+
+        {scheduleText ? (
+          <section className="mt-6 rounded-xl border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">{t.r2Schedule}</h2>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+              {scheduleText}
+            </p>
+          </section>
         ) : null}
 
         <section className="mt-8 space-y-2">
@@ -148,44 +217,88 @@ function MemorialPublicPage() {
           <h2 className="text-sm font-semibold">{t.p6Wreaths}</h2>
           {(wreathQ.data ?? []).map((w) => (
             <article key={w.id} className="rounded-xl border border-border p-3 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="font-medium">{w.from_name}</span>
-                {Number(w.amount) > 0 && (
-                  <Badge variant="secondary">฿{Number(w.amount).toLocaleString()}</Badge>
-                )}
+                {Number(w.amount) > 0 ? (
+                  <Badge variant={w.payment_status === "paid" ? "default" : "secondary"}>
+                    ฿{Number(w.amount).toLocaleString()} · {w.payment_status}
+                  </Badge>
+                ) : null}
               </div>
-              {w.message ? <p className="mt-1 text-muted-foreground">{w.message}</p> : null}
+              {w.message ? (
+                <p className="mt-1 text-muted-foreground">{w.message}</p>
+              ) : null}
             </article>
           ))}
         </section>
 
-        <section className="mt-8 space-y-2 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">{t.p6LeaveMessage}</h2>
+        <section className="mt-8 space-y-3 rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold">{t.r2WreathPay}</h2>
           <Input
             placeholder={t.p6YourName}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Textarea
+            placeholder={t.p6LeaveMessage}
             rows={3}
-            placeholder={t.p6YourMessage}
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
           <Input
             type="number"
-            placeholder={t.p6WreathAmount}
+            min={0}
+            placeholder={t.r2WreathAmount}
             value={wreathAmt}
             onChange={(e) => setWreathAmt(e.target.value)}
           />
           <div className="flex flex-wrap gap-2">
-            <Button disabled={busy} onClick={postMessage}>
+            <Button disabled={busy || !name.trim() || !body.trim()} onClick={postMessage}>
+              {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               {t.p6SendMessage}
             </Button>
-            <Button disabled={busy} variant="secondary" onClick={postWreath}>
+            <Button
+              variant="secondary"
+              disabled={busy || !name.trim()}
+              onClick={postWreath}
+            >
               {t.p6SendWreath}
             </Button>
           </div>
+
+          {payInfo?.qrUrl ? (
+            <div className="mt-4 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
+              <p className="text-xs font-medium">
+                {t.r2WreathQr} · ฿{payInfo.amount.toLocaleString()}
+              </p>
+              <img
+                src={payInfo.qrUrl}
+                alt="PromptPay QR"
+                className="mx-auto h-48 w-48 rounded-lg bg-white p-2"
+              />
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await runMarkPaid({ data: { wreathId: payInfo.wreathId } });
+                    toast.success(t.r2WreathPaid);
+                    setPayInfo(null);
+                    void qc.invalidateQueries({
+                      queryKey: ["digital-wreaths", m.id],
+                    });
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t.error);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {t.r2WreathMarkPaid}
+              </Button>
+            </div>
+          ) : null}
         </section>
       </div>
     </div>
