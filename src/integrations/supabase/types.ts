@@ -581,6 +581,110 @@ export type Database = {
         }
         Relationships: []
       }
+
+      family_events: {
+        Row: {
+          id: string
+          family_id: string
+          created_by: string
+          title: string
+          starts_at: string
+          ends_at: string | null
+          all_day: boolean
+          notes: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          family_id: string
+          created_by: string
+          title: string
+          starts_at: string
+          ends_at?: string | null
+          all_day?: boolean
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          family_id?: string
+          created_by?: string
+          title?: string
+          starts_at?: string
+          ends_at?: string | null
+          all_day?: boolean
+          notes?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      family_checkins: {
+        Row: {
+          id: string
+          family_id: string
+          user_id: string
+          status: string
+          note: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          family_id: string
+          user_id: string
+          status?: string
+          note?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          family_id?: string
+          user_id?: string
+          status?: string
+          note?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      family_permissions: {
+        Row: {
+          id: string
+          family_id: string
+          user_id: string
+          can_view_docs: boolean
+          can_view_tasks: boolean
+          can_view_expenses: boolean
+          can_view_calendar: boolean
+          can_edit_shared: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          family_id: string
+          user_id: string
+          can_view_docs?: boolean
+          can_view_tasks?: boolean
+          can_view_expenses?: boolean
+          can_view_calendar?: boolean
+          can_edit_shared?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          family_id?: string
+          user_id?: string
+          can_view_docs?: boolean
+          can_view_tasks?: boolean
+          can_view_expenses?: boolean
+          can_view_calendar?: boolean
+          can_edit_shared?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+
       family_members: {
         Row: {
           created_at: string
@@ -2118,6 +2222,7 @@ export type Database = {
           is_shared: boolean
           last_completed_at: string | null
           notes: string | null
+          assignee_user_id: string | null
           notified_at: string | null
           notify_at: string | null
           notify_attempts: number
@@ -2138,6 +2243,7 @@ export type Database = {
           is_shared?: boolean
           last_completed_at?: string | null
           notes?: string | null
+          assignee_user_id?: string | null
           notified_at?: string | null
           notify_at?: string | null
           notify_attempts?: number
@@ -2158,6 +2264,7 @@ export type Database = {
           is_shared?: boolean
           last_completed_at?: string | null
           notes?: string | null
+          assignee_user_id?: string | null
           notified_at?: string | null
           notify_at?: string | null
           notify_attempts?: number

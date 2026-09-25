@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, LogOut, Users } from "lucide-react";
+import { Copy, Loader2, LogOut, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { joinFamilyByCode } from "@/lib/lifeos.functions";
+import {
+  assignFamilyTask,
+  createFamilyEvent,
+  listFamilyCheckins,
+  listFamilyEvents,
+  listFamilyPermissions,
+  postFamilyCheckin,
+  upsertFamilyPermission,
+} from "@/lib/family.functions";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
 
@@ -24,8 +33,23 @@ function FamilyPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const join = useServerFn(joinFamilyByCode);
+  const runListEvents = useServerFn(listFamilyEvents);
+  const runCreateEvent = useServerFn(createFamilyEvent);
+  const runPostCheckin = useServerFn(postFamilyCheckin);
+  const runListCheckins = useServerFn(listFamilyCheckins);
+  const runAssign = useServerFn(assignFamilyTask);
+  const runListPerms = useServerFn(listFamilyPermissions);
+  const runUpsertPerm = useServerFn(upsertFamilyPermission);
   const [familyName, setFamilyName] = useState("");
   const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [evTitle, setEvTitle] = useState("");
+  const [evWhen, setEvWhen] = useState("");
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskDue, setTaskDue] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [checkNote, setCheckNote] = useState("");
+
 
   const {
     data: membership,
@@ -121,6 +145,58 @@ function FamilyPage() {
     await supabase.from("family_members").delete().eq("id", membership.id);
     qc.invalidateQueries();
   };
+
+
+  const eventsQ = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-events", familyId],
+    queryFn: async () => {
+      const res = (await runListEvents({ data: { familyId: familyId! } })) as {
+        events: Array<{
+          id: string;
+          title: string;
+          starts_at: string;
+          notes: string;
+        }>;
+      };
+      return res.events ?? [];
+    },
+  });
+
+  const checkinsQ = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-checkins", familyId],
+    queryFn: async () => {
+      const res = (await runListCheckins({ data: { familyId: familyId! } })) as {
+        checkins: Array<{
+          id: string;
+          user_id: string;
+          status: string;
+          note: string;
+          created_at: string;
+        }>;
+      };
+      return res.checkins ?? [];
+    },
+  });
+
+  const permsQ = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-perms", familyId],
+    queryFn: async () => {
+      const res = (await runListPerms({ data: { familyId: familyId! } })) as {
+        permissions: Array<{
+          user_id: string;
+          can_view_docs: boolean;
+          can_view_tasks: boolean;
+          can_view_expenses: boolean;
+          can_view_calendar: boolean;
+          can_edit_shared: boolean;
+        }>;
+      };
+      return res.permissions ?? [];
+    },
+  });
 
   const family = membership?.families as
     { id: string; name: string; invite_code: string; owner_id: string } | null | undefined;
@@ -261,6 +337,280 @@ function FamilyPage() {
               </div>
             </div>
           </section>
+
+          {/* R4 Calendar */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="mb-3 text-sm font-semibold">{t.r4Calendar}</h2>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+              <Input
+                placeholder={t.r4EventTitle}
+                value={evTitle}
+                onChange={(e) => setEvTitle(e.target.value)}
+              />
+              <Input
+                type="datetime-local"
+                value={evWhen}
+                onChange={(e) => setEvWhen(e.target.value)}
+              />
+              <Button
+                size="sm"
+                disabled={busy || !evTitle.trim() || !evWhen}
+                onClick={async () => {
+                  if (!familyId) return;
+                  setBusy(true);
+                  try {
+                    await runCreateEvent({
+                      data: {
+                        familyId,
+                        title: evTitle.trim(),
+                        startsAt: new Date(evWhen).toISOString(),
+                      },
+                    });
+                    setEvTitle("");
+                    setEvWhen("");
+                    void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
+                    toast.success(t.saved);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t.error);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {t.r4AddEvent}
+              </Button>
+            </div>
+            {(eventsQ.data?.length ?? 0) === 0 ? (
+              <p className="text-xs text-muted-foreground">{t.r4NoEvents}</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {(eventsQ.data ?? []).map((ev) => (
+                  <li key={ev.id} className="flex justify-between gap-2 rounded-lg border border-border p-2">
+                    <span className="font-medium">{ev.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDay(new Date(ev.starts_at), lang)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* R4 Care check-in */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="mb-3 text-sm font-semibold">{t.r4Checkin}</h2>
+            <Input
+              className="mb-2"
+              placeholder={t.r4CheckinNote}
+              value={checkNote}
+              onChange={(e) => setCheckNote(e.target.value)}
+            />
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(
+                [
+                  ["ok", t.r4CheckinOk],
+                  ["need_help", t.r4CheckinHelp],
+                  ["emergency", t.r4CheckinEmerg],
+                ] as const
+              ).map(([st, label]) => (
+                <Button
+                  key={st}
+                  size="sm"
+                  variant={st === "ok" ? "default" : st === "emergency" ? "destructive" : "secondary"}
+                  disabled={busy}
+                  onClick={async () => {
+                    if (!familyId) return;
+                    setBusy(true);
+                    try {
+                      await runPostCheckin({
+                        data: {
+                          familyId,
+                          status: st,
+                          note: checkNote.trim() || undefined,
+                        },
+                      });
+                      setCheckNote("");
+                      void qc.invalidateQueries({ queryKey: ["family-checkins", familyId] });
+                      toast.success(t.saved);
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : t.error);
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">{t.r4CheckinRecent}</p>
+            <ul className="space-y-1 text-xs">
+              {(checkinsQ.data ?? []).slice(0, 8).map((c) => {
+                const who =
+                  members?.find((m) => m.user_id === c.user_id)?.display_name ??
+                  c.user_id.slice(0, 8);
+                return (
+                  <li key={c.id} className="flex justify-between gap-2">
+                    <span>
+                      {who} ·{" "}
+                      {c.status === "ok"
+                        ? t.r4CheckinOk
+                        : c.status === "emergency"
+                          ? t.r4CheckinEmerg
+                          : t.r4CheckinHelp}
+                      {c.note ? ` — ${c.note}` : ""}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {formatDay(new Date(c.created_at), lang)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          {/* R4 Assign task */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="mb-3 text-sm font-semibold">{t.r4AssignTask}</h2>
+            <div className="flex flex-col gap-2">
+              <Input
+                placeholder={t.r4TaskTitle}
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+              />
+              <Input
+                type="datetime-local"
+                value={taskDue}
+                onChange={(e) => setTaskDue(e.target.value)}
+              />
+              <select
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+              >
+                <option value="">{t.r4Anyone}</option>
+                {(members ?? []).map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name ?? m.user_id.slice(0, 8)}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                disabled={busy || !taskTitle.trim()}
+                onClick={async () => {
+                  if (!familyId) return;
+                  setBusy(true);
+                  try {
+                    await runAssign({
+                      data: {
+                        familyId,
+                        title: taskTitle.trim(),
+                        dueAt: taskDue ? new Date(taskDue).toISOString() : undefined,
+                        assigneeUserId: assignee || undefined,
+                      },
+                    });
+                    setTaskTitle("");
+                    setTaskDue("");
+                    setAssignee("");
+                    void qc.invalidateQueries({ queryKey: ["family-shared", familyId] });
+                    void qc.invalidateQueries({ queryKey: ["reminders"] });
+                    toast.success(t.saved);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t.error);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                {t.r4Assign}
+              </Button>
+            </div>
+          </section>
+
+          {/* R4 Permissions (owner) */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="mb-1 text-sm font-semibold">{t.r4Permissions}</h2>
+            <p className="mb-3 text-xs text-muted-foreground">{t.r4OwnerOnly}</p>
+            <ul className="space-y-3">
+              {(members ?? []).map((m) => {
+                const perm = (permsQ.data ?? []).find((x) => x.user_id === m.user_id);
+                const defaults = {
+                  can_view_docs: perm?.can_view_docs ?? true,
+                  can_view_tasks: perm?.can_view_tasks ?? true,
+                  can_view_expenses: perm?.can_view_expenses ?? true,
+                  can_view_calendar: perm?.can_view_calendar ?? true,
+                  can_edit_shared: perm?.can_edit_shared ?? false,
+                };
+                return (
+                  <li key={m.id} className="rounded-lg border border-border p-2 text-sm">
+                    <p className="mb-2 font-medium">
+                      {m.display_name ?? m.user_id.slice(0, 8)}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-3">
+                      {(
+                        [
+                          ["docs", t.r4PermDocs, defaults.can_view_docs],
+                          ["tasks", t.r4PermTasks, defaults.can_view_tasks],
+                          ["expenses", t.r4PermMoney, defaults.can_view_expenses],
+                          ["calendar", t.r4PermCal, defaults.can_view_calendar],
+                          ["edit", t.r4PermEdit, defaults.can_edit_shared],
+                        ] as const
+                      ).map(([key, label, val]) => (
+                        <label key={key} className="flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            defaultChecked={val}
+                            id={`${m.user_id}-${key}`}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      disabled={busy}
+                      onClick={async () => {
+                        if (!familyId) return;
+                        const get = (k: string) =>
+                          (
+                            document.getElementById(
+                              `${m.user_id}-${k}`,
+                            ) as HTMLInputElement | null
+                          )?.checked ?? true;
+                        setBusy(true);
+                        try {
+                          await runUpsertPerm({
+                            data: {
+                              familyId,
+                              userId: m.user_id,
+                              canViewDocs: get("docs"),
+                              canViewTasks: get("tasks"),
+                              canViewExpenses: get("expenses"),
+                              canViewCalendar: get("calendar"),
+                              canEditShared: get("edit"),
+                            },
+                          });
+                          void qc.invalidateQueries({ queryKey: ["family-perms", familyId] });
+                          toast.success(t.saved);
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : t.error);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      {t.r4PermSave}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
         </div>
       )}
     </AppShell>

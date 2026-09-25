@@ -87,9 +87,9 @@
 | Feature | หน้า | สถานะ |
 |---------|------|--------|
 | Family Group + members | `/family` | ✅ |
-| Role & Permission ลึก | `/family` | 🟡 |
-| Shared Calendar | `/family` | ❌ |
-| Family Tasks มอบหมาย | `/family` `/tasks` | 🟡 |
+| Role & Permission ลึก | `/family` | ✅ R4 |
+| Shared Calendar | `/family` | ✅ R4 |
+| Family Tasks มอบหมาย | `/family` `/tasks` | ✅ R4 |
 | Care Check-in | — | ❌ |
 | Routine Tracking | — | ❌ |
 
@@ -230,10 +230,10 @@
 ### Round 4 — Family Radar ลึก
 | งาน | รายละเอียด | สถานะ |
 |-----|------------|--------|
-| R4.1 | Shared Calendar | ❌ |
-| R4.2 | Family task assign + notify | ❌ |
-| R4.3 | Care Check-in | ❌ |
-| R4.4 | Permission รายหมวดข้อมูล | ❌ |
+| R4.1 | Shared Calendar | ✅ |
+| R4.2 | Family task assign + notify | ✅ |
+| R4.3 | Care Check-in | ✅ |
+| R4.4 | Permission รายหมวดข้อมูล | ✅ |
 
 ### Round 5 — Trust, Privacy, Monetization
 | งาน | รายละเอียด | สถานะ |
@@ -287,3 +287,10 @@
 - ซิงก์วันครบกำหนดเอกสาร → reminders
 - UI ใกล้ครบกำหนดใน `/docs`
 - สแกน Money/Family/Benefits/Docs → เลือกเพิ่มในแผนฝากไว้ (`/legacy`)
+
+
+### 2026-09-25 — Round 4
+- Shared Calendar (`family_events`)
+- มอบหมายงานครอบครัว + app_notifications (`assignee_user_id` บน reminders)
+- Care Check-in (`family_checkins` + แจ้ง need_help/emergency)
+- Permission รายหมวด (`family_permissions` — owner ตั้งค่า)
