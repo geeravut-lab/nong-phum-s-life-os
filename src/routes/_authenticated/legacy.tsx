@@ -36,6 +36,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { legacyAssist } from "@/lib/legacy.functions";
+import {
+  applyLegacyImports,
+  suggestLegacyFromLifeOs,
+} from "@/lib/docs-legacy.functions";
 import { createVerifierInvite, ensureMyPlanCode } from "@/lib/death.functions";
 import {
   ASSET_KINDS,
@@ -68,6 +72,20 @@ function LegacyPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runAssist = useServerFn(legacyAssist);
+  const runSuggest = useServerFn(suggestLegacyFromLifeOs);
+  const runApplyImport = useServerFn(applyLegacyImports);
+  const [importKeys, setImportKeys] = useState<Set<string>>(new Set());
+  const [importCandidates, setImportCandidates] = useState<
+    Array<{
+      key: string;
+      source: string;
+      target: string;
+      title: string;
+      detail: string;
+      payload: Record<string, unknown>;
+    }>
+  >([]);
+
   const runInvite = useServerFn(createVerifierInvite);
   const runPlanCode = useServerFn(ensureMyPlanCode);
   const [planCodeInfo, setPlanCodeInfo] = useState<{ planCode: string; inviteBaseUrl: string } | null>(null);
@@ -520,6 +538,110 @@ function LegacyPage() {
             )}
           </div>
         </div>
+      )}
+
+      
+      {tab === "hub" && (
+        <section className="mb-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <p className="text-sm font-medium">{t.r3ImportTitle}</p>
+          <p className="text-xs text-muted-foreground">{t.r3ImportSub}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const res = (await runSuggest()) as {
+                  candidates?: Array<{
+                    key: string;
+                    source: string;
+                    target: string;
+                    title: string;
+                    detail: string;
+                    payload: Record<string, string | number | boolean | null | undefined>;
+                  }>;
+                };
+                setImportCandidates(res.candidates ?? []);
+                setImportKeys(new Set());
+                if (!(res.candidates ?? []).length) toast.message(t.r3ImportEmpty);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : t.error);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t.r3ImportScan}
+          </Button>
+          {importCandidates.length > 0 && (
+            <>
+              <ul className="max-h-64 space-y-2 overflow-auto">
+                {importCandidates.map((c) => (
+                  <li key={c.key} className="flex items-start gap-2 rounded-lg border border-border p-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={importKeys.has(c.key)}
+                      onChange={(e) => {
+                        setImportKeys((prev) => {
+                          const n = new Set(prev);
+                          if (e.target.checked) n.add(c.key);
+                          else n.delete(c.key);
+                          return n;
+                        });
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{c.title}</p>
+                      <p className="text-xs text-muted-foreground">{c.detail}</p>
+                      <Badge variant="outline" className="mt-1">
+                        {c.source === "money"
+                          ? t.r3SrcMoney
+                          : c.source === "family"
+                            ? t.r3SrcFamily
+                            : c.source === "benefits"
+                              ? t.r3SrcBenefits
+                              : t.r3SrcDocs}
+                        {" → "}
+                        {c.target}
+                      </Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                size="sm"
+                disabled={busy || importKeys.size === 0}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const items = importCandidates
+                      .filter((c) => importKeys.has(c.key))
+                      .map((c) => ({
+                        target: c.target as "asset" | "contact" | "wish" | "checklist",
+                        payload: c.payload,
+                      }));
+                    const res = await runApplyImport({ data: { items } });
+                    toast.success(`${t.r3ImportApplied}: ${res.applied}`);
+                    setImportCandidates([]);
+                    setImportKeys(new Set());
+                    void qc.invalidateQueries({ queryKey: ["legacy-assets"] });
+                    void qc.invalidateQueries({ queryKey: ["legacy-contacts"] });
+                    void qc.invalidateQueries({ queryKey: ["legacy-wishes"] });
+                    void qc.invalidateQueries({ queryKey: ["legacy-checklist"] });
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : t.error);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {t.r3ImportApply} ({importKeys.size})
+              </Button>
+            </>
+          )}
+        </section>
       )}
 
       {tab === "hub" && (

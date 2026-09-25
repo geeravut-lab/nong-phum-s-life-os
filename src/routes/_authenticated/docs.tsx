@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
+import { syncDocumentExpirations } from "@/lib/docs-legacy.functions";
 import { DocumentAnalysisError, intakeDocument, retryDocument } from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 import { bangkokDateAtHour } from "@/lib/time";
@@ -32,6 +33,8 @@ function DocsPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const analyze = useServerFn(analyzeDocument);
+  const runSyncExpiry = useServerFn(syncDocumentExpirations);
+
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [retrying, setRetrying] = useState<string | null>(null);
@@ -49,6 +52,29 @@ function DocsPage() {
       return data ?? [];
     },
   });
+
+  const expiringDocs = (docs ?? [])
+    .map((d) => {
+      const due = d.due_date as string | null;
+      const war = (d as { warranty_until?: string | null }).warranty_until ?? null;
+      const dates = [due, war].filter(Boolean) as string[];
+      if (!dates.length) return null;
+      const soonest = dates.sort()[0]!;
+      const days =
+        (new Date(soonest + "T00:00:00+07:00").getTime() - Date.now()) /
+        (86400 * 1000);
+      if (days > 60) return null;
+      return { ...d, soonest, days };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a!.soonest > b!.soonest ? 1 : -1)) as Array<{
+    id: string;
+    title: string;
+    soonest: string;
+    days: number;
+    is_warranty?: boolean;
+    category: string;
+  }>;
 
   const { data: family, isError: familyFailed } = useQuery({
     queryKey: ["my-family"],
@@ -172,6 +198,48 @@ function DocsPage() {
           onChange={onFile}
         />
       </header>
+
+      {(expiringDocs?.length ?? 0) > 0 && (
+        <section className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3">
+          <p className="text-sm font-medium">{t.r3Expiring}</p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {expiringDocs.slice(0, 5).map((d) => (
+              <li key={d.id} className="flex justify-between gap-2">
+                <span>
+                  {d.title}
+                  {(d as { is_warranty?: boolean }).is_warranty || d.category === "warranty" ? (
+                    <Badge className="ml-1" variant="secondary">
+                      {t.r3Warranty}
+                    </Badge>
+                  ) : null}
+                </span>
+                <span className="text-muted-foreground">{d.soonest}</span>
+              </li>
+            ))}
+          </ul>
+          <Button
+            size="sm"
+            className="mt-2"
+            variant="outline"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const res = await runSyncExpiry();
+                toast.success(`${t.r3SyncDone}: ${res.created}`);
+                void qc.invalidateQueries({ queryKey: ["reminders"] });
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : t.error);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t.r3SyncExpiry}
+          </Button>
+        </section>
+      )}
+
 
       {familyFailed && (
         <p className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">

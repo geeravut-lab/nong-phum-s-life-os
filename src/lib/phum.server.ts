@@ -19,6 +19,7 @@ const CATEGORIES = [
   "transport",
   "shopping",
   "family",
+  "warranty",
   "other",
 ] as const;
 
@@ -41,6 +42,13 @@ const DocSchema = z.object({
   needsAction: z
     .boolean()
     .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
+  isWarranty: z
+    .boolean()
+    .describe("True when this is a product warranty / guarantee certificate"),
+  warrantyUntil: z
+    .string()
+    .nullable()
+    .describe("Warranty end date as YYYY-MM-DD or null"),
 });
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
@@ -69,7 +77,10 @@ export async function runDocumentAnalysis(input: {
           content: [
             {
               type: "text",
-              text: `Read this document (file name: ${input.fileName}) and extract its details.`,
+              text: `Read this document (file name: ${input.fileName}) and extract its details.
+If it is a warranty/guarantee card, set isWarranty=true, category=warranty, and warrantyUntil.
+If there is any expiry, renew-by, or due date, put it in dueDate.
+Never invent dates.`,
             },
             isImage
               ? { type: "image" as const, image: input.base64, mediaType: input.mimeType }

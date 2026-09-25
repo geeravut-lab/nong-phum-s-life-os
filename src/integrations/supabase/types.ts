@@ -352,6 +352,8 @@ export type Database = {
           created_at: string
           doc_date: string | null
           due_date: string | null
+          warranty_until: string | null
+          is_warranty: boolean
           extracted: Json
           family_id: string | null
           id: string
@@ -372,6 +374,8 @@ export type Database = {
           created_at?: string
           doc_date?: string | null
           due_date?: string | null
+          warranty_until?: string | null
+          is_warranty?: boolean
           extracted?: Json
           family_id?: string | null
           id?: string
@@ -392,6 +396,8 @@ export type Database = {
           created_at?: string
           doc_date?: string | null
           due_date?: string | null
+          warranty_until?: string | null
+          is_warranty?: boolean
           extracted?: Json
           family_id?: string | null
           id?: string

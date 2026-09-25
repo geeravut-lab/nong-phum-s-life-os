@@ -15,6 +15,8 @@ export type DocAnalysisResult = {
   isExpense: boolean;
   isIncome: boolean;
   needsAction: boolean;
+  isWarranty?: boolean;
+  warrantyUntil?: string | null;
 };
 
 type AnalyzeFn = (args: {
@@ -140,17 +142,20 @@ async function analyzeAndFinalize(
     throw new DocumentAnalysisError(documentId, cause);
   }
 
+  const warrantyUntil = result.warrantyUntil ?? (result.isWarranty ? result.dueDate : null);
   const { error: updErr } = await supabase
     .from("documents")
     .update({
       status: "ready",
       title: result.title,
-      category: result.category,
+      category: result.isWarranty ? "warranty" : result.category,
       summary: result.summary,
       doc_date: result.docDate,
       due_date: result.dueDate,
       amount: result.amount,
       counterparty: result.counterparty,
+      is_warranty: !!result.isWarranty,
+      warranty_until: warrantyUntil,
       extracted: JSON.parse(JSON.stringify(result)),
     })
     .eq("id", documentId);
@@ -187,6 +192,23 @@ async function analyzeAndFinalize(
       title: result.suggestedReminderTitle ?? result.title,
       due_at: result.dueDate ? bangkokDateAtHour(result.dueDate, 9) : null,
       priority: "high",
+      source_document_id: documentId,
+    });
+    routed.push("reminder");
+  }
+
+  // Warranty expiry → reminder ~30 days before end (or on end date if closer)
+  if (result.isWarranty && warrantyUntil) {
+    const end = new Date(warrantyUntil + "T00:00:00+07:00");
+    const remind = new Date(end);
+    remind.setDate(remind.getDate() - 30);
+    const remindStr = remind.toISOString().slice(0, 10);
+    await supabase.from("reminders").insert({
+      user_id: userId,
+      title: `หมดประกัน: ${result.title}`,
+      notes: `วันสิ้นสุดประกัน ${warrantyUntil}`,
+      due_at: bangkokDateAtHour(remindStr < warrantyUntil ? remindStr : warrantyUntil, 9),
+      priority: "normal",
       source_document_id: documentId,
     });
     routed.push("reminder");

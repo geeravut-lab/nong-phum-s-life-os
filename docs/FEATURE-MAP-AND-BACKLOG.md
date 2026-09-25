@@ -53,7 +53,7 @@
 | Feature | หน้า | สถานะ |
 |---------|------|--------|
 | AI Inbox | `/chat` | 🟡 |
-| Document AI (OCR, metadata) | `/docs` `/chat` | 🟡 |
+| Document AI (OCR, metadata, warranty) | `/docs` `/chat` | ✅ R3 |
 | Bill & Expense | `/money` | 🟡 |
 | Reminder & Calendar | `/tasks` `/today` | 🟡 |
 | Personal Dashboard | `/today` | 🟡 |
@@ -156,7 +156,7 @@
 | Final Wishes / Trusted / Assets / Will ref / Checklist / Messages / Story / Donation | ✅ |
 | Secure Vault (ข้อความ) | 🟡 |
 | AI Legacy Assistant | ✅ |
-| ดึงข้อมูลจาก Money/Family/Benefits อัตโนมัติ | 🟡 |
+| ดึงข้อมูลจาก Money/Family/Benefits อัตโนมัติ | ✅ R3 |
 | เชิญผู้ยืนยัน + รหัสแผน | ✅ |
 
 **หลังเสียชีวิต** `/legacy/after` `/memorial/$token`
@@ -222,10 +222,10 @@
 ### Round 3 — Document AI + Legacy เชื่อมข้อมูล
 | งาน | รายละเอียด | สถานะ |
 |-----|------------|--------|
-| R3.1 | OCR / จัดประเภทเอกสารใน `/docs` | ❌ |
-| R3.2 | Expiration tracker → สร้างเตือนใน `/tasks` | ❌ |
-| R3.3 | “พบข้อมูลใน LIFE OS ให้เพิ่มในแผนฝากไว้” (Money/Family/Benefits) | ❌ |
-| R3.4 | Warranty tracker | ❌ |
+| R3.1 | OCR / จัดประเภทเอกสารใน `/docs` (+ warranty) | ✅ |
+| R3.2 | Expiration tracker → สร้างเตือนใน `/tasks` | ✅ |
+| R3.3 | “พบข้อมูลใน LIFE OS ให้เพิ่มในแผนฝากไว้” | ✅ |
+| R3.4 | Warranty tracker | ✅ |
 
 ### Round 4 — Family Radar ลึก
 | งาน | รายละเอียด | สถานะ |
@@ -280,3 +280,10 @@
 - Digital Wreath PromptPay QR + mark paid
 - VDO อำลา (ลิงก์) + เปิดเผย memorial สาธารณะ
 - SMS gateway ยังไม่ทำ (optional ภายหลัง)
+
+
+### 2026-09-25 — Round 3
+- Document AI: หมวด warranty + warranty_until + เตือนหมดประกัน
+- ซิงก์วันครบกำหนดเอกสาร → reminders
+- UI ใกล้ครบกำหนดใน `/docs`
+- สแกน Money/Family/Benefits/Docs → เลือกเพิ่มในแผนฝากไว้ (`/legacy`)
