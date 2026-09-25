@@ -35,6 +35,7 @@ import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
+import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authenticated/admin_.premium'
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
@@ -173,6 +174,12 @@ const AuthenticatedAdminPaymentsRoute =
     path: '/admin/payments',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminPremiumRoute =
+  AuthenticatedAdminPremiumRouteImport.update({
+    id: '/admin_/premium',
+    path: '/admin/premium',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminSafetyRoute =
   AuthenticatedAdminSafetyRouteImport.update({
     id: '/admin_/safety',
@@ -230,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/sso/callback': typeof SsoCallbackRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
@@ -296,6 +305,7 @@ export interface FileRoutesById {
   '/sso/callback': typeof SsoCallbackRoute
   '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
+  '/_authenticated/admin_/premium': typeof AuthenticatedAdminPremiumRoute
   '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/sso/callback'
     | '/admin/marketplace'
     | '/admin/payments'
+    | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
     | '/legacy/after'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/sso/callback'
     | '/admin/marketplace'
     | '/admin/payments'
+    | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
     | '/legacy/after'
@@ -395,6 +407,7 @@ export interface FileRouteTypes {
     | '/sso/callback'
     | '/_authenticated/admin_/marketplace'
     | '/_authenticated/admin_/payments'
+    | '/_authenticated/admin_/premium'
     | '/_authenticated/admin_/safety'
     | '/_authenticated/admin_/support'
     | '/_authenticated/legacy_/after'
@@ -596,6 +609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/premium': {
+      id: '/_authenticated/admin_/premium'
+      path: '/admin/premium'
+      fullPath: '/admin/premium'
+      preLoaderRoute: typeof AuthenticatedAdminPremiumRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/safety': {
       id: '/_authenticated/admin_/safety'
       path: '/admin/safety'
@@ -654,6 +674,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
+  AuthenticatedAdminPremiumRoute: typeof AuthenticatedAdminPremiumRoute
   AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
@@ -681,6 +702,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
+  AuthenticatedAdminPremiumRoute: AuthenticatedAdminPremiumRoute,
   AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,

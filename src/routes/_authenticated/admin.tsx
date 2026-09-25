@@ -709,24 +709,30 @@ function PremiumPayHubCard() {
         .from("premium_payments")
         .select("id", { count: "exact", head: true })
         .eq("payment_status", "pending");
-      if (error) throw error;
+      if (error) {
+        console.warn("premium_payments count", error.message);
+        return 0;
+      }
       return count ?? 0;
     },
     refetchInterval: 15000,
   });
+  const n = pending.data ?? 0;
   return (
     <Link
-      to="/admin/support"
+      to="/admin/premium"
       className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
     >
       <div>
         <h2 className="text-sm font-semibold">{t.billPremiumPayCard}</h2>
         <p className="mt-1 text-xs text-muted-foreground">{t.billPremiumPaySub}</p>
       </div>
-      {!!pending.data && (
+      {n > 0 ? (
         <Badge variant="destructive" className="text-sm">
-          {pending.data}
+          {n}
         </Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">{"—"}</span>
       )}
     </Link>
   );

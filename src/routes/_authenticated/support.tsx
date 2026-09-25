@@ -19,6 +19,7 @@ import { useI18n } from "@/lib/i18n";
 import {
   confirmPremiumPaid,
   createPremiumOrder,
+  createPaygOrder,
   getBillingPublic,
 } from "@/lib/billing.functions";
 import { createDonation, DONATION_MAX, DONATION_MIN, getSupportConfig } from "@/lib/support.functions";
@@ -60,6 +61,7 @@ function SupportPage() {
   const runBilling = useServerFn(getBillingPublic);
   const runOrder = useServerFn(createPremiumOrder);
   const runConfirmPrem = useServerFn(confirmPremiumPaid);
+  const runPayg = useServerFn(createPaygOrder);
   const [premBusy, setPremBusy] = useState(false);
   const [premRef, setPremRef] = useState("");
   const [premQr, setPremQr] = useState<{
@@ -236,137 +238,6 @@ function SupportPage() {
       )}
 
       
-      {/* Premium / Free quota — below donation amount */}
-      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        {billingQ.data?.isPremium ? (
-          <p className="text-sm font-semibold text-primary">{t.billYouArePremium}</p>
-        ) : (
-          <>
-            <h2 className="text-sm font-semibold">{t.billFreeQuota}</h2>
-            <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
-              <li>
-                {t.billUsed}: chat {billingQ.data?.usage.chat_count ?? 0}/
-                {billingQ.data?.settings.freeChat} · doc{" "}
-                {billingQ.data?.usage.document_count ?? 0}/
-                {billingQ.data?.settings.freeDocument} · total{" "}
-                {billingQ.data?.usage.total_count ?? 0}/
-                {billingQ.data?.settings.freeTotal}
-              </li>
-              <li>{billingQ.data?.pricingExplain.freeSummary}</li>
-              {billingQ.data?.pricingExplain.payg ? (
-                <li>{billingQ.data.pricingExplain.payg}</li>
-              ) : null}
-              <li className="text-muted-foreground">{t.billFamilyHint}</li>
-            </ul>
-            <h2 className="mt-3 text-sm font-semibold">{t.billPremiumTitle}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{t.billPremiumSub}</p>
-            {billingQ.data?.pricingExplain.payg ? (
-              <p className="mt-1 text-xs text-muted-foreground">{t.billPaygUserExplain}</p>
-            ) : null}
-            <div className="mt-3 space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    ["premium", "monthly", billingQ.data?.settings.premiumMonthly ?? 89],
-                    ["premium", "yearly", billingQ.data?.settings.premiumYearly ?? 890],
-                  ] as const
-                ).map(([tier, period, price]) => (
-                  <Button
-                    key={`${tier}-${period}`}
-                    size="sm"
-                    variant={period === "yearly" ? "default" : "outline"}
-                    disabled={premBusy}
-                    onClick={async () => {
-                      setPremBusy(true);
-                      try {
-                        const res = (await runOrder({
-                          data: { planTier: tier, period },
-                        })) as { paymentId: string; amount: number; qrUrl: string };
-                        setPremQr(res);
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
-                      } finally {
-                        setPremBusy(false);
-                      }
-                    }}
-                  >
-                    {t.billUpgrade} · {period === "yearly" ? t.billYearly : t.billMonthly} · ฿
-                    {price}
-                    {period === "yearly" && billingQ.data?.pricingExplain.yearlySavePct
-                      ? ` (${t.billSave} ${billingQ.data.pricingExplain.yearlySavePct}%)`
-                      : ""}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    ["family", "monthly", billingQ.data?.settings.familyMonthly ?? 149],
-                    ["family", "yearly", billingQ.data?.settings.familyYearly ?? 1490],
-                  ] as const
-                ).map(([tier, period, price]) => (
-                  <Button
-                    key={`${tier}-${period}`}
-                    size="sm"
-                    variant="secondary"
-                    disabled={premBusy}
-                    onClick={async () => {
-                      setPremBusy(true);
-                      try {
-                        const res = (await runOrder({
-                          data: { planTier: tier, period },
-                        })) as { paymentId: string; amount: number; qrUrl: string };
-                        setPremQr(res);
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
-                      } finally {
-                        setPremBusy(false);
-                      }
-                    }}
-                  >
-                    {t.billFamily} · {period === "yearly" ? t.billYearly : t.billMonthly} · ฿
-                    {price}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            {premQr ? (
-              <div className="mt-4 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
-                <p className="text-xs font-medium">
-                  {t.billPayQr} · ฿{premQr.amount.toLocaleString()}
-                </p>
-                <img
-                  src={premQr.qrUrl}
-                  alt="PromptPay"
-                  className="mx-auto h-48 w-48 rounded-lg bg-white p-2"
-                />
-                <Button
-                  size="sm"
-                  disabled={premBusy}
-                  onClick={async () => {
-                    setPremBusy(true);
-                    try {
-                      await runConfirmPrem({ data: { paymentId: premQr.paymentId } });
-                      toast.success(t.saved);
-                      setPremQr(null);
-                      void qc.invalidateQueries({ queryKey: ["billing-public"] });
-                      void qc.invalidateQueries({ queryKey: ["my-plan"] });
-                    } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
-                    } finally {
-                      setPremBusy(false);
-                    }
-                  }}
-                >
-                  {t.billMarkPaid}
-                </Button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </section>
-
-      
       {/* Premium — below donation amount flow */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         {billingQ.data?.isPremium ? (
@@ -388,6 +259,48 @@ function SupportPage() {
                 <li>{billingQ.data.pricingExplain.payg}</li>
               ) : null}
             </ul>
+            {!billingQ.data?.isPremium && billingQ.data?.pricingExplain.payg ? (
+              <div className="mt-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={premBusy}
+                  onClick={async () => {
+                    setPremBusy(true);
+                    try {
+                      const res = (await runPayg()) as {
+                        paymentId: string | null;
+                        amount: number;
+                        qrUrl?: string;
+                        message: string;
+                      };
+                      if (!res.paymentId || res.amount <= 0) {
+                        toast.message(
+                          res.message === "no_overage"
+                            ? (t.billPaygNoOverage ?? "ยังไม่มียอดเกินโควต้า")
+                            : res.message === "premium_skip"
+                              ? t.billYouArePremium
+                              : (res.message || "—"),
+                        );
+                      } else {
+                        setPremQr({
+                          paymentId: res.paymentId,
+                          amount: res.amount,
+                          qrUrl: res.qrUrl ?? "",
+                        });
+                        setPremRef("");
+                      }
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : t.error);
+                    } finally {
+                      setPremBusy(false);
+                    }
+                  }}
+                >
+                  {t.billPaygPay ?? "ชำระ PAYG"}
+                </Button>
+              </div>
+            ) : null}
             <h2 className="mt-3 text-sm font-semibold">{t.billPremiumTitle}</h2>
             <p className="mt-1 text-xs text-muted-foreground">{t.billPremiumSub}</p>
             <p className="mt-1 text-xs text-muted-foreground">{t.billFamilyHint}</p>
