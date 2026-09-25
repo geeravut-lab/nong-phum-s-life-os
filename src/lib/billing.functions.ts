@@ -28,6 +28,7 @@ export type BillingSettings = {
   paygEnabled: boolean;
   paygUnitSatang: number;
   paygGraceDays: number;
+  familyMaxMembers: number;
   promptpayId: string | null;
 };
 
@@ -46,6 +47,7 @@ const DEFAULTS: BillingSettings = {
   paygEnabled: false,
   paygUnitSatang: 50,
   paygGraceDays: 7,
+  familyMaxMembers: 5,
   promptpayId: null,
 };
 
@@ -71,6 +73,7 @@ async function loadBillingSettings(): Promise<BillingSettings> {
     paygEnabled: Boolean(d["payg_enabled"] ?? false),
     paygUnitSatang: n("payg_unit_price_satang", DEFAULTS.paygUnitSatang),
     paygGraceDays: n("payg_grace_days", DEFAULTS.paygGraceDays),
+    familyMaxMembers: n("family_max_members", DEFAULTS.familyMaxMembers),
     promptpayId:
       (d["billing_promptpay_id"] as string) ||
       (d["helpme_promptpay_id"] as string) ||
@@ -129,7 +132,7 @@ export const getBillingPublic = createServerFn({ method: "GET" })
         ),
         costBasis: `ต้นทุนอ้างอิง = ราคา API × ${settings.costFactor} (สูงกว่าค่าเฉลี่ย ~${Math.round((settings.costFactor - 1) * 100)}%) แล้วบวก margin ${settings.marginPct}%`,
         payg: settings.paygEnabled
-          ? `Pay-as-you-go: ${settings.paygUnitSatang} สตางค์/ครั้งที่เกินโควต้าฟรี · ชำระภายใน ${settings.paygGraceDays} วัน มิฉะนั้นระบบจะระงับ AI จนกว่าจะชำระ (สมาชิก Premium ไม่ถูกคิด PAYG)`
+          ? `Pay-as-you-go (สรุปยอดวันที่ 1 ของเดือน · ชำระภายใน grace days): ${settings.paygUnitSatang} สตางค์/ครั้งที่เกินโควต้าฟรี · ชำระภายใน ${settings.paygGraceDays} วัน มิฉะนั้นระบบจะระงับ AI จนกว่าจะชำระ (สมาชิก Premium ไม่ถูกคิด PAYG)`
           : null,
       },
     };
@@ -166,6 +169,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
         paygEnabled: z.boolean().optional(),
         paygUnitSatang: z.number().int().min(0).max(10000).optional(),
         paygGraceDays: z.number().int().min(1).max(90).optional(),
+        familyMaxMembers: z.number().int().min(2).max(50).optional(),
         promptpayId: z.string().max(40).optional(),
       })
       .parse(input),
@@ -193,6 +197,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
     if (data.paygEnabled !== undefined) patch["payg_enabled"] = data.paygEnabled;
     if (data.paygUnitSatang !== undefined) patch["payg_unit_price_satang"] = data.paygUnitSatang;
     if (data.paygGraceDays !== undefined) patch["payg_grace_days"] = data.paygGraceDays;
+    if (data.familyMaxMembers !== undefined) patch["family_max_members"] = data.familyMaxMembers;
     if (data.promptpayId !== undefined) patch["billing_promptpay_id"] = data.promptpayId;
 
     const { error } = await supabaseAdmin
@@ -358,7 +363,40 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .single();
     if (error || !pay) throw new Error(error?.message ?? "not found");
     if (pay.user_id !== context.userId && !isAdmin) throw new Error("Forbidden");
-    if (pay.payment_status === "paid") return { ok: true as const };
+    // User reports transfer — stays pending until admin confirms (same as donations)
+    if (pay.payment_status === "paid") return { ok: true as const, status: "paid" as const };
+
+    await supabaseAdmin
+      .from("premium_payments")
+      .update({
+        payment_status: "pending",
+        payer_ref: data.payerRef ?? null,
+      })
+      .eq("id", data.paymentId);
+
+    return { ok: true as const, status: "pending" as const };
+  });
+
+/** Admin: mark premium payment paid and activate plan */
+export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ paymentId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = await admin();
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { data: pay, error } = await supabaseAdmin
+      .from("premium_payments")
+      .select("*")
+      .eq("id", data.paymentId)
+      .single();
+    if (error || !pay) throw new Error(error?.message ?? "not found");
 
     const start = new Date();
     const end = new Date(start);
@@ -369,7 +407,6 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .from("premium_payments")
       .update({
         payment_status: "paid",
-        payer_ref: data.payerRef ?? null,
         paid_at: start.toISOString(),
         period_start: start.toISOString(),
         period_end: end.toISOString(),
@@ -393,4 +430,54 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
     });
 
     return { ok: true as const, expiresAt: end.toISOString() };
+  });
+
+
+/** Monthly PAYG settlement order (PromptPay) — admin confirms like Premium */
+export const createPaygOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const settings = await loadBillingSettings();
+    if (!settings.paygEnabled) throw new Error("PAYG is disabled");
+    if (!settings.promptpayId) throw new Error("ยังไม่ได้ตั้ง PromptPay");
+    if (await isPremiumActive(context.userId)) {
+      return { amount: 0, paymentId: null as string | null, message: "premium_skip" as const };
+    }
+    const ym = yearMonthBangkok();
+    // Previous month usage overage — simplified: charge total_count over freeTotal * unit
+    const supabaseAdmin = await admin();
+    const { data: usage } = await supabaseAdmin
+      .from("ai_usage_monthly")
+      .select("*")
+      .eq("user_id", context.userId)
+      .eq("year_month", ym)
+      .maybeSingle();
+    const total = Number((usage as Record<string, unknown> | null)?.["total_count"] ?? 0);
+    const over = Math.max(0, total - settings.freeTotal);
+    const amountBaht = (over * settings.paygUnitSatang) / 100;
+    if (amountBaht <= 0) {
+      return { amount: 0, paymentId: null as string | null, message: "no_overage" as const };
+    }
+    const { data: row, error } = await supabaseAdmin
+      .from("premium_payments")
+      .insert({
+        user_id: context.userId,
+        plan_tier: "premium",
+        period: "monthly",
+        amount: amountBaht,
+        payment_status: "pending",
+        promptpay_id: settings.promptpayId,
+        
+      } as never)
+      .select("id, amount, promptpay_id")
+      .single();
+    if (error) throw new Error(error.message);
+    const amt = Number(row.amount);
+    return {
+      paymentId: row.id as string,
+      amount: amt,
+      promptpayId: row.promptpay_id as string,
+      qrUrl: `https://promptpay.io/${row.promptpay_id}/${amt.toFixed(2)}`,
+      message: "ok" as const,
+    };
   });

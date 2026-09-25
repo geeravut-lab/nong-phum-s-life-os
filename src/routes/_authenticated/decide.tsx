@@ -430,7 +430,7 @@ function DecidePage() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (open) setExpandedJournalId(null);
+                        if (open) { setExpandedJournalId(null); setBoard(null); setActiveId(null); }
                         else {
                           setExpandedJournalId(d.id);
                           loadSaved(d);

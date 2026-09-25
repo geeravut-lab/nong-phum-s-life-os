@@ -49,6 +49,8 @@ function MerchantDashboardPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
+  const [editingPlaceId, setEditingPlaceId] = useState<string | null>(null);
+  const [editingDealId, setEditingDealId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     category: "food",
@@ -102,6 +104,29 @@ function MerchantDashboardPage() {
   const savePlace = async () => {
     if (!user || !form.name.trim()) return;
     setBusy(true);
+    if (editingPlaceId) {
+      const { error } = await supabase.from("local_places").update({
+        name: form.name.trim(),
+        category: form.category,
+        description: form.description.trim(),
+        area: form.area.trim() || null,
+        phone: form.phone.trim() || null,
+        price_level: Number(form.price_level) || 2,
+        tags: form.tags.split(",").map((s) => s.trim()).filter(Boolean),
+        lat: parseMapsUrl(form.maps_url)?.lat ?? null,
+        lng: parseMapsUrl(form.maps_url)?.lng ?? null,
+        maps_url: form.maps_url.trim() || null,
+        is_public: form.is_public,
+      } as never).eq("id", editingPlaceId);
+      setBusy(false);
+      if (error) { toast.error(error.message); return; }
+      toast.success(t.saved);
+      setEditingPlaceId(null);
+      setForm({ name: "", category: form.category, description: "", area: "", address: "", phone: "", price_level: "2", tags: "", maps_url: "", is_public: true });
+      void qc.invalidateQueries({ queryKey: ["my-local-places"] });
+      void qc.invalidateQueries({ queryKey: ["local-places"] });
+      return;
+    }
     const { error } = await supabase.from("local_places").insert({
       owner_user_id: user.id,
       name: form.name.trim(),
@@ -295,15 +320,50 @@ function MerchantDashboardPage() {
         {(myPlaces.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">{t.localNoPlaces}</p>
         ) : (
-          (myPlaces.data ?? []).map((p) => (
+          (myPlaces.data ?? []).map((p) => {
+            const maps =
+              (p as { maps_url?: string | null }).maps_url ||
+              (p.lat != null && p.lng != null
+                ? `https://www.google.com/maps?q=${p.lat},${p.lng}`
+                : null);
+            return (
             <article key={p.id} className="rounded-xl border border-border p-3 text-sm">
-              <div className="flex justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{p.name}</span>
-                <Badge variant="outline">{p.category}</Badge>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Badge variant="outline">{p.category}</Badge>
+                  {maps ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={maps} target="_blank" rel="noreferrer">{t.localOpenMap}</a>
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingPlaceId(p.id);
+                      setForm({
+                        name: p.name ?? "",
+                        category: p.category ?? "cafe",
+                        description: p.description ?? "",
+                        area: p.area ?? "",
+                        address: (p as { address?: string | null }).address ?? "",
+                        phone: p.phone ?? "",
+                        price_level: String(p.price_level ?? 2),
+                        tags: Array.isArray(p.tags) ? p.tags.join(", ") : "",
+                        maps_url: (p as { maps_url?: string | null }).maps_url ?? "",
+                        is_public: (p as { is_public?: boolean }).is_public !== false,
+                      });
+                    }}
+                  >
+                    {t.edit}
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">{p.area}</p>
             </article>
-          ))
+            );
+          })
         )}
       </section>
 

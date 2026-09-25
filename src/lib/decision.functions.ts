@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { checkAndConsumeAiQuota } from "@/lib/billing.functions";
 
 const LangInput = z.enum(["th", "en"]).default("th");
 
@@ -17,6 +18,11 @@ export const analyzeDecision = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    const quota = (await checkAndConsumeAiQuota({ data: { task: "decision" } })) as {
+      allowed: boolean;
+      message?: string;
+    };
+    if (!quota.allowed) throw new Error(quota.message ?? "AI quota exceeded");
     const { buildDecisionBoard } = await import("./decision.server");
     return buildDecisionBoard({
       question: data.question,

@@ -408,6 +408,7 @@ function AdminPage() {
         <AdminBillingPanel />
       </section>
 
+      <PremiumPayHubCard />
       <SupportHubCard />
       <MarketplaceHubCard />
       <SafetyHubCard />
@@ -698,6 +699,39 @@ function SafetyHubCard() {
 
 
 
+
+function PremiumPayHubCard() {
+  const { t } = useI18n();
+  const pending = useQuery({
+    queryKey: ["premium-payments-pending"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("premium_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("payment_status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 15000,
+  });
+  return (
+    <Link
+      to="/admin/support"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.billPremiumPayCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.billPremiumPaySub}</p>
+      </div>
+      {!!pending.data && (
+        <Badge variant="destructive" className="text-sm">
+          {pending.data}
+        </Badge>
+      )}
+    </Link>
+  );
+}
+
 function AdminBillingPanel() {
   const { t } = useI18n();
   const runGet = useServerFn(getBillingAdmin);
@@ -721,6 +755,7 @@ function AdminBillingPanel() {
         paygEnabled: boolean;
         paygUnitSatang: number;
         paygGraceDays: number;
+        familyMaxMembers: number;
         promptpayId: string | null;
       },
   });
@@ -745,6 +780,7 @@ function AdminBillingPanel() {
           ["familyYearly", "Family yearly ฿", v.familyYearly],
           ["paygUnitSatang", "PAYG satang/call", v.paygUnitSatang],
           ["paygGraceDays", "PAYG grace days", v.paygGraceDays],
+          ["familyMaxMembers", t.familyMaxMembers, v.familyMaxMembers],
         ] as const
       ).map(([key, label, val]) => (
         <label key={key} className="text-xs">

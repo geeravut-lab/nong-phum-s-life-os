@@ -14,7 +14,7 @@ import { CalendarDays, FileText,
   ShieldEllipsis,
   Users,
   Wallet, } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -53,6 +53,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
+
+  const adminPending = useQuery({
+    queryKey: ["admin-pending-total"],
+    enabled: !!isAdmin,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const [d, s, p, prem] = await Promise.all([
+        supabase.from("donations").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("safety_reports").select("id", { count: "exact", head: true }).in("status", ["open", "reviewing"]),
+        supabase.from("job_payments").select("id", { count: "exact", head: true }).eq("payment_status", "held"),
+        supabase.from("premium_payments").select("id", { count: "exact", head: true }).eq("payment_status", "pending"),
+      ]);
+      return (d.count ?? 0) + (s.count ?? 0) + (p.count ?? 0) + (prem.count ?? 0);
+    },
+  });
+  const adminPendingTotal = adminPending.data ?? 0;
+
   const { user } = useAuthUser();
   const qc = useQueryClient();
 
@@ -165,7 +182,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <ShieldEllipsis className="size-4 shrink-0" />
                 <NavDot show={hasBadge("/admin")} />
               </span>
-              <span className="truncate">{t.navAdmin}</span>
+              <span className="truncate">{t.navAdmin}
+                {adminPendingTotal > 0 ? (
+                  <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-destructive" />
+                ) : null}</span>
             </Link>
           ) : null}
           <Link to="/settings" className={linkClass} activeProps={{ className: activeClass }}>
@@ -255,7 +275,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <ShieldEllipsis className="size-4 shrink-0" />
                     <NavDot show={hasBadge("/admin")} />
                   </span>
-                  <span className="truncate">{t.navAdmin}</span>
+                  <span className="truncate">{t.navAdmin}
+                {adminPendingTotal > 0 ? (
+                  <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-destructive" />
+                ) : null}</span>
                 </Link>
               ) : null}
               <Link

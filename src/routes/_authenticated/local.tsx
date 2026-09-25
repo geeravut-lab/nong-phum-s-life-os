@@ -2,6 +2,7 @@ import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { searchGooglePlaces } from "@/lib/local-places.functions";
 import { useMemo, useState } from "react";
 import {
   ExternalLink,
@@ -43,6 +44,20 @@ function LocalPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runParse = useServerFn(parseLocalQuery);
+  const runGoogle = useServerFn(searchGooglePlaces);
+  const [googlePlaces, setGooglePlaces] = useState<
+    Array<{
+      id: string;
+      name: string;
+      address: string | null;
+      lat: number | null;
+      lng: number | null;
+      rating: number | null;
+      category: string;
+      mapsUrl: string | null;
+    }>
+  >([]);
+  const [googleMsg, setGoogleMsg] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -61,7 +76,7 @@ function LocalPage() {
         .from("local_places")
         .select("*")
         .eq("is_active", true)
-        // is_public: show shared places (default true)
+                // is_public: show shared places (default true)
         .order("is_promoted", { ascending: false })
         .order("rating", { ascending: false })
         .limit(100);
@@ -80,14 +95,14 @@ function LocalPage() {
         .from("local_deals")
         .select("*")
         .eq("is_active", true)
-        .limit(50);
+                .limit(50);
       if (error) throw error;
       return (data ?? []) as unknown as LocalDeal[];
     },
   });
 
   const ranked = useMemo(() => {
-    const places = placesQ.data ?? [];
+    const places = (placesQ.data ?? []).filter((p) => (p as { is_demo?: boolean }).is_demo !== true);
     let list = places;
     if (openOnly) {
       list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
@@ -147,8 +162,24 @@ function LocalPage() {
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        void (async () => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
         toast.success(t.localGeoOk);
+        try {
+          const res = (await runGoogle({
+            data: { lat, lng, radiusKm, lang: lang === "en" ? "en" : "th" },
+          })) as {
+            places: typeof googlePlaces;
+            message: string | null;
+          };
+          setGooglePlaces(res.places ?? []);
+          setGoogleMsg(res.message);
+        } catch {
+          /* ignore */
+        }
+        })();
       },
       () => toast.error(t.localGeoFail),
       { enableHighAccuracy: false, timeout: 10000 },
@@ -271,7 +302,30 @@ function LocalPage() {
         )}
       </section>
 
-      {(dealsQ.data ?? []).length > 0 && (
+      
+      {googlePlaces.length > 0 && (
+        <section className="mb-5 space-y-2">
+          <h2 className="text-sm font-semibold">Google Places</h2>
+          {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
+          <ul className="space-y-2">
+            {googlePlaces.map((g) => (
+              <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
+                <div className="flex justify-between gap-2">
+                  <span className="font-medium">{g.name}</span>
+                  {g.rating != null ? <Badge variant="secondary">{g.rating}</Badge> : null}
+                </div>
+                <p className="text-xs text-muted-foreground">{g.address}</p>
+                {g.mapsUrl ? (
+                  <a className="mt-1 inline-block text-xs text-primary underline" href={g.mapsUrl} target="_blank" rel="noreferrer">
+                    {t.localOpenMap}
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+{(dealsQ.data ?? []).length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Tag className="size-4" />
