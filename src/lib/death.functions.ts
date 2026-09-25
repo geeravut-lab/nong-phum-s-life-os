@@ -468,3 +468,110 @@ export const listMyVerifierCases = createServerFn({ method: "GET" })
       })),
     };
   });
+
+/** List post-life actions for a confirmed case (or seed if missing). */
+export const listPostLifeActions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ caseId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const admin = supabaseAdmin;
+    const { data: c, error } = await admin
+      .from("death_cases")
+      .select("id, status, subject_user_id")
+      .eq("id", data.caseId)
+      .single();
+    if (error || !c) throw new Error(error?.message ?? "case not found");
+    if (c.status !== "confirmed") {
+      return { actions: [] as const, caseStatus: c.status as string };
+    }
+
+    // Seed if empty (covers cases confirmed before migration / trigger miss)
+    const { data: existing } = await admin
+      .from("post_life_actions")
+      .select("id")
+      .eq("case_id", data.caseId)
+      .limit(1);
+    if (!existing?.length) {
+      const subject = c.subject_user_id as string;
+      const templates: Array<{ phase: string; sort_order: number; title: string; description: string }> = [
+        { phase: "24h", sort_order: 1, title: "แจ้งบุคคลที่กำหนด", description: "ติดต่อคนที่ไว้ใจตามลำดับความสำคัญในแผนฝากไว้" },
+        { phase: "24h", sort_order: 2, title: "เปิด Memorial", description: "ตรวจสอบ/แชร์หน้าอาลัยบุ๊คให้ครอบครัว" },
+        { phase: "24h", sort_order: 3, title: "แจ้งข้อมูลที่ได้รับอนุญาต", description: "ส่งเฉพาะข้อมูลที่เจ้าของแผนอนุญาต" },
+        { phase: "3d", sort_order: 1, title: "เอกสารสำคัญ", description: "รวบรวมบัตรประชาชน สำเนา และเอกสารที่อ้างในแผน" },
+        { phase: "3d", sort_order: 2, title: "สถานที่และพิธี", description: "ยืนยันสถานที่จัดพิธีตามความต้องการงานศพ" },
+        { phase: "3d", sort_order: 3, title: "ผู้ให้บริการ", description: "ติดต่อวัด/สถานที่/ผู้ให้บริการที่เกี่ยวข้อง" },
+        { phase: "3d", sort_order: 4, title: "แผนงานศพ (ถ้ามี)", description: "ดูแพ็กเกจจาก AI Funeral Planner และสถานะการชำระ" },
+        { phase: "later", sort_order: 1, title: "ทรัพย์สิน", description: "เปิดดูรายการทรัพย์สินในแผนฝากไว้ (ไม่ใช่เอกสารทางกฎหมาย)" },
+        { phase: "later", sort_order: 2, title: "หนี้สิน / ภาระ", description: "ตรวจสอบรายการหนี้และภาระที่บันทึกไว้" },
+        { phase: "later", sort_order: 3, title: "ประกันและสิทธิ", description: "ติดต่อบริษัทประกัน / สิทธิที่เกี่ยวข้อง" },
+        { phase: "later", sort_order: 4, title: "บัญชีและดิจิทัล", description: "จัดการบัญชีตามที่ระบุในแผน" },
+        { phase: "later", sort_order: 5, title: "มรดก / พินัยกรรม (อ้างอิง)", description: "ติดตามที่เก็บพินัยกรรม — ดำเนินการตามกฎหมายภายนอกแอป" },
+      ];
+      await admin.from("post_life_actions").insert(
+        templates.map((x) => ({
+          case_id: data.caseId,
+          subject_user_id: subject,
+          ...x,
+        })),
+      );
+    }
+
+    const { data: rows, error: aErr } = await admin
+      .from("post_life_actions")
+      .select(
+        "id, case_id, phase, sort_order, title, description, status, done_at, note",
+      )
+      .eq("case_id", data.caseId)
+      .order("sort_order", { ascending: true });
+    if (aErr) throw new Error(aErr.message);
+    const phaseOrder = { "24h": 0, "3d": 1, later: 2 } as Record<string, number>;
+    const sorted = [...(rows ?? [])].sort(
+      (a, b) =>
+        (phaseOrder[a.phase as string] ?? 9) - (phaseOrder[b.phase as string] ?? 9) ||
+        (a.sort_order as number) - (b.sort_order as number),
+    );
+    return { actions: sorted, caseStatus: "confirmed" as const };
+  });
+
+/** Mark a post-life action done / open / skipped. */
+export const updatePostLifeAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        actionId: z.string().uuid(),
+        status: z.enum(["open", "done", "skipped"]),
+        note: z.string().max(1000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const now = new Date().toISOString();
+    const patch =
+      data.status === "done"
+        ? {
+            status: data.status,
+            updated_at: now,
+            done_at: now,
+            done_by: context.userId,
+            ...(data.note !== undefined ? { note: data.note } : {}),
+          }
+        : {
+            status: data.status,
+            updated_at: now,
+            done_at: null as string | null,
+            done_by: null as string | null,
+            ...(data.note !== undefined ? { note: data.note } : {}),
+          };
+
+    const { data: row, error } = await supabaseAdmin
+      .from("post_life_actions")
+      .update(patch)
+      .eq("id", data.actionId)
+      .select("id, status, done_at, note")
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
