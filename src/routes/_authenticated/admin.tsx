@@ -33,6 +33,7 @@ import {
   updateAiSettings,
   updateNotificationSettings,
 } from "@/lib/admin.functions";
+import { getBillingAdmin, updateBillingAdmin } from "@/lib/billing.functions";
 import { Input } from "@/components/ui/input";
 import type { ModelOverrides, ProviderId, TaskKind } from "@/lib/ai-provider.server";
 import { formatDay } from "@/lib/format";
@@ -153,7 +154,13 @@ function AdminPage() {
     return (
       <AppShell>
         <Skeleton className="h-40 w-full" />
-      </AppShell>
+      
+      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
+        <AdminBillingPanel />
+      </section>
+
+    </AppShell>
     );
   }
   if (config.isError || !config.data) {
@@ -162,7 +169,13 @@ function AdminPage() {
         <p className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           {config.error instanceof Error ? config.error.message : t.adminForbidden}
         </p>
-      </AppShell>
+      
+      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
+        <AdminBillingPanel />
+      </section>
+
+    </AppShell>
     );
   }
 
@@ -452,6 +465,12 @@ function AdminPage() {
           </div>
         )}
       </section>
+    
+      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
+        <AdminBillingPanel />
+      </section>
+
     </AppShell>
   );
 }
@@ -690,3 +709,105 @@ function SafetyHubCard() {
   );
 }
 
+
+
+function AdminBillingPanel() {
+  const { t } = useI18n();
+  const runGet = useServerFn(getBillingAdmin);
+  const runSave = useServerFn(updateBillingAdmin);
+  const [busy, setBusy] = useState(false);
+  const q = useQuery({
+    queryKey: ["billing-admin"],
+    queryFn: async () =>
+      (await runGet()) as {
+        marginPct: number;
+        costFactor: number;
+        freeChat: number;
+        freeDocument: number;
+        freeDecision: number;
+        freeTranscribe: number;
+        freeTotal: number;
+        premiumMonthly: number;
+        premiumYearly: number;
+        familyMonthly: number;
+        familyYearly: number;
+        paygEnabled: boolean;
+        paygUnitSatang: number;
+        promptpayId: string | null;
+      },
+  });
+  const s = q.data;
+  const [draft, setDraft] = useState<Partial<NonNullable<typeof s>>>({});
+  const v = { ...s, ...draft };
+  if (!s) return <p className="text-xs text-muted-foreground">…</p>;
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {(
+        [
+          ["marginPct", t.billMargin, v.marginPct],
+          ["costFactor", t.billCostFactor, v.costFactor],
+          ["freeChat", "Free chat", v.freeChat],
+          ["freeDocument", "Free document", v.freeDocument],
+          ["freeDecision", "Free decision", v.freeDecision],
+          ["freeTranscribe", "Free transcribe", v.freeTranscribe],
+          ["freeTotal", "Free total AI", v.freeTotal],
+          ["premiumMonthly", "Premium monthly ฿", v.premiumMonthly],
+          ["premiumYearly", "Premium yearly ฿", v.premiumYearly],
+          ["familyMonthly", "Family monthly ฿", v.familyMonthly],
+          ["familyYearly", "Family yearly ฿", v.familyYearly],
+          ["paygUnitSatang", "PAYG satang/call", v.paygUnitSatang],
+        ] as const
+      ).map(([key, label, val]) => (
+        <label key={key} className="text-xs">
+          {label}
+          <Input
+            className="mt-1"
+            type="number"
+            value={val ?? ""}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                [key]: e.target.value === "" ? undefined : Number(e.target.value),
+              }))
+            }
+          />
+        </label>
+      ))}
+      <label className="text-xs sm:col-span-2">
+        Billing PromptPay
+        <Input
+          className="mt-1"
+          value={v.promptpayId ?? ""}
+          onChange={(e) => setDraft((d) => ({ ...d, promptpayId: e.target.value }))}
+        />
+      </label>
+      <label className="flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={Boolean(v.paygEnabled)}
+          onChange={(e) => setDraft((d) => ({ ...d, paygEnabled: e.target.checked }))}
+        />
+        Enable PAYG overage
+      </label>
+      <Button
+        size="sm"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await runSave({ data: draft });
+            toast.success(t.saved);
+            setDraft({});
+            void q.refetch();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : t.error);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {t.billSaveAdmin}
+      </Button>
+    </div>
+  );
+}

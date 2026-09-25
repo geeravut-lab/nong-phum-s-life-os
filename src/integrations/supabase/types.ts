@@ -114,6 +114,89 @@ export type Database = {
         }
         Relationships: []
       }
+
+      ai_usage_monthly: {
+        Row: {
+          id: string
+          user_id: string
+          year_month: string
+          chat_count: number
+          document_count: number
+          decision_count: number
+          transcribe_count: number
+          total_count: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          year_month: string
+          chat_count?: number
+          document_count?: number
+          decision_count?: number
+          transcribe_count?: number
+          total_count?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          year_month?: string
+          chat_count?: number
+          document_count?: number
+          decision_count?: number
+          transcribe_count?: number
+          total_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      premium_payments: {
+        Row: {
+          id: string
+          user_id: string
+          plan_tier: string
+          period: string
+          amount: number
+          payment_status: string
+          promptpay_id: string | null
+          payer_ref: string | null
+          paid_at: string | null
+          period_start: string | null
+          period_end: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_tier: string
+          period: string
+          amount: number
+          payment_status?: string
+          promptpay_id?: string | null
+          payer_ref?: string | null
+          paid_at?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan_tier?: string
+          period?: string
+          amount?: number
+          payment_status?: string
+          promptpay_id?: string | null
+          payer_ref?: string | null
+          paid_at?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+
       ai_events: {
         Row: {
           created_at: string
@@ -1133,6 +1216,9 @@ export type Database = {
       }
       decisions: {
         Row: {
+          evidence_mode: boolean
+          evidence_notes: string
+
           board: Json
           chosen_option_id: string | null
           context: Json

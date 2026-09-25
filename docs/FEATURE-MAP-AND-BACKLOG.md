@@ -61,7 +61,7 @@
 | Search & Personal Memory | `/chat` | 🟡 |
 | Recurring Tasks | `/tasks` | 🟡 |
 | Privacy Center / audit | `/settings` | ✅ R5 |
-| Monetization Free/Premium | `/settings` | ✅ skeleton R5 |
+| Monetization Free/Premium + PromptPay | `/support` `/admin` | ✅ |
 
 ### 2.2 ช่วยฉันที → `/helpme` `/helper-dashboard` `/admin/*`
 
@@ -248,8 +248,8 @@
 |-----|------------|--------|
 | R6.1 | Matching น้ำหนักครบ + counter-offer cron | ❌ |
 | R6.2 | Provider/Merchant analytics | ❌ |
-| R6.3 | Decision Evidence Mode | ❌ |
-| R6.4 | Share benefits result to family | ❌ |
+| R6.3 | Decision Evidence Mode | ✅ |
+| R6.4 | Share benefits result to family | 🟡 schema |
 
 ---
 
@@ -302,3 +302,12 @@
 - Premium / Family plan skeleton (`user_subscriptions` + trial)
 - Promoted listing flags on helper / local places
 - Agenda: week range Mon–Sun + month-year locale label
+
+
+### 2026-09-25 — Billing + Round 6 partial
+- Free AI quotas + Premium/Family monthly/yearly PromptPay (`premium_payments`, `ai_usage_monthly`)
+- Admin-tunable margin, cost factor, limits, prices
+- Support page: upgrade + QR + usage
+- Decision evidence mode columns + UI
+- user_benefits is_shared / family_id (share path)
+- R6.1 matching already weighted 35/20/15/10/10/10 in marketplace.server

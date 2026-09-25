@@ -16,6 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { formatDay, formatMoney } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import {
+  confirmPremiumPaid,
+  createPremiumOrder,
+  getBillingPublic,
+} from "@/lib/billing.functions";
 import { createDonation, DONATION_MAX, DONATION_MIN, getSupportConfig } from "@/lib/support.functions";
 
 // "สนับสนุน" — the user side of the Harmony donation playbook. Order on the
@@ -51,6 +56,49 @@ function SupportPage() {
   });
 
   const [amountText, setAmountText] = useState("");
+
+  const runBilling = useServerFn(getBillingPublic);
+  const runOrder = useServerFn(createPremiumOrder);
+  const runConfirmPrem = useServerFn(confirmPremiumPaid);
+  const [premBusy, setPremBusy] = useState(false);
+  const [premQr, setPremQr] = useState<{
+    paymentId: string;
+    amount: number;
+    qrUrl: string;
+  } | null>(null);
+
+  const billingQ = useQuery({
+    queryKey: ["billing-public"],
+    queryFn: async () =>
+      (await runBilling()) as {
+        isPremium: boolean;
+        settings: {
+          premiumMonthly: number;
+          premiumYearly: number;
+          familyMonthly: number;
+          familyYearly: number;
+          freeChat: number;
+          freeDocument: number;
+          freeDecision: number;
+          freeTranscribe: number;
+          freeTotal: number;
+        };
+        usage: {
+          chat_count: number;
+          document_count: number;
+          decision_count: number;
+          transcribe_count: number;
+          total_count: number;
+        };
+        pricingExplain: {
+          freeSummary: string;
+          costBasis: string;
+          yearlySavePct: number;
+          payg: string | null;
+        };
+      },
+  });
+
   const [chosen, setChosen] = useState<number | null>(null);
   const [ref, setRef] = useState("");
   const [anonymous, setAnonymous] = useState(false);
@@ -98,6 +146,110 @@ function SupportPage() {
           </div>
         ) : null}
       </section>
+
+      {/* Premium / Free quota */}
+      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.billPremiumTitle}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.billPremiumSub}</p>
+        {billingQ.data?.isPremium ? (
+          <p className="mt-2 text-sm text-primary">{t.billYouArePremium}</p>
+        ) : (
+          <>
+            <p className="mt-2 text-xs font-medium">{t.billFreeQuota}</p>
+            <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              <li>
+                {t.billUsed}: chat {billingQ.data?.usage.chat_count ?? 0}/
+                {billingQ.data?.settings.freeChat} · doc{" "}
+                {billingQ.data?.usage.document_count ?? 0}/
+                {billingQ.data?.settings.freeDocument} · total{" "}
+                {billingQ.data?.usage.total_count ?? 0}/
+                {billingQ.data?.settings.freeTotal}
+              </li>
+              <li>{billingQ.data?.pricingExplain.freeSummary}</li>
+              <li>{billingQ.data?.pricingExplain.costBasis}</li>
+              {billingQ.data?.pricingExplain.payg ? (
+                <li>{billingQ.data.pricingExplain.payg}</li>
+              ) : null}
+            </ul>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(
+                [
+                  ["premium", "monthly", billingQ.data?.settings.premiumMonthly ?? 89],
+                  ["premium", "yearly", billingQ.data?.settings.premiumYearly ?? 890],
+                  ["family", "monthly", billingQ.data?.settings.familyMonthly ?? 149],
+                  ["family", "yearly", billingQ.data?.settings.familyYearly ?? 1490],
+                ] as const
+              ).map(([tier, period, price]) => (
+                <Button
+                  key={`${tier}-${period}`}
+                  size="sm"
+                  variant={period === "yearly" ? "default" : "outline"}
+                  disabled={premBusy}
+                  onClick={async () => {
+                    setPremBusy(true);
+                    try {
+                      const res = (await runOrder({
+                        data: {
+                          planTier: tier,
+                          period,
+                        },
+                      })) as {
+                        paymentId: string;
+                        amount: number;
+                        qrUrl: string;
+                      };
+                      setPremQr(res);
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : t.error);
+                    } finally {
+                      setPremBusy(false);
+                    }
+                  }}
+                >
+                  {tier === "family" ? t.billFamily : t.billUpgrade} ·{" "}
+                  {period === "yearly" ? t.billYearly : t.billMonthly} · ฿{price}
+                  {period === "yearly" && billingQ.data?.pricingExplain.yearlySavePct
+                    ? ` (${t.billSave} ${billingQ.data.pricingExplain.yearlySavePct}%)`
+                    : ""}
+                </Button>
+              ))}
+            </div>
+            {premQr ? (
+              <div className="mt-4 space-y-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-center">
+                <p className="text-xs font-medium">
+                  {t.billPayQr} · ฿{premQr.amount.toLocaleString()}
+                </p>
+                <img
+                  src={premQr.qrUrl}
+                  alt="PromptPay"
+                  className="mx-auto h-48 w-48 rounded-lg bg-white p-2"
+                />
+                <Button
+                  size="sm"
+                  disabled={premBusy}
+                  onClick={async () => {
+                    setPremBusy(true);
+                    try {
+                      await runConfirmPrem({ data: { paymentId: premQr.paymentId } });
+                      toast.success(t.saved);
+                      setPremQr(null);
+                      void qc.invalidateQueries({ queryKey: ["billing-public"] });
+                      void qc.invalidateQueries({ queryKey: ["my-plan"] });
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : t.error);
+                    } finally {
+                      setPremBusy(false);
+                    }
+                  }}
+                >
+                  {t.billMarkPaid}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </section>
+
 
       {cfg.isLoading || !s ? (
         <Skeleton className="h-40 w-full" />
