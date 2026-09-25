@@ -21,6 +21,24 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { PLACE_CATEGORIES, type LocalPlace } from "@/lib/local.shared";
 
+
+function parseMapsUrl(url: string): { lat: number; lng: number } | null {
+  try {
+    const u = url.trim();
+    const at = u.match(/@(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+    if (at) return { lat: Number(at[1]), lng: Number(at[2]) };
+    const q = u.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (q) return { lat: Number(q[1]), lng: Number(q[2]) };
+    const ll = u.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (ll) return { lat: Number(ll[1]), lng: Number(ll[2]) };
+    const dapi = u.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+    if (dapi) return { lat: Number(dapi[1]), lng: Number(dapi[2]) };
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/_authenticated/local_/merchant")({
   head: () => ({ meta: routeMeta("local") }),
   component: MerchantDashboardPage,
@@ -37,8 +55,8 @@ function MerchantDashboardPage() {
     description: "",
     area: "",
     address: "",
-    lat: "",
-    lng: "",
+    maps_url: "",
+    is_public: true,
     tags: "",
     price_level: "2",
     phone: "",
@@ -91,8 +109,10 @@ function MerchantDashboardPage() {
       description: form.description.trim(),
       area: form.area.trim() || null,
       address: form.address.trim() || null,
-      lat: form.lat ? Number(form.lat) : null,
-      lng: form.lng ? Number(form.lng) : null,
+      lat: parseMapsUrl(form.maps_url)?.lat ?? null,
+      lng: parseMapsUrl(form.maps_url)?.lng ?? null,
+      maps_url: form.maps_url.trim() || null,
+      is_public: form.is_public,
       tags: form.tags
         .split(",")
         .map((s) => s.trim())
@@ -100,7 +120,7 @@ function MerchantDashboardPage() {
       price_level: Number(form.price_level) || null,
       phone: form.phone.trim() || null,
       is_active: true,
-    });
+    } as never);
     setBusy(false);
     if (error) {
       toast.error(error.message);
@@ -113,8 +133,8 @@ function MerchantDashboardPage() {
       description: "",
       area: "",
       address: "",
-      lat: "",
-      lng: "",
+      maps_url: "",
+      is_public: true,
       tags: "",
       price_level: "2",
       phone: "",
@@ -237,24 +257,24 @@ function MerchantDashboardPage() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             />
           </div>
-          <div>
-            <Label>Lat</Label>
+          <div className="sm:col-span-2">
+            <Label>{t.localMapsLink}</Label>
             <Input
               className="mt-1"
-              value={form.lat}
-              onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))}
-              placeholder="13.65"
+              placeholder="https://maps.google.com/..."
+              value={form.maps_url}
+              onChange={(e) => setForm((f) => ({ ...f, maps_url: e.target.value }))}
             />
+            <p className="mt-1 text-[10px] text-muted-foreground">{t.localMapsLinkHint}</p>
           </div>
-          <div>
-            <Label>Lng</Label>
-            <Input
-              className="mt-1"
-              value={form.lng}
-              onChange={(e) => setForm((f) => ({ ...f, lng: e.target.value }))}
-              placeholder="100.68"
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.is_public}
+              onChange={(e) => setForm((f) => ({ ...f, is_public: e.target.checked }))}
             />
-          </div>
+            {t.localSharePublic}
+          </label>
           <div className="sm:col-span-2">
             <Label>{t.localTags}</Label>
             <Input

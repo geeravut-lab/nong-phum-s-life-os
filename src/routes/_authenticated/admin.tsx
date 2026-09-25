@@ -154,13 +154,7 @@ function AdminPage() {
     return (
       <AppShell>
         <Skeleton className="h-40 w-full" />
-      
-      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
-        <AdminBillingPanel />
-      </section>
-
-    </AppShell>
+      </AppShell>
     );
   }
   if (config.isError || !config.data) {
@@ -169,13 +163,7 @@ function AdminPage() {
         <p className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           {config.error instanceof Error ? config.error.message : t.adminForbidden}
         </p>
-      
-      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
-        <AdminBillingPanel />
-      </section>
-
-    </AppShell>
+      </AppShell>
     );
   }
 
@@ -415,6 +403,11 @@ function AdminPage() {
 
       <LineQuotaCard />
 
+      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
+        <AdminBillingPanel />
+      </section>
+
       <SupportHubCard />
       <MarketplaceHubCard />
       <SafetyHubCard />
@@ -465,12 +458,6 @@ function AdminPage() {
           </div>
         )}
       </section>
-    
-      <section className="mt-8 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
-        <AdminBillingPanel />
-      </section>
-
     </AppShell>
   );
 }
@@ -733,6 +720,7 @@ function AdminBillingPanel() {
         familyYearly: number;
         paygEnabled: boolean;
         paygUnitSatang: number;
+        paygGraceDays: number;
         promptpayId: string | null;
       },
   });
@@ -756,6 +744,7 @@ function AdminBillingPanel() {
           ["familyMonthly", "Family monthly ฿", v.familyMonthly],
           ["familyYearly", "Family yearly ฿", v.familyYearly],
           ["paygUnitSatang", "PAYG satang/call", v.paygUnitSatang],
+          ["paygGraceDays", "PAYG grace days", v.paygGraceDays],
         ] as const
       ).map(([key, label, val]) => (
         <label key={key} className="text-xs">

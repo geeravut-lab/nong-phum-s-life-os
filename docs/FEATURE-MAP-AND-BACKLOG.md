@@ -247,7 +247,7 @@
 | งาน | รายละเอียด | สถานะ |
 |-----|------------|--------|
 | R6.1 | Matching น้ำหนักครบ + counter-offer cron | ❌ |
-| R6.2 | Provider/Merchant analytics | ❌ |
+| R6.2 | Provider/Merchant analytics | ✅ helper stats |
 | R6.3 | Decision Evidence Mode | ✅ |
 | R6.4 | Share benefits result to family | 🟡 schema |
 
@@ -311,3 +311,11 @@
 - Decision evidence mode columns + UI
 - user_benefits is_shared / family_id (share path)
 - R6.1 matching already weighted 35/20/15/10/10/10 in marketplace.server
+
+
+### 2026-09-25 — UX polish + R6.2
+- Admin billing section before Support
+- Support: Premium/Family button rows, no cost-basis line, Family/PAYG explain
+- Local: radius filter default 5km, merchant Maps link + is_public
+- Decide journal expand/collapse
+- Helper dashboard analytics cards

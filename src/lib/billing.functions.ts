@@ -27,6 +27,7 @@ export type BillingSettings = {
   familyYearly: number;
   paygEnabled: boolean;
   paygUnitSatang: number;
+  paygGraceDays: number;
   promptpayId: string | null;
 };
 
@@ -44,12 +45,13 @@ const DEFAULTS: BillingSettings = {
   familyYearly: 1490,
   paygEnabled: false,
   paygUnitSatang: 50,
+  paygGraceDays: 7,
   promptpayId: null,
 };
 
 async function loadBillingSettings(): Promise<BillingSettings> {
   const supabaseAdmin = await admin();
-  // select * then read via unknown — billing cols may not be in generated types yet
+  // select * — billing columns may not be in generated types yet
   const { data } = await supabaseAdmin.from("platform_settings").select("*").maybeSingle();
   if (!data) return { ...DEFAULTS };
   const d = data as unknown as Record<string, unknown>;
@@ -68,6 +70,7 @@ async function loadBillingSettings(): Promise<BillingSettings> {
     familyYearly: n("family_price_yearly", DEFAULTS.familyYearly),
     paygEnabled: Boolean(d["payg_enabled"] ?? false),
     paygUnitSatang: n("payg_unit_price_satang", DEFAULTS.paygUnitSatang),
+    paygGraceDays: n("payg_grace_days", DEFAULTS.paygGraceDays),
     promptpayId:
       (d["billing_promptpay_id"] as string) ||
       (d["helpme_promptpay_id"] as string) ||
@@ -126,7 +129,7 @@ export const getBillingPublic = createServerFn({ method: "GET" })
         ),
         costBasis: `ต้นทุนอ้างอิง = ราคา API × ${settings.costFactor} (สูงกว่าค่าเฉลี่ย ~${Math.round((settings.costFactor - 1) * 100)}%) แล้วบวก margin ${settings.marginPct}%`,
         payg: settings.paygEnabled
-          ? `Pay-as-you-go: ${settings.paygUnitSatang} สตางค์/ครั้งที่เกินโควต้าฟรี`
+          ? `Pay-as-you-go: ${settings.paygUnitSatang} สตางค์/ครั้งที่เกินโควต้าฟรี · ชำระภายใน ${settings.paygGraceDays} วัน มิฉะนั้นระบบจะระงับ AI จนกว่าจะชำระ (สมาชิก Premium ไม่ถูกคิด PAYG)`
           : null,
       },
     };
@@ -162,6 +165,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
         familyYearly: z.number().min(0).max(1000000).optional(),
         paygEnabled: z.boolean().optional(),
         paygUnitSatang: z.number().int().min(0).max(10000).optional(),
+        paygGraceDays: z.number().int().min(1).max(90).optional(),
         promptpayId: z.string().max(40).optional(),
       })
       .parse(input),
@@ -188,6 +192,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
     if (data.familyYearly !== undefined) patch["family_price_yearly"] = data.familyYearly;
     if (data.paygEnabled !== undefined) patch["payg_enabled"] = data.paygEnabled;
     if (data.paygUnitSatang !== undefined) patch["payg_unit_price_satang"] = data.paygUnitSatang;
+    if (data.paygGraceDays !== undefined) patch["payg_grace_days"] = data.paygGraceDays;
     if (data.promptpayId !== undefined) patch["billing_promptpay_id"] = data.promptpayId;
 
     const { error } = await supabaseAdmin

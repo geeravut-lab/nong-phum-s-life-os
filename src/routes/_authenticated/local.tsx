@@ -48,6 +48,7 @@ function LocalPage() {
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<LocalSearchIntent | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState(5);
   const [openOnly, setOpenOnly] = useState(false);
   const [reviewPlaceId, setReviewPlaceId] = useState<string | null>(null);
   const [reviewStars, setReviewStars] = useState(5);
@@ -60,6 +61,7 @@ function LocalPage() {
         .from("local_places")
         .select("*")
         .eq("is_active", true)
+        // is_public: show shared places (default true)
         .order("is_promoted", { ascending: false })
         .order("rating", { ascending: false })
         .limit(100);
@@ -90,35 +92,43 @@ function LocalPage() {
     if (openOnly) {
       list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
     }
+    const withinRadius = <T extends { distanceKm?: number | null }>(rows: T[]) => {
+      if (!coords) return rows;
+      return rows.filter((p) => p.distanceKm == null || p.distanceKm <= radiusKm);
+    };
     if (!intent) {
-      return list
-        .map((p) => {
-          let distanceKm: number | null = null;
-          if (coords && p.lat != null && p.lng != null) {
-            const R = 6371;
-            const dLat = ((p.lat - coords.lat) * Math.PI) / 180;
-            const dLng = ((p.lng - coords.lng) * Math.PI) / 180;
-            const s =
-              Math.sin(dLat / 2) ** 2 +
-              Math.cos((coords.lat * Math.PI) / 180) *
-                Math.cos((p.lat * Math.PI) / 180) *
-                Math.sin(dLng / 2) ** 2;
-            distanceKm = 2 * R * Math.asin(Math.sqrt(s));
-          }
-          const promoBoost = p.is_promoted ? 50 : 0;
-          return {
-            ...p,
-            distanceKm,
-            score: promoBoost + Number(p.rating) * 10 - (distanceKm ?? 0),
-          };
-        })
-        .sort((a, b) => b.score - a.score);
+      return withinRadius(
+        list
+          .map((p) => {
+            let distanceKm: number | null = null;
+            if (coords && p.lat != null && p.lng != null) {
+              const R = 6371;
+              const dLat = ((p.lat - coords.lat) * Math.PI) / 180;
+              const dLng = ((p.lng - coords.lng) * Math.PI) / 180;
+              const s =
+                Math.sin(dLat / 2) ** 2 +
+                Math.cos((coords.lat * Math.PI) / 180) *
+                  Math.cos((p.lat * Math.PI) / 180) *
+                  Math.sin(dLng / 2) ** 2;
+              distanceKm = 2 * R * Math.asin(Math.sqrt(s));
+            }
+            const promoBoost = p.is_promoted ? 50 : 0;
+            return {
+              ...p,
+              distanceKm,
+              score: promoBoost + Number(p.rating) * 10 - (distanceKm ?? 0),
+            };
+          })
+          .sort((a, b) => b.score - a.score),
+      );
     }
-    return rankPlaces(list, intent, coords?.lat ?? null, coords?.lng ?? null).map((p) => ({
-      ...p,
-      score: p.score + (p.is_promoted ? 40 : 0),
-    }));
-  }, [placesQ.data, intent, coords, openOnly]);
+    return withinRadius(
+      rankPlaces(list, intent, coords?.lat ?? null, coords?.lng ?? null).map((p) => ({
+        ...p,
+        score: p.score + (p.is_promoted ? 40 : 0),
+      })),
+    );
+  }, [placesQ.data, intent, coords, openOnly, radiusKm]);
 
   const dealsByPlace = useMemo(() => {
     const m = new Map<string, LocalDeal[]>();
@@ -222,7 +232,18 @@ function LocalPage() {
             {t.localSearch}
           </Button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1 text-xs text-muted-foreground">
+            {t.localRadiusKm}
+            <Input
+              type="number"
+              min={1}
+              max={50}
+              className="h-8 w-16"
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(Math.max(1, Math.min(50, Number(e.target.value) || 5)))}
+            />
+          </label>
           <Button size="sm" variant="outline" onClick={useMyLocation}>
             <MapPin className="mr-1 size-3.5" />
             {t.localUseLocation}

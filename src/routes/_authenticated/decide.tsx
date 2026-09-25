@@ -45,6 +45,7 @@ function DecidePage() {
   const qc = useQueryClient();
   const runAnalyze = useServerFn(analyzeDecision);
 
+  const [expandedJournalId, setExpandedJournalId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [template, setTemplate] = useState<string | null>(null);
   const [context, setContext] = useState<Record<string, string>>({});
@@ -409,36 +410,58 @@ function DecidePage() {
           <p className="text-sm text-muted-foreground">{t.decideJournalEmpty}</p>
         ) : (
           <ul className="space-y-2">
-            {(journal.data ?? []).map((d) => (
+            {(journal.data ?? []).map((d) => {
+              const open = expandedJournalId === d.id;
+              return (
               <li
                 key={d.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
               >
-                <button type="button" className="text-left hover:underline" onClick={() => loadSaved(d)}>
-                  <span className="font-medium">{d.question}</span>
-                  {d.recommendation && (
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{d.recommendation}</span>
-                  )}
-                </button>
-                <div className="flex flex-wrap items-center gap-1">
-                  <Badge variant="outline">{d.status}</Badge>
-                  {!d.outcome && (
-                    <>
-                      <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "good")}>
-                        👍
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "ok")}>
-                        👌
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "bad")}>
-                        👎
-                      </Button>
-                    </>
-                  )}
-                  {d.outcome && <Badge variant="secondary">{d.outcome}</Badge>}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-medium">{d.question}</span>
+                    {!open && d.recommendation && (
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{d.recommendation}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline">{d.status}</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (open) setExpandedJournalId(null);
+                        else {
+                          setExpandedJournalId(d.id);
+                          loadSaved(d);
+                        }
+                      }}
+                    >
+                      {open ? t.r6CollapseDetail : t.r6ViewDetail}
+                    </Button>
+                    {!d.outcome && (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "good")}>👍</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "ok")}>👌</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "bad")}>👎</Button>
+                      </>
+                    )}
+                    {d.outcome && <Badge variant="secondary">{d.outcome}</Badge>}
+                  </div>
                 </div>
+                {open && (
+                  <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                    {d.recommendation && <p><span className="font-medium text-foreground">{t.decideRecommendation}: </span>{d.recommendation}</p>}
+                    {/* template optional */}
+                    <p className="text-[10px]">{new Date(d.created_at).toLocaleString()}</p>
+                    <Button size="sm" variant="ghost" className="mt-1" onClick={() => setExpandedJournalId(null)}>
+                      {t.r6CollapseDetail}
+                    </Button>
+                  </div>
+                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

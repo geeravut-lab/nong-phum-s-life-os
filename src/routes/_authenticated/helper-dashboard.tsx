@@ -77,6 +77,13 @@ function HelperDashboardPage() {
   const active = (jobs.data ?? []).filter((j) =>
     ["matched", "in_progress"].includes(j.status),
   ).length;
+  const done = (jobs.data ?? []).filter((j) => j.status === "done" || j.status === "completed").length;
+  const pendingOffers = (offers.data ?? []).filter((o) => o.status === "pending" || o.status === "sent").length;
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthJobs = (jobs.data ?? []).filter((j) => j.booked_at && new Date(j.booked_at) >= monthStart).length;
+
 
   return (
     <AppShell>
@@ -84,6 +91,26 @@ function HelperDashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">{t.providerDashTitle}</h1>
         <p className="text-sm text-muted-foreground">{t.providerDashSub}</p>
       </header>
+
+      <section className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl border border-border bg-card p-3 text-center shadow-soft">
+          <p className="text-2xl font-semibold">{active}</p>
+          <p className="text-[10px] text-muted-foreground">{t.r6StatActive}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3 text-center shadow-soft">
+          <p className="text-2xl font-semibold">{done}</p>
+          <p className="text-[10px] text-muted-foreground">{t.r6StatDone}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3 text-center shadow-soft">
+          <p className="text-2xl font-semibold">{pendingOffers}</p>
+          <p className="text-[10px] text-muted-foreground">{t.r6StatOffers}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3 text-center shadow-soft">
+          <p className="text-2xl font-semibold">{formatMoney(earnings)}</p>
+          <p className="text-[10px] text-muted-foreground">{t.r6StatEarn} ({monthJobs} {t.r6StatMonthJobs})</p>
+        </div>
+      </section>
+
 
       {!profile.data ? (
         <p className="text-sm text-muted-foreground">{t.providerDashNoProfile}</p>
