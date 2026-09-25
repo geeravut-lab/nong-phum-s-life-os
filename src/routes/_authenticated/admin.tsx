@@ -175,7 +175,9 @@ function AdminPage() {
     <AppShell>
       <header className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">{t.adminTitle}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p>
+        {t.adminSub ? (
+          <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p>
+        ) : null}
       </header>
 
       {/* ---- In effect now ---- */}

@@ -1,5 +1,5 @@
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,11 @@ function HelperDashboardPage() {
   return (
     <AppShell>
       <header className="mb-5">
+        <p className="mb-1 text-xs text-muted-foreground">
+          <Link to="/helpme" search={{ tab: "helper" }} className="underline">
+            ← ช่วยฉันที · ฉันอยากรับงาน
+          </Link>
+        </p>
         <h1 className="text-2xl font-semibold tracking-tight">{t.providerDashTitle}</h1>
         <p className="text-sm text-muted-foreground">{t.providerDashSub}</p>
       </header>

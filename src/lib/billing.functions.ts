@@ -323,7 +323,7 @@ export const createPremiumOrder = createServerFn({ method: "POST" })
         plan_tier: data.planTier,
         period: data.period,
         amount,
-        payment_status: "pending",
+        payment_status: "draft",
         promptpay_id: settings.promptpayId,
       })
       .select("id, amount, promptpay_id")
@@ -363,8 +363,9 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .single();
     if (error || !pay) throw new Error(error?.message ?? "not found");
     if (pay.user_id !== context.userId && !isAdmin) throw new Error("Forbidden");
-    // User reports transfer — stays pending until admin confirms (same as donations)
+    // User reports transfer — draft/awaiting → pending for admin review
     if (pay.payment_status === "paid") return { ok: true as const, status: "paid" as const };
+    if (pay.payment_status === "rejected") throw new Error("รายการนี้ถูกปฏิเสธแล้ว");
 
     await supabaseAdmin
       .from("premium_payments")
@@ -375,6 +376,27 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .eq("id", data.paymentId);
 
     return { ok: true as const, status: "pending" as const };
+  });
+
+/** Admin: reject premium payment report */
+export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ paymentId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = await admin();
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+    await supabaseAdmin
+      .from("premium_payments")
+      .update({ payment_status: "rejected" })
+      .eq("id", data.paymentId)
+      .eq("payment_status", "pending");
+    return { ok: true as const };
   });
 
 /** Admin: mark premium payment paid and activate plan */
@@ -465,7 +487,7 @@ export const createPaygOrder = createServerFn({ method: "POST" })
         plan_tier: "premium",
         period: "monthly",
         amount: amountBaht,
-        payment_status: "pending",
+        payment_status: "draft",
         promptpay_id: settings.promptpayId,
         
       } as never)

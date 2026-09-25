@@ -88,8 +88,8 @@ const th = {
   docFailedRemovalIn: (days: number) => (days <= 0 ? "จะถูกลบวันนี้" : `จะถูกลบใน ${days} วัน`),
   // admin
   navAdmin: "ผู้ดูแลระบบ",
-  adminTitle: "ตั้งค่า AI",
-  adminSub: "เลือกผู้ให้บริการและรุ่นโมเดลที่แอปใช้ โดยไม่ต้อง deploy ใหม่",
+  adminTitle: "ผู้ดูแลระบบ",
+  adminSub: "",
   adminApplyNote: "การเปลี่ยนแปลงมีผลภายใน 1 นาที",
   adminForbidden: "หน้านี้สำหรับผู้ดูแลระบบเท่านั้น",
   adminNow: "สถานะปัจจุบัน",
@@ -1122,8 +1122,8 @@ const en = {
     days <= 0 ? "Will be removed today" : `Will be removed in ${days} day${days === 1 ? "" : "s"}`,
   // admin
   navAdmin: "Admin",
-  adminTitle: "AI settings",
-  adminSub: "Choose which AI provider and models the app uses, without a redeploy.",
+  adminTitle: "Admin",
+  adminSub: "",
   adminApplyNote: "Changes take effect within a minute.",
   adminForbidden: "This page is for administrators only.",
   adminNow: "In effect now",

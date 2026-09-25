@@ -1,5 +1,5 @@
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -26,6 +26,12 @@ import {
 } from "@/lib/payment.functions";
 
 export const Route = createFileRoute("/_authenticated/helpme")({
+  validateSearch: (s: Record<string, unknown>) => {
+    const tab = s["tab"];
+    return {
+      tab: tab === "helper" ? ("helper" as const) : tab === "need" ? ("need" as const) : undefined,
+    };
+  },
   head: () => ({ meta: routeMeta("helpme") }),
   component: HelpMePage,
 });
@@ -48,7 +54,7 @@ function HelpMePage() {
         <h1 className="text-2xl font-semibold tracking-tight">{t.helpTitle}</h1>
         <p className="text-sm text-muted-foreground">{t.helpSub}</p>
       </header>
-      <Tabs defaultValue="need">
+      <Tabs defaultValue={(Route.useSearch().tab as string | undefined) ?? "need"}>
         <TabsList className="mb-4 grid w-full grid-cols-2">
           <TabsTrigger value="need">{t.tabNeedHelp}</TabsTrigger>
           <TabsTrigger value="helper">{t.tabBeHelper}</TabsTrigger>

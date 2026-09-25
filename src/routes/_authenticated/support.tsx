@@ -239,7 +239,7 @@ function SupportPage() {
 
       
       {/* Premium — below donation amount flow */}
-      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <section className="mt-6 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         {billingQ.data?.isPremium ? (
           <p className="text-sm font-semibold text-primary">{t.billYouArePremium}</p>
         ) : (
