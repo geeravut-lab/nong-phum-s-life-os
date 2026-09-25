@@ -1,6 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  FileText,
+import { CalendarDays, FileText,
   HandHelping,
   Heart,
   MapPinned,
@@ -14,8 +13,7 @@ import {
   Settings,
   ShieldEllipsis,
   Users,
-  Wallet,
-} from "lucide-react";
+  Wallet, } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/chat", label: t.navChat, icon: MessageCircleHeart },
     { to: "/docs", label: t.navDocs, icon: FileText },
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
+    { to: "/agenda", label: t.navAgenda ?? "Agenda", icon: CalendarDays },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },

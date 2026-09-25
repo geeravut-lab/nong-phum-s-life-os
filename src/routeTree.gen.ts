@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as MicTestRouteImport } from './routes/mic-test'
 import { Route as AuthenticatedOldChatRouteImport } from './routes/_authenticated/Old-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedDecideRouteImport } from './routes/_authenticated/decide'
@@ -67,6 +68,11 @@ const AuthenticatedOldChatRoute = AuthenticatedOldChatRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBenefitsRoute = AuthenticatedBenefitsRouteImport.update({
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/mic-test': typeof MicTestRoute
   '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
   '/chat': typeof AuthenticatedChatRoute
   '/decide': typeof AuthenticatedDecideRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/mic-test': typeof MicTestRoute
   '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
   '/chat': typeof AuthenticatedChatRoute
   '/decide': typeof AuthenticatedDecideRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/mic-test': typeof MicTestRoute
   '/_authenticated/Old-chat': typeof AuthenticatedOldChatRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/decide': typeof AuthenticatedDecideRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/Old-chat'
     | '/admin'
+    | '/agenda'
     | '/benefits'
     | '/chat'
     | '/decide'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/Old-chat'
     | '/admin'
+    | '/agenda'
     | '/benefits'
     | '/chat'
     | '/decide'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/mic-test'
     | '/_authenticated/Old-chat'
     | '/_authenticated/admin'
+    | '/_authenticated/agenda'
     | '/_authenticated/benefits'
     | '/_authenticated/chat'
     | '/_authenticated/decide'
@@ -442,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/benefits': {
@@ -618,6 +637,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedOldChatRoute: typeof AuthenticatedOldChatRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDecideRoute: typeof AuthenticatedDecideRoute
@@ -644,6 +664,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOldChatRoute: AuthenticatedOldChatRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDecideRoute: AuthenticatedDecideRoute,

@@ -273,3 +273,60 @@ export const upsertFamilyPermission = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+
+/** Resolve display labels: profiles.display_name (ชื่อที่ให้น้องภูมิเรียก) → email → short id */
+export const listFamilyMemberLabels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ familyId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireFamilyMember(context.userId, data.familyId);
+    const { data: members, error } = await supabaseAdmin
+      .from("family_members")
+      .select("id, user_id, member_role, display_name")
+      .eq("family_id", data.familyId);
+    if (error) throw new Error(error.message);
+
+    const labels: Array<{
+      memberId: string;
+      userId: string;
+      role: string;
+      label: string;
+    }> = [];
+
+    for (const m of members ?? []) {
+      let label = (m.display_name as string | null)?.trim() || "";
+      if (!label) {
+        const { data: prof } = await supabaseAdmin
+          .from("profiles")
+          .select("display_name")
+          .eq("id", m.user_id)
+          .maybeSingle();
+        label = (prof?.display_name as string | null)?.trim() || "";
+      }
+      if (!label) {
+        try {
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(
+            m.user_id as string,
+          );
+          label =
+            (u.user?.user_metadata as Record<string, string> | undefined)?.["full_name"] ||
+            (u.user?.user_metadata as Record<string, string> | undefined)?.["name"] ||
+            u.user?.email?.split("@")[0] ||
+            "";
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!label) label = (m.user_id as string).slice(0, 8);
+      labels.push({
+        memberId: m.id as string,
+        userId: m.user_id as string,
+        role: (m.member_role as string) || "member",
+        label,
+      });
+    }
+    return { members: labels };
+  });

@@ -20,6 +20,7 @@ import {
   listFamilyPermissions,
   postFamilyCheckin,
   upsertFamilyPermission,
+  listFamilyMemberLabels,
 } from "@/lib/family.functions";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
@@ -40,6 +41,8 @@ function FamilyPage() {
   const runAssign = useServerFn(assignFamilyTask);
   const runListPerms = useServerFn(listFamilyPermissions);
   const runUpsertPerm = useServerFn(upsertFamilyPermission);
+  const runMemberLabels = useServerFn(listFamilyMemberLabels);
+
   const [familyName, setFamilyName] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -86,6 +89,22 @@ function FamilyPage() {
       return data ?? [];
     },
   });
+
+  const { data: memberLabels } = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-member-labels", familyId],
+    queryFn: async () => {
+      const res = (await runMemberLabels({ data: { familyId: familyId! } })) as {
+        members: Array<{ userId: string; label: string; role: string }>;
+      };
+      return res.members ?? [];
+    },
+  });
+
+  const labelFor = (userId: string, fallback?: string | null) => {
+    const hit = memberLabels?.find((x) => x.userId === userId);
+    return hit?.label || fallback?.trim() || userId.slice(0, 8);
+  };
 
   const { data: sharedItems } = useQuery({
     enabled: !!familyId,
@@ -294,7 +313,7 @@ function FamilyPage() {
             <ul className="space-y-2">
               {members?.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate">{m.display_name ?? m.user_id.slice(0, 8)}</span>
+                  <span className="truncate">{labelFor(m.user_id, m.display_name)}</span>
                   <Badge variant="outline">{m.member_role}</Badge>
                 </li>
               ))}
@@ -447,8 +466,10 @@ function FamilyPage() {
             <ul className="space-y-1 text-xs">
               {(checkinsQ.data ?? []).slice(0, 8).map((c) => {
                 const who =
-                  members?.find((m) => m.user_id === c.user_id)?.display_name ??
-                  c.user_id.slice(0, 8);
+                  labelFor(
+                    c.user_id,
+                    members?.find((m) => m.user_id === c.user_id)?.display_name,
+                  );
                 return (
                   <li key={c.id} className="flex justify-between gap-2">
                     <span>
@@ -491,7 +512,7 @@ function FamilyPage() {
                 <option value="">{t.r4Anyone}</option>
                 {(members ?? []).map((m) => (
                   <option key={m.user_id} value={m.user_id}>
-                    {m.display_name ?? m.user_id.slice(0, 8)}
+                    {labelFor(m.user_id, m.display_name)}
                   </option>
                 ))}
               </select>
@@ -546,7 +567,7 @@ function FamilyPage() {
                 return (
                   <li key={m.id} className="rounded-lg border border-border p-2 text-sm">
                     <p className="mb-2 font-medium">
-                      {m.display_name ?? m.user_id.slice(0, 8)}
+                      {labelFor(m.user_id, m.display_name)}
                     </p>
                     <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-3">
                       {(
