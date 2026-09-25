@@ -1463,7 +1463,7 @@ export type Database = {
         }
         Relationships: []
       }
-      
+
       post_life_actions: {
         Row: {
           id: string

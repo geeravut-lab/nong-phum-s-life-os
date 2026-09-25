@@ -27,7 +27,6 @@ GRANT ALL ON public.post_life_actions TO service_role;
 
 ALTER TABLE public.post_life_actions ENABLE ROW LEVEL SECURITY;
 
--- Same visibility as death_cases participants
 CREATE POLICY post_life_actions_select ON public.post_life_actions
   FOR SELECT TO authenticated
   USING (
@@ -75,20 +74,17 @@ BEGIN
     RETURN;
   END IF;
 
-  -- ภายใน 24 ชั่วโมง
   INSERT INTO public.post_life_actions (case_id, subject_user_id, phase, sort_order, title, description) VALUES
     (p_case_id, p_subject, '24h', 1, 'แจ้งบุคคลที่กำหนด', 'ติดต่อคนที่ไว้ใจตามลำดับความสำคัญในแผนฝากไว้'),
     (p_case_id, p_subject, '24h', 2, 'เปิด Memorial', 'ตรวจสอบ/แชร์หน้าอาลัยบุ๊คให้ครอบครัว'),
     (p_case_id, p_subject, '24h', 3, 'แจ้งข้อมูลที่ได้รับอนุญาต', 'ส่งเฉพาะข้อมูลที่เจ้าของแผนอนุญาต — ไม่เปิดเผยเกินความจำเป็น');
 
-  -- ภายใน 3 วัน
   INSERT INTO public.post_life_actions (case_id, subject_user_id, phase, sort_order, title, description) VALUES
     (p_case_id, p_subject, '3d', 1, 'เอกสารสำคัญ', 'รวบรวมบัตรประชาชน สำเนา และเอกสารที่อ้างในแผน'),
     (p_case_id, p_subject, '3d', 2, 'สถานที่และพิธี', 'ยืนยันสถานที่จัดพิธีตามความต้องการงานศพ'),
     (p_case_id, p_subject, '3d', 3, 'ผู้ให้บริการ', 'ติดต่อวัด/สถานที่/ผู้ให้บริการที่เกี่ยวข้อง'),
     (p_case_id, p_subject, '3d', 4, 'แผนงานศพ (ถ้ามี)', 'ดูแพ็กเกจจาก AI Funeral Planner และสถานะการชำระ');
 
-  -- ภายหลัง
   INSERT INTO public.post_life_actions (case_id, subject_user_id, phase, sort_order, title, description) VALUES
     (p_case_id, p_subject, 'later', 1, 'ทรัพย์สิน', 'เปิดดูรายการทรัพย์สินในแผนฝากไว้ (ไม่ใช่เอกสารทางกฎหมาย)'),
     (p_case_id, p_subject, 'later', 2, 'หนี้สิน / ภาระ', 'ตรวจสอบรายการหนี้และภาระที่บันทึกไว้'),
@@ -98,7 +94,6 @@ BEGIN
 END;
 $$;
 
--- Hook into existing confirmation trigger: after status becomes confirmed, seed actions
 CREATE OR REPLACE FUNCTION public.trg_death_confirm_seed_actions()
 RETURNS trigger
 LANGUAGE plpgsql
