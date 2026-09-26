@@ -3,6 +3,14 @@
 # Enable locally with:
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 #
+# Run that only once this file exists on your checked-out branch. Git treats a
+# missing ignore-revs file as a fatal error, so setting it early makes every
+# `git blame` fail with "could not open object name list".
+#
+# Do not run it from inside a git worktree: `git config` writes to the shared
+# .git/config, so the setting leaks to the main checkout and every other
+# worktree, where this file may not exist yet.
+#
 # Only add commits that are provably formatting-only.
 
 # style: apply prettier across the repo
