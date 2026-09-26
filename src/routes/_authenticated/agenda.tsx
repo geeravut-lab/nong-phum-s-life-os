@@ -331,6 +331,11 @@ function AgendaPage() {
                       minute: "2-digit",
                     })}
                   </p>
+                  {it.meta.assigneeLabel ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t.r4Assignee}: {it.meta.assigneeLabel}
+                    </p>
+                  ) : null}
                   {it.detail ? (
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{it.detail}</p>
                   ) : null}

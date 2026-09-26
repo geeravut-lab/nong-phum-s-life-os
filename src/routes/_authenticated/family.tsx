@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, Loader2, LogOut, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { updateAgendaItem } from "@/lib/agenda.functions";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ function FamilyPage() {
   const runListEvents = useServerFn(listFamilyEvents);
   const runCreateEvent = useServerFn(createFamilyEvent);
   const runDeleteEvent = useServerFn(deleteFamilyEvent);
+  const runUpdateAgenda = useServerFn(updateAgendaItem);
   const runPostCheckin = useServerFn(postFamilyCheckin);
   const runListCheckins = useServerFn(listFamilyCheckins);
   const runAssign = useServerFn(assignFamilyTask);
@@ -55,6 +57,15 @@ function FamilyPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [editEvent, setEditEvent] = useState<{
+    id: string;
+    title: string;
+    starts_at: string;
+    notes: string;
+  } | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editWhen, setEditWhen] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [checkNote, setCheckNote] = useState("");
 
   const {
@@ -231,6 +242,40 @@ function FamilyPage() {
   // so members are not shown a button the server will refuse.
   const canDeleteEvent = (createdBy: string) =>
     !!user && (user.id === createdBy || user.id === family?.owner_id);
+
+  // Editing goes through the same server function the unified agenda uses, so
+  // the rules stay in one place: family membership, and future events only.
+  const openEditEvent = (ev: { id: string; title: string; starts_at: string; notes: string }) => {
+    setEditEvent(ev);
+    setEditTitle(ev.title);
+    const d = new Date(ev.starts_at);
+    setEditWhen(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setEditNotes(ev.notes ?? "");
+  };
+
+  const saveEditEvent = async () => {
+    if (!editEvent) return;
+    setBusy(true);
+    try {
+      await runUpdateAgenda({
+        data: {
+          source: "family_event",
+          id: editEvent.id,
+          title: editTitle.trim(),
+          ...(editWhen ? { startsAt: new Date(editWhen).toISOString() } : {}),
+          notes: editNotes,
+        },
+      });
+      toast.success(t.saved);
+      setEditEvent(null);
+      void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const removeEvent = async (eventId: string) => {
     if (!window.confirm(t.agendaDeleteConfirm)) return;
@@ -440,6 +485,16 @@ function FamilyPage() {
                       <span className="text-xs text-muted-foreground">
                         {formatDay(new Date(ev.starts_at), lang)}
                       </span>
+                      {new Date(ev.starts_at) >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => openEditEvent(ev)}
+                        >
+                          {t.edit}
+                        </Button>
+                      )}
                       {canDeleteEvent(ev.created_by) && (
                         <Button
                           size="sm"
@@ -667,6 +722,33 @@ function FamilyPage() {
               })}
             </ul>
           </section>
+        </div>
+      )}
+
+      {editEvent && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
+            <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={editWhen}
+              onChange={(e) => setEditWhen(e.target.value)}
+            />
+            <Input
+              value={editNotes}
+              placeholder={t.note}
+              onChange={(e) => setEditNotes(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setEditEvent(null)}>
+                {t.cancel ?? "ยกเลิก"}
+              </Button>
+              <Button disabled={busy} onClick={() => void saveEditEvent()}>
+                {t.save}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </AppShell>

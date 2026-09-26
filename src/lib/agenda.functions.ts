@@ -18,10 +18,64 @@ export type AgendaItem = {
   meta: {
     amount?: number | null;
     assigneeUserId?: string | null;
+    assigneeLabel?: string | null;
     familyId?: string | null;
     priority?: string | null;
   };
 };
+
+/**
+ * Human label for a set of user ids, same fallback chain as
+ * listFamilyMemberLabels: the family nickname, then the profile name, then the
+ * local part of the email, then a short uid. Resolved here so every page that
+ * renders an agenda row shows a name rather than a uuid.
+ */
+async function resolveAssigneeLabels(
+  userIds: string[],
+  familyId: string | null,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (ids.length === 0) return out;
+
+  if (familyId) {
+    const { data: members } = await supabaseAdmin
+      .from("family_members")
+      .select("user_id, display_name")
+      .eq("family_id", familyId)
+      .in("user_id", ids);
+    for (const m of members ?? []) {
+      const nick = (m.display_name as string | null)?.trim();
+      if (nick) out.set(m.user_id as string, nick);
+    }
+  }
+
+  const missing = ids.filter((id) => !out.has(id));
+  if (missing.length > 0) {
+    const { data: profs } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", missing);
+    for (const p of profs ?? []) {
+      const name = (p.display_name as string | null)?.trim();
+      if (name) out.set(p.id as string, name);
+    }
+  }
+
+  for (const id of ids.filter((x) => !out.has(x))) {
+    try {
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+      const meta = u.user?.user_metadata as Record<string, string> | undefined;
+      out.set(
+        id,
+        meta?.["full_name"] || meta?.["name"] || u.user?.email?.split("@")[0] || id.slice(0, 6),
+      );
+    } catch {
+      out.set(id, id.slice(0, 6));
+    }
+  }
+  return out;
+}
 
 function isFutureOrToday(iso: string | null | undefined): boolean {
   if (!iso) return true;
@@ -203,6 +257,16 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
     }
 
     items.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
+    const labels = await resolveAssigneeLabels(
+      items.map((i) => i.meta.assigneeUserId).filter((x): x is string => !!x),
+      familyId ?? null,
+    );
+    for (const it of items) {
+      if (it.meta.assigneeUserId) {
+        it.meta.assigneeLabel = labels.get(it.meta.assigneeUserId) ?? null;
+      }
+    }
 
     return { items, familyId: familyId ?? null };
   });

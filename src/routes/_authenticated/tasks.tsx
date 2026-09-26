@@ -1,6 +1,8 @@
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { listFamilyMemberLabels } from "@/lib/family.functions";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/tasks")({
 function TasksPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const runMemberLabels = useServerFn(listFamilyMemberLabels);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -57,6 +60,24 @@ function TasksPage() {
       return data?.family_id ?? null;
     },
   });
+
+  // Assignee names for shared family reminders, so the list shows a person
+  // rather than nothing. Same resolver the family page uses.
+  const { data: memberLabels } = useQuery({
+    enabled: !!family,
+    queryKey: ["family-member-labels", family],
+    queryFn: async () => {
+      const res = (await runMemberLabels({ data: { familyId: family! } })) as {
+        members: Array<{ userId: string; label: string }>;
+      };
+      return res.members ?? [];
+    },
+  });
+
+  const assigneeLabel = (userId: string | null | undefined) => {
+    if (!userId) return null;
+    return memberLabels?.find((m) => m.userId === userId)?.label ?? userId.slice(0, 6);
+  };
 
   const { data: tasks } = useQuery({
     queryKey: ["reminders"],
@@ -236,6 +257,11 @@ function TasksPage() {
                       {r.recurrence === "monthly" ? t.monthly : t.yearly}
                     </Badge>
                   )}
+                  {assigneeLabel(r.assignee_user_id) ? (
+                    <span>
+                      {t.r4Assignee}: {assigneeLabel(r.assignee_user_id)}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="mt-1.5">
                   <AttachmentControl
