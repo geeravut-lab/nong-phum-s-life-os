@@ -2,6 +2,7 @@ node_modules
 dist
 .output
 .netlify
+.claude
 .vinxi
 pnpm-lock.yaml
 package-lock.json
