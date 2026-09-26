@@ -14,6 +14,7 @@ import {
   type RoutineRow,
 } from "@/lib/routines.functions";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { TaskEditDialog, type EditableTask } from "@/components/TaskEditDialog";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,7 @@ function FamilyPage() {
   const [routineSubject, setRoutineSubject] = useState("");
   const [routineInterval, setRoutineInterval] = useState("1");
   const [routineGrace, setRoutineGrace] = useState("2");
+  const [editTask, setEditTask] = useState<EditableTask | null>(null);
   const [editEvent, setEditEvent] = useState<{
     id: string;
     title: string;
@@ -145,7 +147,10 @@ function FamilyPage() {
           .select("id, title, due_date")
           .eq("is_shared", true)
           .eq("kind", "analyzed"),
-        supabase.from("reminders").select("id, title, due_at").eq("is_shared", true),
+        supabase
+          .from("reminders")
+          .select("id, title, due_at, notes, assignee_user_id")
+          .eq("is_shared", true),
         supabase.from("expenses").select("id, title, amount, spent_on").eq("is_shared", true),
       ]);
       return {
@@ -488,9 +493,36 @@ function FamilyPage() {
                 <p className="mb-2 text-xs font-medium text-muted-foreground">{t.tasksTitle}</p>
                 <ul className="space-y-1 text-sm">
                   {sharedItems?.tasks.map((r) => (
-                    <li key={r.id} className="truncate">
-                      {r.title}
-                      {r.due_at ? ` · ${formatDay(new Date(r.due_at), lang)}` : ""}
+                    <li key={r.id} className="flex items-start justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="block truncate">
+                          {r.title}
+                          {r.due_at ? ` · ${formatDay(new Date(r.due_at), lang)}` : ""}
+                        </span>
+                        {r.assignee_user_id ? (
+                          <span className="block text-xs text-muted-foreground">
+                            {t.r4Assignee}: {labelFor(r.assignee_user_id)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0"
+                        aria-label={t.edit}
+                        title={t.edit}
+                        onClick={() =>
+                          setEditTask({
+                            id: r.id,
+                            title: r.title,
+                            dueAt: r.due_at,
+                            notes: r.notes ?? "",
+                            assigneeUserId: r.assignee_user_id ?? null,
+                          })
+                        }
+                      >
+                        {t.edit}
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -925,6 +957,16 @@ function FamilyPage() {
           </div>
         </div>
       )}
+      <TaskEditDialog
+        task={editTask}
+        members={(memberLabels ?? []).map((m) => ({ userId: m.userId, label: m.label }))}
+        onClose={() => setEditTask(null)}
+        onSaved={() => {
+          void qc.invalidateQueries({ queryKey: ["family-shared", familyId] });
+          void qc.invalidateQueries({ queryKey: ["reminders"] });
+          void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+        }}
+      />
     </AppShell>
   );
 }

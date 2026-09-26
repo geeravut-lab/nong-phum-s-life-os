@@ -283,6 +283,8 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
         startsAt: z.string().optional(),
         notes: z.string().max(1000).optional(),
         status: z.string().max(40).optional(),
+        /** Reassign a family task. null clears the assignee. */
+        assigneeUserId: z.string().uuid().nullable().optional(),
       })
       .parse(input),
   )
@@ -313,6 +315,20 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
       } else if (r.user_id !== uid) {
         throw new Error("Forbidden");
       }
+      // Reassigning is only meaningful inside a family, and the new assignee
+      // has to be a member of the one this reminder is shared with - otherwise
+      // a task could be pushed onto someone outside it.
+      if (data.assigneeUserId !== undefined && data.assigneeUserId !== null) {
+        if (!r.family_id) throw new Error("ต้องแชร์กับครอบครัวก่อนจึงจะมอบหมายได้");
+        const { data: mem } = await supabaseAdmin
+          .from("family_members")
+          .select("id")
+          .eq("family_id", r.family_id as string)
+          .eq("user_id", data.assigneeUserId)
+          .maybeSingle();
+        if (!mem) throw new Error("ผู้รับมอบหมายไม่ได้อยู่ในครอบครัวนี้");
+      }
+
       const { error: up } = await supabaseAdmin
         .from("reminders")
         .update({
@@ -320,6 +336,7 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
           ...(data.startsAt !== undefined ? { due_at: data.startsAt } : {}),
           ...(data.notes !== undefined ? { notes: data.notes } : {}),
           ...(data.status !== undefined ? { status: data.status } : {}),
+          ...(data.assigneeUserId !== undefined ? { assignee_user_id: data.assigneeUserId } : {}),
         })
         .eq("id", data.id);
       if (up) throw new Error(up.message);

@@ -4,10 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listFamilyMemberLabels } from "@/lib/family.functions";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PhumQuickBar } from "@/components/PhumQuickBar";
+import { TaskEditDialog, type EditableTask } from "@/components/TaskEditDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ function TasksPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const runMemberLabels = useServerFn(listFamilyMemberLabels);
+  const [editTask, setEditTask] = useState<EditableTask | null>(null);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -296,6 +298,23 @@ function TasksPage() {
                     />
                   </label>
                 )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={t.edit}
+                  title={t.edit}
+                  onClick={() =>
+                    setEditTask({
+                      id: r.id,
+                      title: r.title,
+                      dueAt: r.due_at,
+                      notes: r.notes ?? "",
+                      assigneeUserId: r.assignee_user_id ?? null,
+                    })
+                  }
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => toggle(r)}>
                   {r.status === "done" ? t.reopen : doneLabel(r)}
                 </Button>
@@ -308,6 +327,15 @@ function TasksPage() {
           {t.tasksEmpty}
         </p>
       )}
+      <TaskEditDialog
+        task={editTask}
+        members={(memberLabels ?? []).map((m) => ({ userId: m.userId, label: m.label }))}
+        onClose={() => setEditTask(null)}
+        onSaved={() => {
+          void qc.invalidateQueries({ queryKey: ["reminders"] });
+          void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+        }}
+      />
     </AppShell>
   );
 }
