@@ -53,6 +53,7 @@
 - [ ] เปลี่ยน `package.json` → `"name": "nong-phum-life-os"`
 - [ ] ถอด `@lovable.dev/cloud-auth-js` และ `@lovable.dev/vite-tanstack-config` ออกจาก dependencies
 - [ ] `npm install` → ต้องได้ `package-lock.json` ใหม่ที่ไม่มี URL ของ lovable-core-prod เลย (ตรวจด้วย `grep lovable package-lock.json` ต้องไม่เจอ)
+- [ ] **ตรวจด้วย `npm ci` ไม่ใช่แค่ `npm install`** — Netlify รัน `npm ci` เวลา build ซึ่ง**บังคับว่า lockfile ต้องตรงกับ `package.json` เป๊ะ** ถ้าไม่ตรงมันไม่ยอมซ่อมให้เหมือน `npm install` แต่ล้มทั้ง build ทันที ทุกครั้งที่แก้ dependency ต้อง commit `package-lock.json` ที่ regenerate แล้วไปด้วยเสมอ (ดูข้อ 5 ในหัวข้อ "สิ่งที่ทำต่างจากแผนเดิม")
 - [ ] `.env` ปัจจุบัน**ถูก track ใน git อยู่** (ตรวจด้วย `git ls-files | grep '^\.env$'`) และมี `SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY` ของ Lovable Cloud project เดิมอยู่ในนั้น — รัน `git rm --cached .env` แล้วเพิ่ม `.env` เข้า `.gitignore` (ปัจจุบัน `.gitignore` มีแค่ `*.local` ซึ่งไม่ครอบคลุม `.env` เปล่าๆ) **หมายเหตุ: `git rm --cached` เอาไฟล์ออกจาก commit ถัดไปเท่านั้น ค่าเดิมยังอยู่ใน git history ทุก commit ก่อนหน้า** — เมื่อเลิกใช้ Lovable Cloud project เดิมแล้ว ให้ไป revoke/หมุน key ตัวนั้นฝั่ง Lovable Cloud ด้วย อย่าพึ่งแค่การลบออกจาก working tree
 - [ ] สร้าง `.env.example` ที่มีชื่อ env ครบตามตารางในขั้น 2.7 (ค่าว่าง ไม่ใส่ค่าจริง) — เป็นเงื่อนไขหนึ่งใน Definition of Done (หัวข้อ 4)
 
@@ -87,7 +88,7 @@ export default defineConfig({
 - [ ] `npm i -D @netlify/vite-plugin-tanstack-start`
 - [ ] ตรวจว่า alias `@/*` ยังทำงาน (มาจาก `tsconfig.json` → `paths` ผ่าน `vite-tsconfig-paths`)
 - [ ] ตรวจว่า `npm run dev` ขึ้นได้และหน้าแรก render
-- [ ] `package.json` ปัจจุบันมี `nitro` เป็น **explicit devDependency ปักเวอร์ชัน beta** (`3.0.260603-beta`) อยู่แล้ว ไม่ใช่แค่สิ่งที่ `@lovable.dev/vite-tanstack-config` ดึงมาเฉยๆ — **ให้ลอง `@netlify/vite-plugin-tanstack-start` เป็นตัวหลักก่อนเสมอ** ถ้า build/deploy บน Netlify ใช้ได้ ให้ถอด `nitro` ออกจาก devDependencies ไปเลย ถ้าใช้ไม่ได้ (ยังต้องพึ่ง nitro preset) ให้เช็คเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงก่อนตัดสินใจตั้งค่า preset ห้ามเดา
+- [x] ~~`package.json` ปัจจุบันมี `nitro` เป็น **explicit devDependency ปักเวอร์ชัน beta** (`3.0.260603-beta`)~~ — **ถอดออกแล้ว** ตรวจแล้วว่า `@netlify/vite-plugin-tanstack-start` ทำงานเป็นตัวหลักได้จริง: ไม่มีอะไรใน repo อ้างถึง `nitro` เลย (เหลือแค่ `.nitro` ใน `.gitignore`) `npm ls nitro` ยืนยันว่าไม่มี package ไหน depend ถึง และหลัง `npm uninstall nitro` (ถอดออก 13 packages) `npm run build` ยัง exit 0 พร้อม emit SSR handler ที่ `.netlify/v1/functions/server.mjs` ครบตามเดิม จึงไม่ต้องตั้ง preset เองเลย
 
 > หมายเหตุ: TanStack Start เวอร์ชันนี้เปลี่ยนวิธีตั้ง preset มาหลายรอบ (เดิม `app.config.ts` → `server.preset`, ต่อมา `nitro/vite`, ปัจจุบัน Netlify มี plugin เฉพาะ) **ให้ยึดเอกสารทางการของ TanStack Start เวอร์ชันที่ติดตั้งจริงเป็นหลัก อย่ายึดตัวอย่างข้างบนถ้าขัดกัน**
 
@@ -324,6 +325,13 @@ repo ไม่มีไฟล์รูปเลย (`public/` มีแค่ `f
 
 **4. `netlify.toml` ต้องอยู่บน production branch ถึงจะถูกอ่าน**
 Netlify อ่าน `netlify.toml` จาก branch ที่กำลัง deploy ตราบใดที่ไฟล์ยังอยู่แค่บน `phase-0/*` **build ของ production จะยังใช้ค่าจาก UI อยู่** ตรวจได้จาก deploy log ที่ฟิลด์ `commandOrigin` — ถ้าขึ้น `ui` แปลว่ายังไม่ได้อ่านไฟล์ ถ้าขึ้น `config` คืออ่านจาก `netlify.toml` แล้ว **ต้อง merge เข้า `main` ก่อน production build ถึงจะใช้ค่าในไฟล์**
+
+**5. `package-lock.json` หลุด sync กับ `package.json` (เจอทีหลัง — เป็น blocker ของ deploy ตัวจริง)**
+ตอนตั้ง environment ใหม่แล้วลง dependency จากศูนย์พบว่า **`npm ci` ล้มทันที** ด้วย `Missing: ... from lock file` รวม 19 รายการ ทั้งหมดเป็น transitive dependency ของฝั่ง Netlify (`@netlify/blobs`, `@netlify/otel`, `@netlify/dev-utils`, `@netlify/runtime-utils`, `@opentelemetry/*`, `chokidar`, `readdirp`, `semver`) แปลว่า lockfile ถูก generate ไว้**ก่อน**ที่ `@netlify/functions` / `@netlify/vite-plugin-tanstack-start` จะถูกเพิ่ม/อัปเวอร์ชัน แล้วไม่ได้ regenerate ตาม
+
+**อันตรายเพราะมันไม่โผล่ในเครื่อง dev เลย** — `npm install` ซ่อม lockfile ให้เงียบ ๆ และ `npm run dev` / `npm run build` ก็ผ่านหมด แต่ **Netlify ใช้ `npm ci`** ซึ่งตั้งใจให้ fail แทนที่จะซ่อม → production build จะพังตั้งแต่ขั้นลง dependency ยังไม่ถึง vite เลย ทั้งที่ DoD ข้อ 3 (ไม่มี registry ของ Lovable) ผ่านอยู่แล้ว
+
+แก้ด้วยการรัน `npm install` ให้ regenerate lockfile (`package.json` ไม่ถูกแก้เลย มีแต่ lockfile +342/-90 บรรทัด) แล้วยืนยันซ้ำด้วยการลบ `node_modules` ทิ้งและรัน `npm ci` ใหม่จนผ่านสะอาด
 
 ### ข้อมูลทดสอบ
 
