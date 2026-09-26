@@ -157,6 +157,35 @@ function LocalPage() {
     return m;
   }, [dealsQ.data]);
 
+  /**
+   * Single entry point to Google Places for this page.
+   *
+   * Never swallows a failure: the server returns { places: [], message } for a
+   * missing key or an API error, and a thrown request is reported too. The
+   * message is rendered whether or not any place came back - previously it sat
+   * inside the results block, so it only showed when it was not needed.
+   */
+  const loadGooglePlaces = async (opts: { lat?: number; lng?: number; query?: string }) => {
+    try {
+      const res = (await runGoogle({
+        data: {
+          ...(opts.lat != null && opts.lng != null ? { lat: opts.lat, lng: opts.lng } : {}),
+          ...(opts.query ? { query: opts.query } : {}),
+          radiusKm,
+          lang: lang === "en" ? "en" : "th",
+        },
+      })) as {
+        places: typeof googlePlaces;
+        message: string | null;
+      };
+      setGooglePlaces(res.places ?? []);
+      setGoogleMsg(res.message);
+    } catch (e) {
+      setGooglePlaces([]);
+      setGoogleMsg(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const useMyLocation = () => {
     if (!navigator.geolocation) {
       toast.error(t.localNoGeo);
@@ -169,18 +198,13 @@ function LocalPage() {
           const lng = pos.coords.longitude;
           setCoords({ lat, lng });
           toast.success(t.localGeoOk);
-          try {
-            const res = (await runGoogle({
-              data: { lat, lng, radiusKm, lang: lang === "en" ? "en" : "th" },
-            })) as {
-              places: typeof googlePlaces;
-              message: string | null;
-            };
-            setGooglePlaces(res.places ?? []);
-            setGoogleMsg(res.message);
-          } catch {
-            /* ignore */
-          }
+          // Carry the typed query along if there is one, so "use my location"
+          // after typing searches for that text nearby instead of ignoring it.
+          await loadGooglePlaces({
+            lat,
+            lng,
+            ...(query.trim().length >= 2 ? { query: query.trim() } : {}),
+          });
         })();
       },
       () => toast.error(t.localGeoFail),
@@ -196,6 +220,13 @@ function LocalPage() {
         data: { query: query.trim(), lang: lang === "en" ? "en" : "th" },
       });
       setIntent(result);
+      // The AI intent parser only ranks places already in the database. Search
+      // has to ask Google too, or typing a query never reaches it and the page
+      // just reports "ranked" over local rows.
+      await loadGooglePlaces({
+        query: query.trim(),
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+      });
       toast.success(t.localSearchDone);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.error);
@@ -303,7 +334,7 @@ function LocalPage() {
         )}
       </section>
 
-      {googlePlaces.length > 0 && (
+      {(googlePlaces.length > 0 || googleMsg) && (
         <section className="mb-5 space-y-2">
           <h2 className="text-sm font-semibold">Google Places</h2>
           {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
