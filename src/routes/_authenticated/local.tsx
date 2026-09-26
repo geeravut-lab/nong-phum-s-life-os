@@ -26,6 +26,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { parseLocalQuery } from "@/lib/local.functions";
+import { listUpcomingLocalEvents, type LocalEventRow } from "@/lib/local-events.functions";
+import { mapsRouteUrl, orderStops, routeDistanceKm, type Stop } from "@/lib/itinerary";
 import {
   rankPlaces,
   type LocalDeal,
@@ -45,6 +47,7 @@ function LocalPage() {
   const qc = useQueryClient();
   const runParse = useServerFn(parseLocalQuery);
   const runGoogle = useServerFn(searchGooglePlaces);
+  const runEvents = useServerFn(listUpcomingLocalEvents);
   const [googlePlaces, setGooglePlaces] = useState<
     Array<{
       id: string;
@@ -65,6 +68,9 @@ function LocalPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState(5);
   const [openOnly, setOpenOnly] = useState(false);
+  // The itinerary is a local selection: places and events the user picked for
+  // one outing. Not persisted - it is a scratch plan, not a saved document.
+  const [plan, setPlan] = useState<Stop[]>([]);
   const [reviewPlaceId, setReviewPlaceId] = useState<string | null>(null);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -212,6 +218,29 @@ function LocalPage() {
     );
   };
 
+  const eventsQ = useQuery({
+    queryKey: ["local-events", intent?.budgetMax ?? null, intent?.withKids ?? false],
+    queryFn: async () => {
+      const res = (await runEvents({
+        data: {
+          withinDays: 14,
+          ...(intent?.budgetMax != null ? { budgetMax: intent.budgetMax } : {}),
+          ...(intent?.withKids ? { kidFriendly: true } : {}),
+        },
+      })) as { events: LocalEventRow[] };
+      return res.events ?? [];
+    },
+  });
+
+  const inPlan = (id: string) => plan.some((p) => p.id === id);
+
+  const addToPlan = (stop: Stop) => {
+    setPlan((cur) => (cur.some((p) => p.id === stop.id) ? cur : [...cur, stop]));
+  };
+
+  const orderedPlan = useMemo(() => orderStops(plan, coords), [plan, coords]);
+  const planKm = useMemo(() => routeDistanceKm(orderedPlan, coords), [orderedPlan, coords]);
+
   const search = async () => {
     if (query.trim().length < 2) return;
     setBusy(true);
@@ -334,6 +363,110 @@ function LocalPage() {
         )}
       </section>
 
+      {/* Events - the time-bound half of this module */}
+      <section className="mb-5 space-y-2">
+        <h2 className="text-sm font-semibold">{t.evtTitle}</h2>
+        {eventsQ.isLoading ? (
+          <Skeleton className="h-20 w-full" />
+        ) : (eventsQ.data ?? []).length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t.evtNone}</p>
+        ) : (
+          <ul className="space-y-2">
+            {(eventsQ.data ?? []).map((e) => (
+              <li key={e.id} className="rounded-xl border border-border bg-card p-3 text-sm">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <span className="font-medium">{e.title}</span>
+                  <div className="flex shrink-0 flex-wrap gap-1">
+                    {e.kidFriendly ? <Badge variant="secondary">{t.evtKidFriendly}</Badge> : null}
+                    <Badge variant="outline">
+                      {e.priceMin == null && e.priceMax == null
+                        ? t.evtFree
+                        : `฿${e.priceMin ?? 0}${e.priceMax != null && e.priceMax !== e.priceMin ? `–${e.priceMax}` : ""}`}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(e.startsAt).toLocaleString(lang === "th" ? "th-TH" : "en-US", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  {e.area ? ` · ${e.area}` : ""}
+                </p>
+                {e.description ? (
+                  <p className="mt-1 text-xs line-clamp-2">{e.description}</p>
+                ) : null}
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  variant="outline"
+                  disabled={inPlan(e.id)}
+                  onClick={() =>
+                    addToPlan({
+                      id: e.id,
+                      title: e.title,
+                      lat: e.lat,
+                      lng: e.lng,
+                      startsAt: e.startsAt,
+                      address: e.address,
+                    })
+                  }
+                >
+                  {inPlan(e.id) ? t.evtInPlan : t.evtAddToPlan}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Multi-stop itinerary */}
+      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.planTitle}</h2>
+        {plan.length === 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">{t.planEmpty}</p>
+        ) : (
+          <>
+            <p className="mt-1 mb-2 text-xs text-muted-foreground">{t.planNote}</p>
+            <ol className="mb-2 space-y-1 text-sm">
+              {orderedPlan.map((st, i) => (
+                <li key={st.id} className="flex items-center justify-between gap-2">
+                  <span>
+                    {i + 1}. {st.title}
+                    {st.startsAt
+                      ? ` · ${new Date(st.startsAt).toLocaleTimeString(lang === "th" ? "th-TH" : "en-US", { hour: "2-digit", minute: "2-digit" })}`
+                      : ""}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPlan((cur) => cur.filter((x) => x.id !== st.id))}
+                  >
+                    {t.planRemove}
+                  </Button>
+                </li>
+              ))}
+            </ol>
+            {planKm != null ? (
+              <p className="mb-2 text-xs text-muted-foreground">
+                {t.planDistance} {planKm} km
+              </p>
+            ) : null}
+            <div className="flex gap-2">
+              <Button size="sm" asChild>
+                <a href={mapsRouteUrl(orderedPlan, coords)} target="_blank" rel="noreferrer">
+                  {t.planOpenRoute}
+                </a>
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setPlan([])}>
+                {t.planClear}
+              </Button>
+            </div>
+          </>
+        )}
+      </section>
+
       {(googlePlaces.length > 0 || googleMsg) && (
         <section className="mb-5 space-y-2">
           <h2 className="text-sm font-semibold">Google Places</h2>
@@ -346,16 +479,34 @@ function LocalPage() {
                   {g.rating != null ? <Badge variant="secondary">{g.rating}</Badge> : null}
                 </div>
                 <p className="text-xs text-muted-foreground">{g.address}</p>
-                {g.mapsUrl ? (
-                  <a
-                    className="mt-1 inline-block text-xs text-primary underline"
-                    href={g.mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {g.mapsUrl ? (
+                    <a
+                      className="text-xs text-primary underline"
+                      href={g.mapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t.localOpenMap}
+                    </a>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={inPlan(g.id)}
+                    onClick={() =>
+                      addToPlan({
+                        id: g.id,
+                        title: g.name,
+                        lat: g.lat,
+                        lng: g.lng,
+                        address: g.address,
+                      })
+                    }
                   >
-                    {t.localOpenMap}
-                  </a>
-                ) : null}
+                    {inPlan(g.id) ? t.evtInPlan : t.evtAddToPlan}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

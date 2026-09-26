@@ -63,8 +63,10 @@
 
 **ช่องว่างสำคัญ:** สเปก v2 หน้า 2 กำหนดน้ำหนัก Match Score ชัดเจน (ทักษะ 35% / ระยะทาง 20% /
 เวลาว่าง 15% / ราคา 10% / Rating 10% / ประสบการณ์ 10%) — ต้องตรวจว่าที่ทำไว้ตรงน้ำหนักนี้หรือไม่
-และสเปกสั่งว่า **Admin ต้องเลือกได้ว่าจะเก็บรายได้แบบ Commission หรือ Service Fee (อย่างใดอย่างหนึ่ง
-default = Commission)** — ยังไม่เห็นสวิตช์เลือกโมเดลนี้ใน `/admin`
+**แก้ข้อมูล (2026-09-26):** ตอนแรกผมเขียนว่ายังไม่มีสวิตช์เลือกโมเดลรายได้ — **ผิด มีครบแล้ว**
+`/admin/marketplace` ตั้งได้ทั้ง revenue_mode (commission / service_fee), commission_rate, service_fee,
+cancel_fee_pct และ escrow_enabled · `payment.server.ts` คิดถูกทั้งสองแบบ (commission หักจากผู้รับงาน,
+service_fee บวกเพิ่มให้ผู้จ่าย) · default เป็น commission rate 5% ตามที่สเปกสั่ง
 
 ---
 
@@ -298,7 +300,7 @@ Privacy policy consent records 🟡
 3. **Family Radar ตัวจริง** (Routine Tracking + Change Detection) — เป็นเหตุผลที่ระบบนี้ถูกจัดอันดับ 3
    ในสเปก ปัจจุบันมีแต่ Care Check-in แบบกดเอง
 4. **Share ผลสิทธิฉัน** — กลไก viral ที่สเปกเน้นซ้ำ 2 ที่ ทำได้ไม่ยาก
-5. **Admin เลือกโมเดลรายได้ Commission / Service Fee** — สเปก v2 สั่งไว้ตรง ๆ พร้อม default
+5. ~~Admin เลือกโมเดลรายได้ Commission / Service Fee~~ — **ตรวจใหม่แล้วมีครบ** ที่ `/admin/marketplace`
 6. **Local Event + Route/Itinerary** — เป็นแกนของ use case ตัวอย่างในสเปก ("เย็นนี้พาลูกไปไหน")
 7. **พินัยกรรมและมรดก (Will & Estate)** — 1 ใน 12 หัวข้อที่สเปก Life Legacy บอกว่าผู้ใช้ต้องเห็น
    _(ทำโดยเก็บ "สำเนาและตำแหน่งของฉบับจริง" เท่านั้น ไม่ใช่ระบบทำพินัยกรรม — ดูหลักการใน

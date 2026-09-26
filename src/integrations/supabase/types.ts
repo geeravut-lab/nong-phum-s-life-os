@@ -1412,6 +1412,72 @@ export type Database = {
         ];
       };
 
+      local_events: {
+        Row: {
+          address: string | null;
+          area: string | null;
+          category: string;
+          created_at: string;
+          description: string;
+          ends_at: string | null;
+          id: string;
+          is_active: boolean;
+          kid_friendly: boolean;
+          lat: number | null;
+          lng: number | null;
+          maps_url: string | null;
+          owner_user_id: string;
+          place_id: string | null;
+          price_max: number | null;
+          price_min: number | null;
+          starts_at: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          address?: string | null;
+          area?: string | null;
+          category?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          kid_friendly?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          maps_url?: string | null;
+          owner_user_id: string;
+          place_id?: string | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          starts_at: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          address?: string | null;
+          area?: string | null;
+          category?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          kid_friendly?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          maps_url?: string | null;
+          owner_user_id?: string;
+          place_id?: string | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          starts_at?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       local_places: {
         Row: {
           address: string | null;
