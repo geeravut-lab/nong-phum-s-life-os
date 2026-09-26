@@ -1,6 +1,7 @@
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { persona } from "./ai-gateway.server";
 import { providerCapabilities, resolveProvider, withProviderFallback } from "./ai-provider.server";
 import { APP_TIME_ZONE, APP_UTC_OFFSET, todayInBangkok } from "./time";
@@ -127,7 +128,7 @@ const ActionSchema = z.object({
 
 export type PhumAction = z.infer<typeof ActionSchema>["action"];
 
-type Db = SupabaseClient<any, "public", any>;
+type Db = SupabaseClient<Database>;
 
 async function loadContext(supabase: Db, userId: string) {
   const [reminders, expenses, incomes, documents, benefitProfile, myBenefits] = await Promise.all([

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 // Self-service account deletion. The database cascade (phase 1.2 migration)
@@ -12,7 +13,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 //   3. remove the user's files from storage, which Postgres knows nothing about
 // and it writes one audit row before the user disappears.
 
-type Db = SupabaseClient<any, "public", any>;
+type Db = SupabaseClient<Database>;
 
 // Tables with a user_id column that will be cascaded. profiles/user_roles are
 // implied and not interesting to the user; families is handled separately.

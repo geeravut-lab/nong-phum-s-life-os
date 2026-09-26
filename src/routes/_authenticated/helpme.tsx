@@ -1113,7 +1113,7 @@ function HelperTab() {
       {(assignedJobs ?? []).length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold">{t.payAssignedJobs ?? "งานของฉัน"}</h2>
-          {(assignedJobs ?? []).map((job: any) => {
+          {(assignedJobs ?? []).map((job) => {
             const pays = job.job_payments
               ? Array.isArray(job.job_payments)
                 ? job.job_payments
@@ -1146,17 +1146,17 @@ function HelperTab() {
         </section>
       )}
 
-      {(myOffers ?? []).filter((o: any) => o.status === "pending").length > 0 && (
+      {(myOffers ?? []).filter((o) => o.status === "pending").length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold">{t.myPendingOffers}</h2>
           {(myOffers ?? [])
-            .filter((o: any) => o.status === "pending")
-            .map((o: any) => (
+            .filter((o) => o.status === "pending")
+            .map((o) => (
               <article
                 key={o.id}
                 className="rounded-2xl border border-border bg-card p-4 shadow-soft"
               >
-                <h3 className="font-medium">{(o.jobs as any)?.title ?? o.job_id.slice(0, 8)}</h3>
+                <h3 className="font-medium">{o.jobs?.title ?? o.job_id.slice(0, 8)}</h3>
                 <p className="text-sm text-muted-foreground">
                   {o.price != null ? `${o.price} ${t.baht}` : ""}{" "}
                   {o.message ? `· ${o.message}` : ""}
