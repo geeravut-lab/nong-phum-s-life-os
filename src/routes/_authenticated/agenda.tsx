@@ -98,7 +98,10 @@ function AgendaPage() {
     },
   });
 
-  const items = agendaQ.data ?? [];
+  // Memoised so the `?? []` fallback does not mint a fresh array on every
+  // render, which would invalidate the byDay memo below while the query
+  // has no data yet.
+  const items = useMemo(() => agendaQ.data ?? [], [agendaQ.data]);
 
   const byDay = useMemo(() => {
     const m = new Map<string, AgendaItem[]>();
