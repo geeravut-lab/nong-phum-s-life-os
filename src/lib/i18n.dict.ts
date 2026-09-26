@@ -558,6 +558,9 @@ const th = {
   localPlaceSaved: "บันทึกสถานที่แล้ว",
   localMyPlaces: "สถานที่ของฉัน",
   localNoPlaces: "ยังไม่มีสถานที่",
+  localDeletePlaceConfirm:
+    "ลบสถานที่นี้? โปรโมชันทั้งหมดของสถานที่นี้จะถูกลบด้วย และย้อนกลับไม่ได้",
+  localDeleteDealConfirm: "ลบโปรโมชันนี้?",
   localAddDeal: "เพิ่มโปรโมชัน",
   localDealTitle: "ชื่อโปร",
   localDealDesc: "รายละเอียด",
@@ -1619,6 +1622,9 @@ const en = {
   localPlaceSaved: "Place saved",
   localMyPlaces: "My places",
   localNoPlaces: "No places yet",
+  localDeletePlaceConfirm:
+    "Delete this place? All of its promotions will be deleted too. This cannot be undone.",
+  localDeleteDealConfirm: "Delete this promotion?",
   localAddDeal: "Add a deal",
   localDealTitle: "Deal title",
   localDealDesc: "Details",

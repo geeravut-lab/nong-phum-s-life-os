@@ -248,11 +248,17 @@ function TasksPage() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {family && (
-                  <Switch
-                    checked={r.is_shared}
-                    onCheckedChange={(v) => share(r.id, v)}
-                    aria-label={t.shared}
-                  />
+                  // The switch carried only an aria-label, so sighted users saw
+                  // an unlabelled toggle next to the done button and could not
+                  // tell what it did. The text makes the purpose visible.
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="hidden sm:inline">{t.shared}</span>
+                    <Switch
+                      checked={r.is_shared}
+                      onCheckedChange={(v) => share(r.id, v)}
+                      aria-label={t.shared}
+                    />
+                  </label>
                 )}
                 <Button size="sm" variant="outline" onClick={() => toggle(r)}>
                   {r.status === "done" ? t.reopen : doneLabel(r)}

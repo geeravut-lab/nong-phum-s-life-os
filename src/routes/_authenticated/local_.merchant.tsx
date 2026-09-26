@@ -233,8 +233,28 @@ function MerchantDashboardPage() {
     }
   };
 
+  const deletePlace = async (id: string) => {
+    // local_deals.place_id is ON DELETE CASCADE, so the promotions go with it.
+    if (!window.confirm(t.localDeletePlaceConfirm)) return;
+    const { error } = await supabase
+      .from("local_places")
+      .delete()
+      .eq("id", id)
+      .eq("owner_user_id", user!.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (editingPlaceId === id) setEditingPlaceId(null);
+    void qc.invalidateQueries({ queryKey: ["my-local-places", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
+    void qc.invalidateQueries({ queryKey: ["local-deals"] });
+    void qc.invalidateQueries({ queryKey: ["local-places"] });
+    toast.success(t.saved);
+  };
+
   const deleteDeal = async (id: string) => {
-    if (!confirm("ลบโปรโมชันนี้?")) return;
+    if (!window.confirm(t.localDeleteDealConfirm)) return;
     const { error } = await supabase.from("local_deals").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
@@ -423,6 +443,9 @@ function MerchantDashboardPage() {
                       }}
                     >
                       {t.edit}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => void deletePlace(p.id)}>
+                      {t.delete}
                     </Button>
                   </div>
                 </div>
