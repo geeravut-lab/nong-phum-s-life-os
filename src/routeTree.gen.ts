@@ -12,8 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as MicTestRouteImport } from './routes/mic-test'
-import { Route as AuthenticatedOldChatRouteImport } from './routes/_authenticated/Old-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
@@ -55,16 +53,6 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any)
-const MicTestRoute = MicTestRouteImport.update({
-  id: '/mic-test',
-  path: '/mic-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedOldChatRoute = AuthenticatedOldChatRouteImport.update({
-  id: '/Old-chat',
-  path: '/Old-chat',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -214,8 +202,6 @@ const AuthenticatedLegacyInviteTokenRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
@@ -247,8 +233,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
@@ -282,8 +266,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/_authenticated/Old-chat': typeof AuthenticatedOldChatRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
@@ -317,8 +299,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/mic-test'
-    | '/Old-chat'
     | '/admin'
     | '/agenda'
     | '/benefits'
@@ -350,8 +330,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/mic-test'
-    | '/Old-chat'
     | '/admin'
     | '/agenda'
     | '/benefits'
@@ -384,8 +362,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/mic-test'
-    | '/_authenticated/Old-chat'
     | '/_authenticated/admin'
     | '/_authenticated/agenda'
     | '/_authenticated/benefits'
@@ -419,7 +395,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  MicTestRoute: typeof MicTestRoute
   LineCallbackRoute: typeof LineCallbackRoute
   MemorialTokenRoute: typeof MemorialTokenRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
@@ -447,20 +422,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/mic-test': {
-      id: '/mic-test'
-      path: '/mic-test'
-      fullPath: '/mic-test'
-      preLoaderRoute: typeof MicTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/Old-chat': {
-      id: '/_authenticated/Old-chat'
-      path: '/Old-chat'
-      fullPath: '/Old-chat'
-      preLoaderRoute: typeof AuthenticatedOldChatRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -655,7 +616,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedOldChatRoute: typeof AuthenticatedOldChatRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
@@ -683,7 +643,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedOldChatRoute: AuthenticatedOldChatRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
@@ -717,7 +676,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  MicTestRoute: MicTestRoute,
   LineCallbackRoute: LineCallbackRoute,
   MemorialTokenRoute: MemorialTokenRoute,
   SsoCallbackRoute: SsoCallbackRoute,
