@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, List, Loader2, Pencil, Sparkles } from "lucide-react";
+import { CalendarDays, List, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,6 @@ import {
   type AgendaItem,
 } from "@/lib/agenda.functions";
 
-function localDayKey(d: Date | string): string {
-  const x = typeof d === "string" ? new Date(d) : d;
-  const y = x.getFullYear();
-  const m = String(x.getMonth() + 1).padStart(2, "0");
-  const day = String(x.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({ meta: routeMeta("agenda") }),
   component: AgendaPage,
@@ -41,8 +33,21 @@ function startOfDay(d: Date) {
   return x;
 }
 
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
+/**
+ * Day bucket key in the viewer's own timezone.
+ *
+ * toISOString() would convert to UTC first, which shifts the date for any
+ * zone east of UTC: in Bangkok (UTC+7) a cell built as new Date(y, m, d) is
+ * local midnight, i.e. 17:00Z the day before, so its key came out one day
+ * early, while an event at 02:00 local fell into the previous day's bucket.
+ * Reading the local calendar fields keeps cells and events on the same day.
+ */
+function localDayKey(d: Date | string): string {
+  const x = typeof d === "string" ? new Date(d) : d;
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function AgendaPage() {
@@ -106,7 +111,7 @@ function AgendaPage() {
   const byDay = useMemo(() => {
     const m = new Map<string, AgendaItem[]>();
     for (const it of items) {
-      const k = ymd(new Date(it.startsAt));
+      const k = localDayKey(it.startsAt);
       const arr = m.get(k) ?? [];
       arr.push(it);
       m.set(k, arr);
@@ -123,6 +128,28 @@ function AgendaPage() {
       warranty: t.r3Warranty ?? "Warranty",
     };
     return map[s] ?? s;
+  };
+
+  // deleteAgendaItem only accepts these three; money and warranty rows are
+  // derived views with nothing of their own to remove.
+  const DELETABLE = ["task", "family_event", "helpme"] as const;
+  const canDelete = (it: AgendaItem) =>
+    it.editable && (DELETABLE as readonly string[]).includes(it.source);
+
+  const remove = async (it: AgendaItem) => {
+    if (!window.confirm(t.agendaDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDelete({
+        data: { source: it.source as (typeof DELETABLE)[number], id: it.id },
+      });
+      toast.success(t.agendaDeleted);
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const openEdit = (it: AgendaItem) => {
@@ -147,13 +174,13 @@ function AgendaPage() {
     for (let i = 0; i < startPad; i++) cells.push({ date: null, key: `e${i}` });
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(cursor.getFullYear(), cursor.getMonth(), d);
-      cells.push({ date, key: ymd(date) });
+      cells.push({ date, key: localDayKey(date) });
     }
     return cells;
   }, [cursor]);
 
   const selectedDayItems =
-    view === "month" || view === "day" ? (byDay.get(ymd(cursor)) ?? []) : items;
+    view === "month" || view === "day" ? (byDay.get(localDayKey(cursor)) ?? []) : items;
 
   return (
     <AppShell>
@@ -258,9 +285,9 @@ function AgendaPage() {
             ))}
             {monthCells.map((c) => {
               if (!c.date) return <div key={c.key} />;
-              const key = ymd(c.date);
+              const key = localDayKey(c.date);
               const count = byDay.get(key)?.length ?? 0;
-              const selected = ymd(cursor) === key;
+              const selected = localDayKey(cursor) === key;
               return (
                 <button
                   key={c.key}
@@ -304,6 +331,11 @@ function AgendaPage() {
                       minute: "2-digit",
                     })}
                   </p>
+                  {it.meta.assigneeLabel ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t.r4Assignee}: {it.meta.assigneeLabel}
+                    </p>
+                  ) : null}
                   {it.detail ? (
                     <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{it.detail}</p>
                   ) : null}
@@ -312,6 +344,18 @@ function AgendaPage() {
                   {it.editable && (
                     <Button size="sm" variant="outline" onClick={() => openEdit(it)}>
                       <Pencil className="size-3.5" />
+                    </Button>
+                  )}
+                  {canDelete(it) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      aria-label={t.delete}
+                      title={t.delete}
+                      onClick={() => void remove(it)}
+                    >
+                      <Trash2 className="size-3.5" />
                     </Button>
                   )}
                   <Link to={it.href} className="text-center text-[10px] text-primary underline">

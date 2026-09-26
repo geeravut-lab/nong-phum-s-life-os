@@ -7,6 +7,7 @@ import { ExternalLink, Loader2, Sparkles, Bell, CalendarClock } from "lucide-rea
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { createBenefitShare } from "@/lib/benefit-share.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,40 @@ function BenefitsPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runInterview = useServerFn(interviewBenefits);
+  const runShare = useServerFn(createBenefitShare);
+  const [shareMsg, setShareMsg] = useState("");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+
+  // Only the benefits the engine actually matched are shared, and only by id -
+  // the server resolves the text, so nothing typed here reaches a public page.
+  const shareResult = async () => {
+    const ids = matches.filter((m) => m.level !== "not").map((m) => m.benefit.id);
+    if (ids.length === 0) return;
+    setSharing(true);
+    try {
+      const res = (await runShare({
+        data: {
+          benefitIds: ids,
+          ...(shareMsg.trim() ? { message: shareMsg.trim() } : {}),
+          lang: lang === "en" ? "en" : "th",
+        },
+      })) as { token: string };
+      const url = `${window.location.origin}/benefits-share/${res.token}`;
+      setShareUrl(url);
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success(t.benShareCreated);
+      } catch {
+        // Clipboard can be blocked; the link is shown below either way.
+        toast.success(t.saved);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const [form, setForm] = useState<BenefitProfile>(emptyProfile);
   const [saving, setSaving] = useState(false);
@@ -466,6 +501,26 @@ function BenefitsPage() {
           {saving ? t.benInterviewRunning : t.benSaveProfile}
         </Button>
       </section>
+
+      {/* Shareable result - the growth loop the blueprint asks for */}
+      {matches.some((m) => m.level !== "not") ? (
+        <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-semibold">{t.benShareTitle}</h2>
+          <p className="mt-1 mb-2 text-xs text-muted-foreground">{t.benShareNote}</p>
+          <Input
+            className="mb-2"
+            placeholder={t.benShareMessage}
+            value={shareMsg}
+            onChange={(e) => setShareMsg(e.target.value)}
+          />
+          <Button size="sm" disabled={sharing} onClick={() => void shareResult()}>
+            {t.benShareButton}
+          </Button>
+          {shareUrl ? (
+            <p className="mt-2 break-all rounded-lg border border-border p-2 text-xs">{shareUrl}</p>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Matches */}
       <section className="space-y-3">

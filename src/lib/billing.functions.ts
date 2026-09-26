@@ -405,6 +405,51 @@ export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
   });
 
 /** Admin: mark premium payment paid and activate plan */
+/**
+ * Display labels for a set of user ids, for admin lists.
+ *
+ * Falls back display_name -> email -> first 6 of the uid. The email step has
+ * to run server-side: `profiles` has no email column, it lives in auth.users,
+ * which only the service-role client can read.
+ */
+export const adminLookupUserLabels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ userIds: z.array(z.string().uuid()).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = await admin();
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const ids = [...new Set(data.userIds)];
+    if (ids.length === 0) return { labels: {} as Record<string, string> };
+
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", ids);
+    const byId = new Map<string, string | null>();
+    for (const row of profiles ?? []) byId.set(row.id, row.display_name);
+
+    const labels: Record<string, string> = {};
+    for (const id of ids) {
+      const name = byId.get(id);
+      if (name && name.trim()) {
+        labels[id] = name.trim();
+        continue;
+      }
+      // Only reached for users without a display name, so this stays a small
+      // number of lookups rather than one per row in the list.
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+      labels[id] = u.user?.email ?? id.slice(0, 6);
+    }
+    return { labels };
+  });
+
 export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ paymentId: z.string().uuid() }).parse(input))

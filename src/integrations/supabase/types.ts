@@ -310,6 +310,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      benefit_shares: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          message: string;
+          revoked_at: string | null;
+          share_token: string;
+          snapshot: Json;
+          user_id: string;
+          view_count: number;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string;
+          revoked_at?: string | null;
+          share_token: string;
+          snapshot?: Json;
+          user_id: string;
+          view_count?: number;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string;
+          revoked_at?: string | null;
+          share_token?: string;
+          snapshot?: Json;
+          user_id?: string;
+          view_count?: number;
+        };
+        Relationships: [];
+      };
       benefits: {
         Row: {
           category: string;
@@ -795,6 +831,78 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      family_routines: {
+        Row: {
+          alerted_at: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string;
+          grace_days: number;
+          id: string;
+          interval_days: number;
+          is_active: boolean;
+          note: string;
+          subject_user_id: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          alerted_at?: string | null;
+          created_at?: string;
+          created_by: string;
+          family_id: string;
+          grace_days?: number;
+          id?: string;
+          interval_days?: number;
+          is_active?: boolean;
+          note?: string;
+          subject_user_id: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          alerted_at?: string | null;
+          created_at?: string;
+          created_by?: string;
+          family_id?: string;
+          grace_days?: number;
+          id?: string;
+          interval_days?: number;
+          is_active?: boolean;
+          note?: string;
+          subject_user_id?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      routine_logs: {
+        Row: {
+          created_at: string;
+          id: string;
+          logged_by: string;
+          logged_on: string;
+          note: string;
+          routine_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          logged_by: string;
+          logged_on?: string;
+          note?: string;
+          routine_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          logged_by?: string;
+          logged_on?: string;
+          note?: string;
+          routine_id?: string;
+        };
+        Relationships: [];
       };
       helper_profiles: {
         Row: {
@@ -1304,6 +1412,72 @@ export type Database = {
         ];
       };
 
+      local_events: {
+        Row: {
+          address: string | null;
+          area: string | null;
+          category: string;
+          created_at: string;
+          description: string;
+          ends_at: string | null;
+          id: string;
+          is_active: boolean;
+          kid_friendly: boolean;
+          lat: number | null;
+          lng: number | null;
+          maps_url: string | null;
+          owner_user_id: string;
+          place_id: string | null;
+          price_max: number | null;
+          price_min: number | null;
+          starts_at: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          address?: string | null;
+          area?: string | null;
+          category?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          kid_friendly?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          maps_url?: string | null;
+          owner_user_id: string;
+          place_id?: string | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          starts_at: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          address?: string | null;
+          area?: string | null;
+          category?: string;
+          created_at?: string;
+          description?: string;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          kid_friendly?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          maps_url?: string | null;
+          owner_user_id?: string;
+          place_id?: string | null;
+          price_max?: number | null;
+          price_min?: number | null;
+          starts_at?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       local_places: {
         Row: {
           address: string | null;
@@ -1586,6 +1760,54 @@ export type Database = {
           title?: string;
           updated_at?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+      legacy_will: {
+        Row: {
+          created_at: string;
+          document_id: string | null;
+          executor_contact: string;
+          executor_name: string;
+          has_will: boolean;
+          lawyer_contact: string;
+          lawyer_name: string;
+          location_hint: string;
+          made_on: string | null;
+          notes: string;
+          updated_at: string;
+          user_id: string;
+          will_kind: string;
+        };
+        Insert: {
+          created_at?: string;
+          document_id?: string | null;
+          executor_contact?: string;
+          executor_name?: string;
+          has_will?: boolean;
+          lawyer_contact?: string;
+          lawyer_name?: string;
+          location_hint?: string;
+          made_on?: string | null;
+          notes?: string;
+          updated_at?: string;
+          user_id: string;
+          will_kind?: string;
+        };
+        Update: {
+          created_at?: string;
+          document_id?: string | null;
+          executor_contact?: string;
+          executor_name?: string;
+          has_will?: boolean;
+          lawyer_contact?: string;
+          lawyer_name?: string;
+          location_hint?: string;
+          made_on?: string | null;
+          notes?: string;
+          updated_at?: string;
+          user_id?: string;
+          will_kind?: string;
         };
         Relationships: [];
       };

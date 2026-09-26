@@ -3,6 +3,43 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+/**
+ * Notify every member of a family except the actor, and optionally one more
+ * user (e.g. an assignee who already gets a more specific notification).
+ */
+async function notifyFamily(
+  familyId: string,
+  actorUserId: string,
+  n: {
+    kind: string;
+    title: string;
+    body: string;
+    href: string;
+    refTable: string;
+    refId: string;
+    exceptUserId?: string | null;
+  },
+) {
+  const { data: members } = await supabaseAdmin
+    .from("family_members")
+    .select("user_id")
+    .eq("family_id", familyId)
+    .neq("user_id", actorUserId);
+  const rows = (members ?? [])
+    .map((m) => m.user_id as string)
+    .filter((uid) => uid !== n.exceptUserId)
+    .map((uid) => ({
+      user_id: uid,
+      kind: n.kind,
+      title: n.title,
+      body: n.body,
+      href: n.href,
+      ref_table: n.refTable,
+      ref_id: n.refId,
+    }));
+  if (rows.length > 0) await supabaseAdmin.from("app_notifications").insert(rows);
+}
+
 async function requireFamilyMember(userId: string, familyId: string) {
   const { data } = await supabaseAdmin
     .from("family_members")
@@ -70,6 +107,18 @@ export const createFamilyEvent = createServerFn({ method: "POST" })
       .select("id, title, starts_at")
       .single();
     if (error) throw new Error(error.message);
+
+    // Red dot on the unified agenda for everyone else in the family. The nav
+    // badge is driven by app_notifications and kindToNav falls back to the
+    // href, so pointing at /agenda is what lights that menu item up.
+    await notifyFamily(data.familyId, context.userId, {
+      kind: "family_event",
+      title: "นัดใหม่ในปฏิทินครอบครัว",
+      body: data.title,
+      href: "/agenda",
+      refTable: "family_events",
+      refId: row.id as string,
+    });
     return row;
   });
 
@@ -209,6 +258,18 @@ export const assignFamilyTask = createServerFn({ method: "POST" })
         ref_id: row.id,
       });
     }
+
+    // The assignee is told where to act (/tasks, above); everyone else in the
+    // family sees the new task on the shared calendar instead.
+    await notifyFamily(data.familyId, context.userId, {
+      kind: "family_task",
+      title: "งานครอบครัวใหม่ในปฏิทิน",
+      body: data.title,
+      href: "/agenda",
+      refTable: "reminders",
+      refId: row.id as string,
+      exceptUserId: data.assigneeUserId ?? null,
+    });
     return row;
   });
 

@@ -33,7 +33,20 @@ export default tseslint.config(
         },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+      // Kept as an error on purpose: this is the rule that catches a server
+      // function or helper that was written and imported but never wired to
+      // the UI. Three dead handlers shipped while it was off (an agenda
+      // delete, a family-event delete and a local-date helper), each one a
+      // feature that looked done in the code and did nothing in the browser.
+      // `_`-prefixed names stay exempt for deliberately unused bindings.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   {

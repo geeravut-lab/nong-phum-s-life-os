@@ -3,8 +3,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Loader2, LogOut, Users } from "lucide-react";
+import { Copy, Loader2, LogOut, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { updateAgendaItem } from "@/lib/agenda.functions";
+import {
+  deleteFamilyRoutine,
+  listFamilyRoutines,
+  logRoutine,
+  upsertFamilyRoutine,
+  type RoutineRow,
+} from "@/lib/routines.functions";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,10 +43,16 @@ export const Route = createFileRoute("/_authenticated/family")({
 function FamilyPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const { user } = useAuthUser();
   const join = useServerFn(joinFamilyByCode);
   const runListEvents = useServerFn(listFamilyEvents);
   const runCreateEvent = useServerFn(createFamilyEvent);
   const runDeleteEvent = useServerFn(deleteFamilyEvent);
+  const runUpdateAgenda = useServerFn(updateAgendaItem);
+  const runListRoutines = useServerFn(listFamilyRoutines);
+  const runUpsertRoutine = useServerFn(upsertFamilyRoutine);
+  const runDeleteRoutine = useServerFn(deleteFamilyRoutine);
+  const runLogRoutine = useServerFn(logRoutine);
   const runPostCheckin = useServerFn(postFamilyCheckin);
   const runListCheckins = useServerFn(listFamilyCheckins);
   const runAssign = useServerFn(assignFamilyTask);
@@ -53,6 +68,19 @@ function FamilyPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [routineName, setRoutineName] = useState("");
+  const [routineSubject, setRoutineSubject] = useState("");
+  const [routineInterval, setRoutineInterval] = useState("1");
+  const [routineGrace, setRoutineGrace] = useState("2");
+  const [editEvent, setEditEvent] = useState<{
+    id: string;
+    title: string;
+    starts_at: string;
+    notes: string;
+  } | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editWhen, setEditWhen] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [checkNote, setCheckNote] = useState("");
 
   const {
@@ -180,6 +208,7 @@ function FamilyPage() {
           title: string;
           starts_at: string;
           notes: string;
+          created_by: string;
         }>;
       };
       return res.events ?? [];
@@ -223,6 +252,124 @@ function FamilyPage() {
 
   const family = membership?.families as
     { id: string; name: string; invite_code: string; owner_id: string } | null | undefined;
+
+  // deleteFamilyEvent allows the creator or the family owner; mirror that here
+  // so members are not shown a button the server will refuse.
+  const canDeleteEvent = (createdBy: string) =>
+    !!user && (user.id === createdBy || user.id === family?.owner_id);
+
+  // Editing goes through the same server function the unified agenda uses, so
+  // the rules stay in one place: family membership, and future events only.
+  const openEditEvent = (ev: { id: string; title: string; starts_at: string; notes: string }) => {
+    setEditEvent(ev);
+    setEditTitle(ev.title);
+    const d = new Date(ev.starts_at);
+    setEditWhen(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setEditNotes(ev.notes ?? "");
+  };
+
+  const saveEditEvent = async () => {
+    if (!editEvent) return;
+    setBusy(true);
+    try {
+      await runUpdateAgenda({
+        data: {
+          source: "family_event",
+          id: editEvent.id,
+          title: editTitle.trim(),
+          ...(editWhen ? { startsAt: new Date(editWhen).toISOString() } : {}),
+          notes: editNotes,
+        },
+      });
+      toast.success(t.saved);
+      setEditEvent(null);
+      void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const routinesQ = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-routines", familyId],
+    queryFn: async () => {
+      const res = (await runListRoutines({ data: { familyId: familyId! } })) as {
+        routines: RoutineRow[];
+      };
+      return res.routines ?? [];
+    },
+  });
+
+  const refreshRoutines = () =>
+    void qc.invalidateQueries({ queryKey: ["family-routines", familyId] });
+
+  const addRoutine = async () => {
+    if (!familyId || !routineName.trim() || !routineSubject) return;
+    setBusy(true);
+    try {
+      await runUpsertRoutine({
+        data: {
+          familyId,
+          subjectUserId: routineSubject,
+          title: routineName.trim(),
+          intervalDays: Math.max(1, Math.min(90, Number(routineInterval) || 1)),
+          graceDays: Math.max(0, Math.min(30, Number(routineGrace) || 0)),
+        },
+      });
+      setRoutineName("");
+      toast.success(t.saved);
+      refreshRoutines();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logToday = async (routineId: string) => {
+    setBusy(true);
+    try {
+      await runLogRoutine({ data: { routineId } });
+      toast.success(t.routineLogged);
+      refreshRoutines();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeRoutine = async (id: string) => {
+    if (!window.confirm(t.routineDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDeleteRoutine({ data: { id } });
+      toast.success(t.saved);
+      refreshRoutines();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeEvent = async (eventId: string) => {
+    if (!window.confirm(t.agendaDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDeleteEvent({ data: { eventId } });
+      toast.success(t.agendaDeleted);
+      void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -413,13 +560,132 @@ function FamilyPage() {
                     className="flex justify-between gap-2 rounded-lg border border-border p-2"
                   >
                     <span className="font-medium">{ev.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDay(new Date(ev.starts_at), lang)}
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDay(new Date(ev.starts_at), lang)}
+                      </span>
+                      {new Date(ev.starts_at) >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => openEditEvent(ev)}
+                        >
+                          {t.edit}
+                        </Button>
+                      )}
+                      {canDeleteEvent(ev.created_by) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          aria-label={t.delete}
+                          title={t.delete}
+                          onClick={() => void removeEvent(ev.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      )}
                     </span>
                   </li>
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Family Radar: routine tracking + deterministic change detection */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="text-sm font-semibold">{t.routineTitle}</h2>
+            <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.routineSub}</p>
+
+            {(routinesQ.data ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t.routineEmpty}</p>
+            ) : (
+              <ul className="mb-3 space-y-2 text-sm">
+                {(routinesQ.data ?? []).map((r) => (
+                  <li key={r.id} className="rounded-lg border border-border p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{r.title}</span>
+                      {r.overdue ? <Badge variant="destructive">{t.routineOverdue}</Badge> : null}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {labelFor(r.subjectUserId)} ·{" "}
+                      {r.lastLoggedOn
+                        ? `${t.routineLastLogged}: ${r.daysSince === 0 ? t.routineLogged : `${r.daysSince} ${t.routineDaysAgo}`}`
+                        : t.routineNever}
+                    </p>
+                    <div className="mt-1.5 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || r.daysSince === 0}
+                        onClick={() => void logToday(r.id)}
+                      >
+                        {r.daysSince === 0 ? t.routineLogged : t.routineLogToday}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        aria-label={t.delete}
+                        title={t.delete}
+                        onClick={() => void removeRoutine(r.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="space-y-2 border-t border-border pt-3">
+              <Input
+                placeholder={t.routineName}
+                value={routineName}
+                onChange={(e) => setRoutineName(e.target.value)}
+              />
+              <select
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={routineSubject}
+                onChange={(e) => setRoutineSubject(e.target.value)}
+                aria-label={t.routineSubject}
+              >
+                <option value="">{t.routineSubject}</option>
+                {(members ?? []).map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {labelFor(m.user_id, m.display_name)}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={routineInterval}
+                  onChange={(e) => setRoutineInterval(e.target.value)}
+                  aria-label={t.routineInterval}
+                  placeholder={t.routineInterval}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={30}
+                  value={routineGrace}
+                  onChange={(e) => setRoutineGrace(e.target.value)}
+                  aria-label={t.routineGrace}
+                  placeholder={t.routineGrace}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={busy || !routineName.trim() || !routineSubject}
+                onClick={() => void addRoutine()}
+              >
+                {t.routineAdd}
+              </Button>
+            </div>
           </section>
 
           {/* R4 Care check-in */}
@@ -630,6 +896,33 @@ function FamilyPage() {
               })}
             </ul>
           </section>
+        </div>
+      )}
+
+      {editEvent && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
+            <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={editWhen}
+              onChange={(e) => setEditWhen(e.target.value)}
+            />
+            <Input
+              value={editNotes}
+              placeholder={t.note}
+              onChange={(e) => setEditNotes(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setEditEvent(null)}>
+                {t.cancel ?? "ยกเลิก"}
+              </Button>
+              <Button disabled={busy} onClick={() => void saveEditEvent()}>
+                {t.save}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </AppShell>

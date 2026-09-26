@@ -17,7 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import {
+  deleteLocalEvent,
+  listUpcomingLocalEvents,
+  upsertLocalEvent,
+  type LocalEventRow,
+} from "@/lib/local-events.functions";
 import { useI18n } from "@/lib/i18n";
 import { PLACE_CATEGORIES, type LocalPlace } from "@/lib/local.shared";
 
@@ -99,6 +106,68 @@ function MerchantDashboardPage() {
       return data ?? [];
     },
   });
+
+  const runListEvents = useServerFn(listUpcomingLocalEvents);
+  const runUpsertEvent = useServerFn(upsertLocalEvent);
+  const runDeleteEvent = useServerFn(deleteLocalEvent);
+  const [evtName, setEvtName] = useState("");
+  const [evtWhen, setEvtWhen] = useState("");
+  const [evtMin, setEvtMin] = useState("");
+  const [evtMax, setEvtMax] = useState("");
+  const [evtKids, setEvtKids] = useState(false);
+  const [evtPlace, setEvtPlace] = useState("");
+
+  const myEvents = useQuery({
+    enabled: !!user,
+    queryKey: ["my-local-events", user?.id],
+    queryFn: async () => {
+      const res = (await runListEvents({ data: { withinDays: 90, mineOnly: true } })) as {
+        events: LocalEventRow[];
+      };
+      return res.events ?? [];
+    },
+  });
+
+  const addEvent = async () => {
+    if (!evtName.trim() || !evtWhen) return;
+    setBusy(true);
+    try {
+      await runUpsertEvent({
+        data: {
+          title: evtName.trim(),
+          startsAt: new Date(evtWhen).toISOString(),
+          ...(evtPlace ? { placeId: evtPlace } : {}),
+          ...(evtMin ? { priceMin: Number(evtMin) } : {}),
+          ...(evtMax ? { priceMax: Number(evtMax) } : {}),
+          kidFriendly: evtKids,
+        },
+      });
+      setEvtName("");
+      setEvtWhen("");
+      toast.success(t.saved);
+      void qc.invalidateQueries({ queryKey: ["my-local-events", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["local-events"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeEvent = async (id: string) => {
+    if (!window.confirm(t.evtDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDeleteEvent({ data: { id } });
+      void qc.invalidateQueries({ queryKey: ["my-local-events", user?.id] });
+      void qc.invalidateQueries({ queryKey: ["local-events"] });
+      toast.success(t.saved);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const savePlace = async () => {
     if (!user || !form.name.trim()) return;
@@ -233,8 +302,28 @@ function MerchantDashboardPage() {
     }
   };
 
+  const deletePlace = async (id: string) => {
+    // local_deals.place_id is ON DELETE CASCADE, so the promotions go with it.
+    if (!window.confirm(t.localDeletePlaceConfirm)) return;
+    const { error } = await supabase
+      .from("local_places")
+      .delete()
+      .eq("id", id)
+      .eq("owner_user_id", user!.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (editingPlaceId === id) setEditingPlaceId(null);
+    void qc.invalidateQueries({ queryKey: ["my-local-places", user?.id] });
+    void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
+    void qc.invalidateQueries({ queryKey: ["local-deals"] });
+    void qc.invalidateQueries({ queryKey: ["local-places"] });
+    toast.success(t.saved);
+  };
+
   const deleteDeal = async (id: string) => {
-    if (!confirm("ลบโปรโมชันนี้?")) return;
+    if (!window.confirm(t.localDeleteDealConfirm)) return;
     const { error } = await supabase.from("local_deals").delete().eq("id", id);
     if (error) toast.error(error.message);
     else {
@@ -424,6 +513,9 @@ function MerchantDashboardPage() {
                     >
                       {t.edit}
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => void deletePlace(p.id)}>
+                      {t.delete}
+                    </Button>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">{p.area}</p>
@@ -431,6 +523,97 @@ function MerchantDashboardPage() {
             );
           })
         )}
+      </section>
+
+      {/* Events for this merchant's places - the time-bound half of Local */}
+      <section className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="mb-2 text-sm font-semibold">{t.evtManage}</h2>
+
+        {(myEvents.data ?? []).length === 0 ? (
+          <p className="mb-3 text-xs text-muted-foreground">{t.evtMineNone}</p>
+        ) : (
+          <ul className="mb-3 space-y-2 text-sm">
+            {(myEvents.data ?? []).map((e) => (
+              <li
+                key={e.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2"
+              >
+                <span>
+                  <span className="font-medium">{e.title}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {new Date(e.startsAt).toLocaleString()}
+                  </span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => void removeEvent(e.id)}
+                >
+                  {t.delete}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="space-y-2 border-t border-border pt-3">
+          <Input
+            placeholder={t.evtName}
+            value={evtName}
+            onChange={(e) => setEvtName(e.target.value)}
+          />
+          <Input
+            type="datetime-local"
+            aria-label={t.evtWhen}
+            value={evtWhen}
+            onChange={(e) => setEvtWhen(e.target.value)}
+          />
+          <select
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            value={evtPlace}
+            onChange={(e) => setEvtPlace(e.target.value)}
+            aria-label={t.localMyPlaces ?? "place"}
+          >
+            <option value="">—</option>
+            {(myPlaces.data ?? []).map((pl) => (
+              <option key={pl.id} value={pl.id}>
+                {pl.name}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              min={0}
+              placeholder={t.evtPriceMin}
+              value={evtMin}
+              onChange={(e) => setEvtMin(e.target.value)}
+            />
+            <Input
+              type="number"
+              min={0}
+              placeholder={t.evtPriceMax}
+              value={evtMax}
+              onChange={(e) => setEvtMax(e.target.value)}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={evtKids}
+              onChange={(e) => setEvtKids(e.target.checked)}
+            />
+            {t.evtKidFriendly}
+          </label>
+          <Button
+            size="sm"
+            disabled={busy || !evtName.trim() || !evtWhen}
+            onClick={() => void addEvent()}
+          >
+            {t.evtAdd}
+          </Button>
+        </div>
       </section>
 
       {(myPlaces.data ?? []).length > 0 && (

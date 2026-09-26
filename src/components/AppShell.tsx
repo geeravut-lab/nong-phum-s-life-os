@@ -18,6 +18,7 @@ import {
   Users,
   Wallet,
   Download,
+  Search,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -204,6 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/docs", label: t.navDocs, icon: FileText },
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
     { to: "/agenda", label: t.navAgenda ?? "Agenda", icon: CalendarDays },
+    { to: "/search", label: t.navSearch ?? "Search", icon: Search },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },

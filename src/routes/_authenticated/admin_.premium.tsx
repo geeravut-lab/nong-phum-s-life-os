@@ -5,7 +5,11 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { adminConfirmPremiumPayment, adminRejectPremiumPayment } from "@/lib/billing.functions";
+import {
+  adminConfirmPremiumPayment,
+  adminLookupUserLabels,
+  adminRejectPremiumPayment,
+} from "@/lib/billing.functions";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDay, formatMoney } from "@/lib/format";
@@ -38,6 +42,7 @@ function AdminPremiumPage() {
   const qc = useQueryClient();
   const runConfirm = useServerFn(adminConfirmPremiumPayment);
   const runReject = useServerFn(adminRejectPremiumPayment);
+  const runLookupLabels = useServerFn(adminLookupUserLabels);
 
   const list = useQuery({
     queryKey: ["admin-premium-payments"],
@@ -78,10 +83,11 @@ function AdminPremiumPage() {
       const ids = [
         ...new Set([...(list.data ?? []), ...(history.data ?? [])].map((r) => r.user_id)),
       ];
-      const { data } = await supabase.from("profiles").select("id, display_name").in("id", ids);
-      const map: Record<string, string> = {};
-      for (const row of data ?? []) map[row.id] = row.display_name || row.id.slice(0, 8);
-      return map;
+      // Resolved server-side so the email fallback can reach auth.users.
+      const res = (await runLookupLabels({ data: { userIds: ids } })) as {
+        labels: Record<string, string>;
+      };
+      return res.labels;
     },
   });
 
@@ -146,7 +152,7 @@ function AdminPremiumPage() {
                   <div>
                     <p className="text-lg font-semibold">฿{formatMoney(Number(r.amount))}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      ผู้ใช้: {names[r.user_id] ?? r.user_id.slice(0, 8)}…
+                      ผู้ใช้: {names[r.user_id] ?? r.user_id.slice(0, 6)}…
                     </p>
                     <p className="text-xs text-muted-foreground">
                       แพ็ก: {r.plan_tier === "payg" ? "PAYG" : r.plan_tier} · {r.period}
@@ -210,7 +216,7 @@ function AdminPremiumPage() {
                 <li key={r.id} className="space-y-1 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 space-y-0.5">
-                      <p className="font-medium">{names[r.user_id] ?? r.user_id.slice(0, 8)}</p>
+                      <p className="font-medium">{names[r.user_id] ?? r.user_id.slice(0, 6)}</p>
                       <p className="text-xs text-muted-foreground">
                         {t.billHistWhen ?? "วันที่-เวลา"}:{" "}
                         {formatDay(new Date(r.created_at), lang, true)}

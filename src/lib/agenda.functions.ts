@@ -18,10 +18,64 @@ export type AgendaItem = {
   meta: {
     amount?: number | null;
     assigneeUserId?: string | null;
+    assigneeLabel?: string | null;
     familyId?: string | null;
     priority?: string | null;
   };
 };
+
+/**
+ * Human label for a set of user ids, same fallback chain as
+ * listFamilyMemberLabels: the family nickname, then the profile name, then the
+ * local part of the email, then a short uid. Resolved here so every page that
+ * renders an agenda row shows a name rather than a uuid.
+ */
+async function resolveAssigneeLabels(
+  userIds: string[],
+  familyId: string | null,
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (ids.length === 0) return out;
+
+  if (familyId) {
+    const { data: members } = await supabaseAdmin
+      .from("family_members")
+      .select("user_id, display_name")
+      .eq("family_id", familyId)
+      .in("user_id", ids);
+    for (const m of members ?? []) {
+      const nick = (m.display_name as string | null)?.trim();
+      if (nick) out.set(m.user_id as string, nick);
+    }
+  }
+
+  const missing = ids.filter((id) => !out.has(id));
+  if (missing.length > 0) {
+    const { data: profs } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", missing);
+    for (const p of profs ?? []) {
+      const name = (p.display_name as string | null)?.trim();
+      if (name) out.set(p.id as string, name);
+    }
+  }
+
+  for (const id of ids.filter((x) => !out.has(x))) {
+    try {
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
+      const meta = u.user?.user_metadata as Record<string, string> | undefined;
+      out.set(
+        id,
+        meta?.["full_name"] || meta?.["name"] || u.user?.email?.split("@")[0] || id.slice(0, 6),
+      );
+    } catch {
+      out.set(id, id.slice(0, 6));
+    }
+  }
+  return out;
+}
 
 function isFutureOrToday(iso: string | null | undefined): boolean {
   if (!iso) return true;
@@ -75,8 +129,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .limit(200);
 
     for (const r of reminders ?? []) {
-      const starts = (r.due_at as string | null) || r.id; // undated still list
-      if (r.due_at && (r.due_at < fromIso || r.due_at > toIso)) continue;
+      if (r.due_at && (r.due_at < fromIso || r.due_at > toIso)) continue; // undated still list
       const open = r.status === "open" || r.status === "pending";
       items.push({
         id: r.id as string,
@@ -158,14 +211,6 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .eq("user_id", uid)
       .maybeSingle();
 
-    const jobsQuery = supabaseAdmin
-      .from("jobs")
-      .select("id, title, scheduled_at, status, user_id, assigned_helper_id, location_text")
-      .not("scheduled_at", "is", null)
-      .gte("scheduled_at", fromIso)
-      .lte("scheduled_at", toIso)
-      .limit(80);
-
     const { data: jobsOwn } = await supabaseAdmin
       .from("jobs")
       .select("id, title, scheduled_at, status, user_id, assigned_helper_id, location_text")
@@ -212,6 +257,16 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
     }
 
     items.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
+    const labels = await resolveAssigneeLabels(
+      items.map((i) => i.meta.assigneeUserId).filter((x): x is string => !!x),
+      familyId ?? null,
+    );
+    for (const it of items) {
+      if (it.meta.assigneeUserId) {
+        it.meta.assigneeLabel = labels.get(it.meta.assigneeUserId) ?? null;
+      }
+    }
 
     return { items, familyId: familyId ?? null };
   });
@@ -454,9 +509,44 @@ export const deleteAgendaItem = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const uid = context.userId;
+
+    // Every branch runs through supabaseAdmin, which bypasses RLS, so the
+    // ownership check has to happen here. updateAgendaItem already does this;
+    // delete did not, which let any signed-in caller remove another user's
+    // reminder or family event by passing its id.
     if (data.source === "task") {
-      await supabaseAdmin.from("reminders").delete().eq("id", data.id);
+      const { data: r, error } = await supabaseAdmin
+        .from("reminders")
+        .select("id, user_id")
+        .eq("id", data.id)
+        .single();
+      if (error || !r) throw new Error(error?.message ?? "not found");
+      // Deleting is destructive, so only the owner may do it - a family
+      // member who can edit a shared reminder still cannot delete it.
+      if (r.user_id !== uid) throw new Error("Forbidden");
+      await supabaseAdmin.from("reminders").delete().eq("id", data.id).eq("user_id", uid);
     } else if (data.source === "family_event") {
+      const { data: ev, error } = await supabaseAdmin
+        .from("family_events")
+        .select("id, family_id, created_by")
+        .eq("id", data.id)
+        .single();
+      if (error || !ev) throw new Error(error?.message ?? "not found");
+      const { data: member } = await supabaseAdmin
+        .from("family_members")
+        .select("id")
+        .eq("family_id", ev.family_id as string)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (!member) throw new Error("Not a family member");
+      const { data: fam } = await supabaseAdmin
+        .from("families")
+        .select("owner_id")
+        .eq("id", ev.family_id as string)
+        .single();
+      // Same rule as deleteFamilyEvent: the creator or the family owner.
+      if (ev.created_by !== uid && fam?.owner_id !== uid) throw new Error("Forbidden");
       await supabaseAdmin.from("family_events").delete().eq("id", data.id);
     }
     // helpme: soft cancel only
@@ -465,7 +555,7 @@ export const deleteAgendaItem = createServerFn({ method: "POST" })
         .from("jobs")
         .update({ status: "cancelled" })
         .eq("id", data.id)
-        .eq("user_id", context.userId);
+        .eq("user_id", uid);
     }
     return { ok: true as const };
   });

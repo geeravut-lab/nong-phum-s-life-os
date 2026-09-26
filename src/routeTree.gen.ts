@@ -12,8 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as MicTestRouteImport } from './routes/mic-test'
-import { Route as AuthenticatedOldChatRouteImport } from './routes/_authenticated/Old-chat'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 import { Route as AuthenticatedBenefitsRouteImport } from './routes/_authenticated/benefits'
@@ -26,10 +24,12 @@ import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
+import { Route as BenefitsShareTokenRouteImport } from './routes/benefits-share.$token'
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
@@ -55,16 +55,6 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any)
-const MicTestRoute = MicTestRouteImport.update({
-  id: '/mic-test',
-  path: '/mic-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedOldChatRoute = AuthenticatedOldChatRouteImport.update({
-  id: '/Old-chat',
-  path: '/Old-chat',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -127,6 +117,11 @@ const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
   path: '/money',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -146,6 +141,11 @@ const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
   id: '/today',
   path: '/today',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const BenefitsShareTokenRoute = BenefitsShareTokenRouteImport.update({
+  id: '/benefits-share/$token',
+  path: '/benefits-share/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LineCallbackRoute = LineCallbackRouteImport.update({
   id: '/line/callback',
@@ -214,8 +214,6 @@ const AuthenticatedLegacyInviteTokenRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
@@ -228,10 +226,12 @@ export interface FileRoutesByFullPath {
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -247,8 +247,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/Old-chat': typeof AuthenticatedOldChatRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/benefits': typeof AuthenticatedBenefitsRoute
@@ -261,10 +259,12 @@ export interface FileRoutesByTo {
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -282,8 +282,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/mic-test': typeof MicTestRoute
-  '/_authenticated/Old-chat': typeof AuthenticatedOldChatRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/benefits': typeof AuthenticatedBenefitsRoute
@@ -296,10 +294,12 @@ export interface FileRoutesById {
   '/_authenticated/legacy': typeof AuthenticatedLegacyRoute
   '/_authenticated/local': typeof AuthenticatedLocalRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
+  '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -317,8 +317,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/mic-test'
-    | '/Old-chat'
     | '/admin'
     | '/agenda'
     | '/benefits'
@@ -331,10 +329,12 @@ export interface FileRouteTypes {
     | '/legacy'
     | '/local'
     | '/money'
+    | '/search'
     | '/settings'
     | '/support'
     | '/tasks'
     | '/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -350,8 +350,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/mic-test'
-    | '/Old-chat'
     | '/admin'
     | '/agenda'
     | '/benefits'
@@ -364,10 +362,12 @@ export interface FileRouteTypes {
     | '/legacy'
     | '/local'
     | '/money'
+    | '/search'
     | '/settings'
     | '/support'
     | '/tasks'
     | '/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -384,8 +384,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/mic-test'
-    | '/_authenticated/Old-chat'
     | '/_authenticated/admin'
     | '/_authenticated/agenda'
     | '/_authenticated/benefits'
@@ -398,10 +396,12 @@ export interface FileRouteTypes {
     | '/_authenticated/legacy'
     | '/_authenticated/local'
     | '/_authenticated/money'
+    | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/support'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -419,7 +419,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  MicTestRoute: typeof MicTestRoute
+  BenefitsShareTokenRoute: typeof BenefitsShareTokenRoute
   LineCallbackRoute: typeof LineCallbackRoute
   MemorialTokenRoute: typeof MemorialTokenRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
@@ -447,20 +447,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/mic-test': {
-      id: '/mic-test'
-      path: '/mic-test'
-      fullPath: '/mic-test'
-      preLoaderRoute: typeof MicTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/Old-chat': {
-      id: '/_authenticated/Old-chat'
-      path: '/Old-chat'
-      fullPath: '/Old-chat'
-      preLoaderRoute: typeof AuthenticatedOldChatRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -546,6 +532,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMoneyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -573,6 +566,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/today'
       preLoaderRoute: typeof AuthenticatedTodayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/benefits-share/$token': {
+      id: '/benefits-share/$token'
+      path: '/benefits-share/$token'
+      fullPath: '/benefits-share/$token'
+      preLoaderRoute: typeof BenefitsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/line/callback': {
       id: '/line/callback'
@@ -655,7 +655,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedOldChatRoute: typeof AuthenticatedOldChatRoute
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedBenefitsRoute: typeof AuthenticatedBenefitsRoute
@@ -668,6 +667,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
   AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
+  AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
@@ -683,7 +683,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedOldChatRoute: AuthenticatedOldChatRoute,
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedBenefitsRoute: AuthenticatedBenefitsRoute,
@@ -696,6 +695,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
   AuthenticatedLocalRoute: AuthenticatedLocalRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
+  AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
@@ -717,7 +717,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  MicTestRoute: MicTestRoute,
+  BenefitsShareTokenRoute: BenefitsShareTokenRoute,
   LineCallbackRoute: LineCallbackRoute,
   MemorialTokenRoute: MemorialTokenRoute,
   SsoCallbackRoute: SsoCallbackRoute,
