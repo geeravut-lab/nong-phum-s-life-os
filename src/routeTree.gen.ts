@@ -33,6 +33,7 @@ import { Route as BenefitsShareTokenRouteImport } from './routes/benefits-share.
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
+import { Route as AuthenticatedAdminFuneralRouteImport } from './routes/_authenticated/admin_.funeral'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
 import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authenticated/admin_.premium'
@@ -163,6 +164,12 @@ const SsoCallbackRoute = SsoCallbackRouteImport.update({
   path: '/sso/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminFuneralRoute =
+  AuthenticatedAdminFuneralRouteImport.update({
+    id: '/admin_/funeral',
+    path: '/admin/funeral',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminMarketplaceRoute =
   AuthenticatedAdminMarketplaceRouteImport.update({
     id: '/admin_/marketplace',
@@ -241,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/funeral': typeof AuthenticatedAdminFuneralRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
@@ -275,6 +283,7 @@ export interface FileRoutesByTo {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/funeral': typeof AuthenticatedAdminFuneralRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
@@ -311,6 +320,7 @@ export interface FileRoutesById {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/_authenticated/admin_/funeral': typeof AuthenticatedAdminFuneralRoute
   '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
   '/_authenticated/admin_/premium': typeof AuthenticatedAdminPremiumRoute
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/admin/funeral'
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/admin/funeral'
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
@@ -416,6 +428,7 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/_authenticated/admin_/funeral'
     | '/_authenticated/admin_/marketplace'
     | '/_authenticated/admin_/payments'
     | '/_authenticated/admin_/premium'
@@ -607,6 +620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SsoCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin_/funeral': {
+      id: '/_authenticated/admin_/funeral'
+      path: '/admin/funeral'
+      fullPath: '/admin/funeral'
+      preLoaderRoute: typeof AuthenticatedAdminFuneralRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/marketplace': {
       id: '/_authenticated/admin_/marketplace'
       path: '/admin/marketplace'
@@ -691,6 +711,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
+  AuthenticatedAdminFuneralRoute: typeof AuthenticatedAdminFuneralRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
   AuthenticatedAdminPremiumRoute: typeof AuthenticatedAdminPremiumRoute
@@ -720,6 +741,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
+  AuthenticatedAdminFuneralRoute: AuthenticatedAdminFuneralRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
   AuthenticatedAdminPremiumRoute: AuthenticatedAdminPremiumRoute,

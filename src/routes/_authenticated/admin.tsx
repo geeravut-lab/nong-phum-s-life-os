@@ -185,6 +185,7 @@ function AdminPage() {
       <MarketplaceHubCard />
       <SafetyHubCard />
       <PaymentsHubCard />
+      <FuneralHubCard />
       <UsageHubCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -619,6 +620,33 @@ function LineQuotaCard() {
         </div>
       )}
     </section>
+  );
+}
+
+function FuneralHubCard() {
+  const { t } = useI18n();
+  const waiting = useQuery({
+    queryKey: ["funeral-plans-reviewing-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("funeral_plans")
+        .select("id", { count: "exact", head: true })
+        .eq("admin_status", "reviewing");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  return (
+    <Link
+      to="/admin/funeral"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.fnAdminCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.fnAdminCardSub}</p>
+      </div>
+      {!!waiting.data && <Badge variant="destructive">{waiting.data}</Badge>}
+    </Link>
   );
 }
 

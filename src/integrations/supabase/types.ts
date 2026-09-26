@@ -2180,6 +2180,12 @@ export type Database = {
       funeral_plans: {
         Row: {
           admin_notes: string | null;
+          admin_status: string;
+          admin_reviewed_at: string | null;
+          admin_reviewed_by: string | null;
+          fulfilment: string;
+          representative_name: string | null;
+          representative_contact: string | null;
           created_at: string;
           death_case_id: string | null;
           id: string;
@@ -2193,6 +2199,12 @@ export type Database = {
         };
         Insert: {
           admin_notes?: string | null;
+          admin_status?: string;
+          admin_reviewed_at?: string | null;
+          admin_reviewed_by?: string | null;
+          fulfilment?: string;
+          representative_name?: string | null;
+          representative_contact?: string | null;
           created_at?: string;
           death_case_id?: string | null;
           id?: string;
@@ -2206,6 +2218,12 @@ export type Database = {
         };
         Update: {
           admin_notes?: string | null;
+          admin_status?: string;
+          admin_reviewed_at?: string | null;
+          admin_reviewed_by?: string | null;
+          fulfilment?: string;
+          representative_name?: string | null;
+          representative_contact?: string | null;
           created_at?: string;
           death_case_id?: string | null;
           id?: string;
@@ -2216,6 +2234,75 @@ export type Database = {
           total_budget?: number | null;
           updated_at?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+      funeral_installments: {
+        Row: {
+          id: string;
+          plan_id: string;
+          seq: number;
+          due_on: string;
+          amount: number;
+          payment_status: string;
+          paid_at: string | null;
+          payer_ref: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          seq: number;
+          due_on: string;
+          amount: number;
+          payment_status?: string;
+          paid_at?: string | null;
+          payer_ref?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          seq?: number;
+          due_on?: string;
+          amount?: number;
+          payment_status?: string;
+          paid_at?: string | null;
+          payer_ref?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      funeral_evidence: {
+        Row: {
+          id: string;
+          plan_id: string;
+          kind: string;
+          title: string;
+          note: string;
+          file_path: string | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          kind?: string;
+          title: string;
+          note?: string;
+          file_path?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          kind?: string;
+          title?: string;
+          note?: string;
+          file_path?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

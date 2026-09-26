@@ -12,13 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
@@ -34,7 +27,8 @@ import {
   listDeathNotifyMessages,
   updateMemorialExtras,
 } from "@/lib/legacy-notify.functions";
-import { createFuneralPayment, markFuneralPaid, planFuneral } from "@/lib/funeral.functions";
+import { planFuneral, selectFuneralPackage } from "@/lib/funeral.functions";
+import { FuneralPlanStatus, RepresentativeFields } from "@/components/FuneralPlanStatus";
 
 export const Route = createFileRoute("/_authenticated/legacy_/after")({
   head: () => ({ meta: routeMeta("legacy") }),
@@ -57,8 +51,7 @@ function LegacyAfterPage() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
-  const runPay = useServerFn(createFuneralPayment);
-  const runMarkPaid = useServerFn(markFuneralPaid);
+  const runSelect = useServerFn(selectFuneralPackage);
 
   const [busy, setBusy] = useState(false);
   const [planCode, setPlanCode] = useState("");
@@ -86,13 +79,8 @@ function LegacyAfterPage() {
     }>;
     notes: string;
   } | null>(null);
-  const [payInfo, setPayInfo] = useState<{
-    paymentId: string;
-    amount: number;
-    qrUrl: string | null;
-    installments: number;
-  } | null>(null);
-  const [installments, setInstallments] = useState<"1" | "12" | "24" | "36">("1");
+  const [repName, setRepName] = useState("");
+  const [repContact, setRepContact] = useState("");
 
   const casesQ = useQuery({
     queryKey: ["death-cases"],
@@ -224,33 +212,24 @@ function LegacyAfterPage() {
     }
   };
 
+  // Choosing a package sends it to an admin to check against real venues and
+  // providers. Paying comes later, and only if the user asks the platform to
+  // arrange it - see FuneralPlanStatus.
   const onSelectPackage = async (packageId: "economy" | "standard" | "premium") => {
     if (!planResult) return;
     setBusy(true);
     try {
-      const res = await runPay({
+      await runSelect({
         data: {
           planId: planResult.planId,
           packageId,
-          installments: Number(installments) as 1 | 12 | 24 | 36,
+          ...(repName.trim() ? { representativeName: repName.trim() } : {}),
+          ...(repContact.trim() ? { representativeContact: repContact.trim() } : {}),
         },
       });
-      setPayInfo(res);
-      toast.success(t.p6PayReady);
-    } catch (e) {
-      toast.error(errorText(e, t));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onMarkPaid = async () => {
-    if (!payInfo) return;
-    setBusy(true);
-    try {
-      await runMarkPaid({ data: { paymentId: payInfo.paymentId } });
-      toast.success(t.p6PaidMarked);
-      setPayInfo(null);
+      setPlanResult(null);
+      toast.success(t.fnStatusReviewing);
+      void qc.invalidateQueries({ queryKey: ["my-funeral-plan"] });
     } catch (e) {
       toast.error(errorText(e, t));
     } finally {
@@ -752,23 +731,12 @@ function LegacyAfterPage() {
         {planResult && (
           <div className="space-y-3 border-t border-border pt-3">
             <p className="text-xs text-muted-foreground">{planResult.notes}</p>
-            <div>
-              <Label>{t.p6Installments}</Label>
-              <Select
-                value={installments}
-                onValueChange={(v) => setInstallments(v as typeof installments)}
-              >
-                <SelectTrigger className="mt-1 w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">{t.p6PayOnce}</SelectItem>
-                  <SelectItem value="12">12</SelectItem>
-                  <SelectItem value="24">24</SelectItem>
-                  <SelectItem value="36">36</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <RepresentativeFields
+              name={repName}
+              contact={repContact}
+              onName={setRepName}
+              onContact={setRepContact}
+            />
             {planResult.packages.map((pkg) => (
               <article key={pkg.id} className="rounded-xl border border-border p-3 text-sm">
                 <div className="flex justify-between gap-2">
@@ -795,28 +763,9 @@ function LegacyAfterPage() {
             ))}
           </div>
         )}
-
-        {payInfo && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
-            <p className="font-medium">
-              {t.p6PayAmount}: ฿{payInfo.amount.toLocaleString()}
-              {payInfo.installments > 1 ? ` (${t.p6PerInstallment} × ${payInfo.installments})` : ""}
-            </p>
-            {payInfo.qrUrl ? (
-              <img
-                src={payInfo.qrUrl}
-                alt="PromptPay QR"
-                className="mx-auto mt-2 size-48 rounded-lg bg-white p-2"
-              />
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground">{t.p6NoPromptPay}</p>
-            )}
-            <Button className="mt-2" size="sm" disabled={busy} onClick={onMarkPaid}>
-              {t.p6MarkPaid}
-            </Button>
-          </div>
-        )}
       </section>
+
+      <FuneralPlanStatus />
     </AppShell>
   );
 }
