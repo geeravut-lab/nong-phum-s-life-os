@@ -32,8 +32,21 @@ function startOfDay(d: Date) {
   return x;
 }
 
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
+/**
+ * Day bucket key in the viewer's own timezone.
+ *
+ * toISOString() would convert to UTC first, which shifts the date for any
+ * zone east of UTC: in Bangkok (UTC+7) a cell built as new Date(y, m, d) is
+ * local midnight, i.e. 17:00Z the day before, so its key came out one day
+ * early, while an event at 02:00 local fell into the previous day's bucket.
+ * Reading the local calendar fields keeps cells and events on the same day.
+ */
+function localDayKey(d: Date | string): string {
+  const x = typeof d === "string" ? new Date(d) : d;
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function AgendaPage() {
@@ -96,7 +109,7 @@ function AgendaPage() {
   const byDay = useMemo(() => {
     const m = new Map<string, AgendaItem[]>();
     for (const it of items) {
-      const k = ymd(new Date(it.startsAt));
+      const k = localDayKey(it.startsAt);
       const arr = m.get(k) ?? [];
       arr.push(it);
       m.set(k, arr);
@@ -137,13 +150,13 @@ function AgendaPage() {
     for (let i = 0; i < startPad; i++) cells.push({ date: null, key: `e${i}` });
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(cursor.getFullYear(), cursor.getMonth(), d);
-      cells.push({ date, key: ymd(date) });
+      cells.push({ date, key: localDayKey(date) });
     }
     return cells;
   }, [cursor]);
 
   const selectedDayItems =
-    view === "month" || view === "day" ? (byDay.get(ymd(cursor)) ?? []) : items;
+    view === "month" || view === "day" ? (byDay.get(localDayKey(cursor)) ?? []) : items;
 
   return (
     <AppShell>
@@ -248,9 +261,9 @@ function AgendaPage() {
             ))}
             {monthCells.map((c) => {
               if (!c.date) return <div key={c.key} />;
-              const key = ymd(c.date);
+              const key = localDayKey(c.date);
               const count = byDay.get(key)?.length ?? 0;
-              const selected = ymd(cursor) === key;
+              const selected = localDayKey(cursor) === key;
               return (
                 <button
                   key={c.key}
