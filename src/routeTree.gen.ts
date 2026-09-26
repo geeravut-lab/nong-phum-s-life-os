@@ -33,11 +33,14 @@ import { Route as BenefitsShareTokenRouteImport } from './routes/benefits-share.
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
+import { Route as AuthenticatedAdminFuneralRouteImport } from './routes/_authenticated/admin_.funeral'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
 import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authenticated/admin_.premium'
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
+import { Route as AuthenticatedAdminUsageRouteImport } from './routes/_authenticated/admin_.usage'
+import { Route as AuthenticatedFamilyTimelineRouteImport } from './routes/_authenticated/family_.timeline'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedLegacyInviteTokenRouteImport } from './routes/_authenticated/legacy_.invite.$token'
@@ -162,6 +165,12 @@ const SsoCallbackRoute = SsoCallbackRouteImport.update({
   path: '/sso/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminFuneralRoute =
+  AuthenticatedAdminFuneralRouteImport.update({
+    id: '/admin_/funeral',
+    path: '/admin/funeral',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminMarketplaceRoute =
   AuthenticatedAdminMarketplaceRouteImport.update({
     id: '/admin_/marketplace',
@@ -190,6 +199,17 @@ const AuthenticatedAdminSupportRoute =
   AuthenticatedAdminSupportRouteImport.update({
     id: '/admin_/support',
     path: '/admin/support',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminUsageRoute = AuthenticatedAdminUsageRouteImport.update({
+  id: '/admin_/usage',
+  path: '/admin/usage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFamilyTimelineRoute =
+  AuthenticatedFamilyTimelineRouteImport.update({
+    id: '/family_/timeline',
+    path: '/family/timeline',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedLegacyAfterRoute =
@@ -235,11 +255,14 @@ export interface FileRoutesByFullPath {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/funeral': typeof AuthenticatedAdminFuneralRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/usage': typeof AuthenticatedAdminUsageRoute
+  '/family/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -268,11 +291,14 @@ export interface FileRoutesByTo {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/admin/funeral': typeof AuthenticatedAdminFuneralRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/usage': typeof AuthenticatedAdminUsageRoute
+  '/family/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -303,11 +329,14 @@ export interface FileRoutesById {
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
+  '/_authenticated/admin_/funeral': typeof AuthenticatedAdminFuneralRoute
   '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
   '/_authenticated/admin_/premium': typeof AuthenticatedAdminPremiumRoute
   '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
+  '/_authenticated/admin_/usage': typeof AuthenticatedAdminUsageRoute
+  '/_authenticated/family_/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
   '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
   '/_authenticated/legacy_/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -338,11 +367,14 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/admin/funeral'
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
+    | '/admin/usage'
+    | '/family/timeline'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -371,11 +403,14 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/admin/funeral'
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
+    | '/admin/usage'
+    | '/family/timeline'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -405,11 +440,14 @@ export interface FileRouteTypes {
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
+    | '/_authenticated/admin_/funeral'
     | '/_authenticated/admin_/marketplace'
     | '/_authenticated/admin_/payments'
     | '/_authenticated/admin_/premium'
     | '/_authenticated/admin_/safety'
     | '/_authenticated/admin_/support'
+    | '/_authenticated/admin_/usage'
+    | '/_authenticated/family_/timeline'
     | '/_authenticated/legacy_/after'
     | '/_authenticated/local_/merchant'
     | '/_authenticated/legacy_/invite/$token'
@@ -595,6 +633,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SsoCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin_/funeral': {
+      id: '/_authenticated/admin_/funeral'
+      path: '/admin/funeral'
+      fullPath: '/admin/funeral'
+      preLoaderRoute: typeof AuthenticatedAdminFuneralRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/marketplace': {
       id: '/_authenticated/admin_/marketplace'
       path: '/admin/marketplace'
@@ -628,6 +673,20 @@ declare module '@tanstack/react-router' {
       path: '/admin/support'
       fullPath: '/admin/support'
       preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin_/usage': {
+      id: '/_authenticated/admin_/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AuthenticatedAdminUsageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/family_/timeline': {
+      id: '/_authenticated/family_/timeline'
+      path: '/family/timeline'
+      fullPath: '/family/timeline'
+      preLoaderRoute: typeof AuthenticatedFamilyTimelineRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/legacy_/after': {
@@ -672,11 +731,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
+  AuthenticatedAdminFuneralRoute: typeof AuthenticatedAdminFuneralRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
   AuthenticatedAdminPremiumRoute: typeof AuthenticatedAdminPremiumRoute
   AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
+  AuthenticatedAdminUsageRoute: typeof AuthenticatedAdminUsageRoute
+  AuthenticatedFamilyTimelineRoute: typeof AuthenticatedFamilyTimelineRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
   AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
   AuthenticatedLegacyInviteTokenRoute: typeof AuthenticatedLegacyInviteTokenRoute
@@ -700,11 +762,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
+  AuthenticatedAdminFuneralRoute: AuthenticatedAdminFuneralRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
   AuthenticatedAdminPremiumRoute: AuthenticatedAdminPremiumRoute,
   AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
+  AuthenticatedAdminUsageRoute: AuthenticatedAdminUsageRoute,
+  AuthenticatedFamilyTimelineRoute: AuthenticatedFamilyTimelineRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
   AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
   AuthenticatedLegacyInviteTokenRoute: AuthenticatedLegacyInviteTokenRoute,

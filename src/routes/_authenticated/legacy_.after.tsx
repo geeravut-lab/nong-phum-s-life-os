@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,18 +7,12 @@ import { useEffect, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
@@ -33,7 +28,8 @@ import {
   listDeathNotifyMessages,
   updateMemorialExtras,
 } from "@/lib/legacy-notify.functions";
-import { createFuneralPayment, markFuneralPaid, planFuneral } from "@/lib/funeral.functions";
+import { planFuneral, selectFuneralPackage } from "@/lib/funeral.functions";
+import { FuneralPlanStatus, RepresentativeFields } from "@/components/FuneralPlanStatus";
 
 export const Route = createFileRoute("/_authenticated/legacy_/after")({
   head: () => ({ meta: routeMeta("legacy") }),
@@ -56,8 +52,7 @@ function LegacyAfterPage() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
-  const runPay = useServerFn(createFuneralPayment);
-  const runMarkPaid = useServerFn(markFuneralPaid);
+  const runSelect = useServerFn(selectFuneralPackage);
 
   const [busy, setBusy] = useState(false);
   const [planCode, setPlanCode] = useState("");
@@ -85,13 +80,9 @@ function LegacyAfterPage() {
     }>;
     notes: string;
   } | null>(null);
-  const [payInfo, setPayInfo] = useState<{
-    paymentId: string;
-    amount: number;
-    qrUrl: string | null;
-    installments: number;
-  } | null>(null);
-  const [installments, setInstallments] = useState<"1" | "12" | "24" | "36">("1");
+  const flags = useFeatureFlags();
+  const [repName, setRepName] = useState("");
+  const [repContact, setRepContact] = useState("");
 
   const casesQ = useQuery({
     queryKey: ["death-cases"],
@@ -168,7 +159,7 @@ function LegacyAfterPage() {
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
       void qc.invalidateQueries({ queryKey: ["verifier-duties"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -193,7 +184,7 @@ function LegacyAfterPage() {
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
       void qc.invalidateQueries({ queryKey: ["my-memorials"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -217,41 +208,32 @@ function LegacyAfterPage() {
       setPlanResult(res as typeof planResult);
       toast.success(t.p6PlanReady);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
   };
 
+  // Choosing a package sends it to an admin to check against real venues and
+  // providers. Paying comes later, and only if the user asks the platform to
+  // arrange it - see FuneralPlanStatus.
   const onSelectPackage = async (packageId: "economy" | "standard" | "premium") => {
     if (!planResult) return;
     setBusy(true);
     try {
-      const res = await runPay({
+      await runSelect({
         data: {
           planId: planResult.planId,
           packageId,
-          installments: Number(installments) as 1 | 12 | 24 | 36,
+          ...(repName.trim() ? { representativeName: repName.trim() } : {}),
+          ...(repContact.trim() ? { representativeContact: repContact.trim() } : {}),
         },
       });
-      setPayInfo(res);
-      toast.success(t.p6PayReady);
+      setPlanResult(null);
+      toast.success(t.fnStatusReviewing);
+      void qc.invalidateQueries({ queryKey: ["my-funeral-plan"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onMarkPaid = async () => {
-    if (!payInfo) return;
-    setBusy(true);
-    try {
-      await runMarkPaid({ data: { paymentId: payInfo.paymentId } });
-      toast.success(t.p6PaidMarked);
-      setPayInfo(null);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -420,7 +402,7 @@ function LegacyAfterPage() {
                         toast.success(t.r2MakePublic);
                         void qc.invalidateQueries({ queryKey: ["memorials"] });
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
+                        toast.error(errorText(e, t));
                       } finally {
                         setBusy(false);
                       }
@@ -455,7 +437,7 @@ function LegacyAfterPage() {
                         toast.success(t.r2VideoSaved);
                         void qc.invalidateQueries({ queryKey: ["memorials"] });
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
+                        toast.error(errorText(e, t));
                       } finally {
                         setBusy(false);
                       }
@@ -464,6 +446,44 @@ function LegacyAfterPage() {
                     {t.r2VideoSave}
                   </Button>
                 </div>
+                {/* A family that filmed something on a phone has nowhere to put
+                    it if the only field is a link, and asking them to publish it
+                    on YouTube first is not reasonable. The file goes straight
+                    from the browser into the bucket - a server function would
+                    hit the request body limit long before a real video does. */}
+                <Input
+                  type="file"
+                  accept="video/*"
+                  className="text-xs"
+                  disabled={busy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 200 * 1024 * 1024) {
+                      toast.error(t.r2VideoTooBig);
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      const { data: u } = await supabase.auth.getUser();
+                      const uid = u.user?.id;
+                      if (!uid) throw new Error("no session");
+                      const path = `${uid}/memorial/${m.id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+                      const { error: upErr } = await supabase.storage
+                        .from("documents")
+                        .upload(path, file, { contentType: file.type || "video/mp4" });
+                      if (upErr) throw upErr;
+                      await runMemExtra({ data: { memorialId: m.id, videoPath: path } });
+                      toast.success(t.r2VideoUploaded);
+                      void qc.invalidateQueries({ queryKey: ["memorials"] });
+                    } catch (err) {
+                      toast.error(errorText(err, t));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                />
+                <p className="text-[10px] text-muted-foreground">{t.r2VideoOrLink}</p>
               </div>
             </article>
           ))
@@ -486,7 +506,7 @@ function LegacyAfterPage() {
               void qc.invalidateQueries({ queryKey: ["death-notify", selectedCaseId] });
               void qc.invalidateQueries({ queryKey: ["memorials"] });
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : t.error);
+              toast.error(errorText(e, t));
             } finally {
               setBusy(false);
             }
@@ -611,7 +631,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }
@@ -635,7 +655,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }
@@ -659,7 +679,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }
@@ -682,140 +702,113 @@ function LegacyAfterPage() {
         )}
       </section>
 
-      {/* Funeral planner */}
-      <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="font-semibold">{t.p6FuneralTitle}</h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <Label>{t.p6Budget}</Label>
-            <Input
-              className="mt-1"
-              type="number"
-              value={fBudget}
-              onChange={(e) => setFBudget(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>{t.p6Religion}</Label>
-            <Input
-              className="mt-1"
-              value={fReligion}
-              onChange={(e) => setFReligion(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>{t.p6Province}</Label>
-            <Input
-              className="mt-1"
-              value={fProvince}
-              onChange={(e) => setFProvince(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>{t.p6Days}</Label>
-            <Input
-              className="mt-1"
-              type="number"
-              value={fDays}
-              onChange={(e) => setFDays(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>{t.p6Guests}</Label>
-            <Input
-              className="mt-1"
-              type="number"
-              value={fGuests}
-              onChange={(e) => setFGuests(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>{t.p6Style}</Label>
-            <Input className="mt-1" value={fStyle} onChange={(e) => setFStyle(e.target.value)} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>{t.p6Extras}</Label>
-            <Textarea
-              className="mt-1"
-              rows={2}
-              value={fExtras}
-              onChange={(e) => setFExtras(e.target.value)}
-            />
-          </div>
-        </div>
-        <Button disabled={busy} onClick={onPlan}>
-          {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-          {t.p6PlanBtn}
-        </Button>
-
-        {planResult && (
-          <div className="space-y-3 border-t border-border pt-3">
-            <p className="text-xs text-muted-foreground">{planResult.notes}</p>
+      {/* Funeral planner. Hidden entirely when switched off: it promises that a
+          person will act on what is chosen, so it must not be half-available. */}
+      {flags.enabled("funeral_planner") ? (
+        <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="font-semibold">{t.p6FuneralTitle}</h2>
+          <div className="grid gap-2 sm:grid-cols-2">
             <div>
-              <Label>{t.p6Installments}</Label>
-              <Select
-                value={installments}
-                onValueChange={(v) => setInstallments(v as typeof installments)}
-              >
-                <SelectTrigger className="mt-1 w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">{t.p6PayOnce}</SelectItem>
-                  <SelectItem value="12">12</SelectItem>
-                  <SelectItem value="24">24</SelectItem>
-                  <SelectItem value="36">36</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {planResult.packages.map((pkg) => (
-              <article key={pkg.id} className="rounded-xl border border-border p-3 text-sm">
-                <div className="flex justify-between gap-2">
-                  <p className="font-medium">{pkg.name}</p>
-                  <span>฿{Number(pkg.totalBudget).toLocaleString()}</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{pkg.summary}</p>
-                <ul className="mt-2 list-disc pl-4 text-xs">
-                  {pkg.lineItems.slice(0, 6).map((li) => (
-                    <li key={li.item}>
-                      {li.item}: ฿{Number(li.estimate).toLocaleString()}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  size="sm"
-                  className="mt-2"
-                  disabled={busy}
-                  onClick={() => onSelectPackage(pkg.id as "economy" | "standard" | "premium")}
-                >
-                  {t.p6SelectPackage}
-                </Button>
-              </article>
-            ))}
-          </div>
-        )}
-
-        {payInfo && (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
-            <p className="font-medium">
-              {t.p6PayAmount}: ฿{payInfo.amount.toLocaleString()}
-              {payInfo.installments > 1 ? ` (${t.p6PerInstallment} × ${payInfo.installments})` : ""}
-            </p>
-            {payInfo.qrUrl ? (
-              <img
-                src={payInfo.qrUrl}
-                alt="PromptPay QR"
-                className="mx-auto mt-2 size-48 rounded-lg bg-white p-2"
+              <Label>{t.p6Budget}</Label>
+              <Input
+                className="mt-1"
+                type="number"
+                value={fBudget}
+                onChange={(e) => setFBudget(e.target.value)}
               />
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground">{t.p6NoPromptPay}</p>
-            )}
-            <Button className="mt-2" size="sm" disabled={busy} onClick={onMarkPaid}>
-              {t.p6MarkPaid}
-            </Button>
+            </div>
+            <div>
+              <Label>{t.p6Religion}</Label>
+              <Input
+                className="mt-1"
+                value={fReligion}
+                onChange={(e) => setFReligion(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>{t.p6Province}</Label>
+              <Input
+                className="mt-1"
+                value={fProvince}
+                onChange={(e) => setFProvince(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>{t.p6Days}</Label>
+              <Input
+                className="mt-1"
+                type="number"
+                value={fDays}
+                onChange={(e) => setFDays(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>{t.p6Guests}</Label>
+              <Input
+                className="mt-1"
+                type="number"
+                value={fGuests}
+                onChange={(e) => setFGuests(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>{t.p6Style}</Label>
+              <Input className="mt-1" value={fStyle} onChange={(e) => setFStyle(e.target.value)} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label>{t.p6Extras}</Label>
+              <Textarea
+                className="mt-1"
+                rows={2}
+                value={fExtras}
+                onChange={(e) => setFExtras(e.target.value)}
+              />
+            </div>
           </div>
-        )}
-      </section>
+          <Button disabled={busy} onClick={onPlan}>
+            {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            {t.p6PlanBtn}
+          </Button>
+
+          {planResult && (
+            <div className="space-y-3 border-t border-border pt-3">
+              <p className="text-xs text-muted-foreground">{planResult.notes}</p>
+              <RepresentativeFields
+                name={repName}
+                contact={repContact}
+                onName={setRepName}
+                onContact={setRepContact}
+              />
+              {planResult.packages.map((pkg) => (
+                <article key={pkg.id} className="rounded-xl border border-border p-3 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <p className="font-medium">{pkg.name}</p>
+                    <span>฿{Number(pkg.totalBudget).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{pkg.summary}</p>
+                  <ul className="mt-2 list-disc pl-4 text-xs">
+                    {pkg.lineItems.slice(0, 6).map((li) => (
+                      <li key={li.item}>
+                        {li.item}: ฿{Number(li.estimate).toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    size="sm"
+                    className="mt-2"
+                    disabled={busy}
+                    onClick={() => onSelectPackage(pkg.id as "economy" | "standard" | "premium")}
+                  >
+                    {t.p6SelectPackage}
+                  </Button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {flags.enabled("funeral_planner") ? <FuneralPlanStatus /> : null}
     </AppShell>
   );
 }

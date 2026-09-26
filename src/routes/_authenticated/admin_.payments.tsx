@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,7 +88,7 @@ function AdminPaymentsPage() {
       qc.invalidateQueries({ queryKey: ["job-payment-queues"] });
       qc.invalidateQueries({ queryKey: ["job-payments-pending-count"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : t.error),
+    onError: (e) => toast.error(errorText(e, t)),
   });
 
   const pending = (queues.data?.pending ?? []) as unknown as PayRow[];

@@ -21,6 +21,11 @@ export type Stop = {
    * venue is what gets routed to when there are no coordinates.
    */
   venue?: string | null;
+  /**
+   * Google place id, when the stop came from Google Places. Passed alongside
+   * the name so Maps resolves the exact shop rather than searching the text.
+   */
+  placeId?: string | null;
 };
 
 const R = 6371; // km
@@ -117,21 +122,46 @@ export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number }
       ? `${s.lat},${s.lng}`
       : s.address?.trim() || s.venue?.trim() || s.title;
 
-  const points = ordered.map(key).filter(Boolean);
-  if (points.length === 0) return "https://www.google.com/maps";
+  if (ordered.length === 0) return "https://www.google.com/maps";
 
   // The last stop is always the destination. Only when the user's location is
   // unknown AND there is more than one stop does the first stop become the
   // origin instead. Taking the origin first used to leave a single-stop plan
   // with an origin and no destination, which opened Maps on a blank route.
-  const destination = points.pop()!;
+  const rest = [...ordered];
+  const last = rest.pop()!;
+  const dest = destinationFor(last);
+  const points = rest.map(key).filter(Boolean);
   const origin = from ? `${from.lat},${from.lng}` : points.length > 0 ? points.shift() : undefined;
 
   const params = new URLSearchParams({ api: "1" });
   if (origin) params.set("origin", origin);
-  params.set("destination", destination);
+  params.set("destination", dest.text);
+  if (dest.placeId) params.set("destination_place_id", dest.placeId);
   if (points.length > 0) {
     params.set("waypoints", points.slice(0, MAX_WAYPOINTS).join("|"));
   }
   return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+/**
+ * How the final stop is named to Maps.
+ *
+ * Coordinates route exactly but open an unlabelled pin, and the user wants to
+ * see which shop they are heading to - so the venue name is used whenever it
+ * can be made unambiguous: with the Google place id when we have one, else
+ * with the address appended so the search cannot drift to another branch of
+ * the same chain. A name on its own is not enough to route by, so without
+ * either of those the coordinates win over the label.
+ */
+function destinationFor(s: Stop): { text: string; placeId?: string } {
+  const name = s.venue?.trim() || null;
+  const address = s.address?.trim() || null;
+  const placeId = s.placeId?.trim() || null;
+  const hasPin = s.lat != null && s.lng != null;
+
+  if (name && placeId) return { text: name, placeId };
+  if (name && address) return { text: `${name}, ${address}` };
+  if (hasPin) return { text: `${s.lat},${s.lng}` };
+  return { text: name || address || s.title };
 }

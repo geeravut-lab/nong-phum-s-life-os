@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -295,7 +296,7 @@ function RequesterTab() {
       setPayRef("");
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -310,7 +311,7 @@ function RequesterTab() {
       setPayPanel(null);
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -323,7 +324,7 @@ function RequesterTab() {
       toast.success(t.payReleased);
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -833,7 +834,7 @@ function HelperTab() {
   const runMarkEnded = useServerFn(markServiceEnded);
   const runNotifyOffer = useServerFn(notifyJobOffer);
 
-  const withdrawOffer = async (offerId: string) => {
+  const withdrawOffer = async (offerId: string, jobId: string) => {
     const { error } = await supabase
       .from("job_offers")
       .update({ status: "withdrawn" })
@@ -841,6 +842,13 @@ function HelperTab() {
     if (error) {
       toast.error(error.message);
       return;
+    }
+    // The person waiting on the offer has to be told it is gone; they cannot
+    // see a row disappear from a list they are not looking at.
+    try {
+      await runNotifyOffer({ data: { jobId, event: "withdrawn" } });
+    } catch {
+      // A missed notification must not make a successful withdrawal look failed.
     }
     toast.success(t.offerWithdrawn);
     qc.invalidateQueries({ queryKey: ["my-offers"] });
@@ -911,7 +919,7 @@ function HelperTab() {
       toast.success(t.payServiceEnded);
       qc.invalidateQueries({ queryKey: ["my-assigned-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     }
   };
 
@@ -1160,7 +1168,7 @@ function HelperTab() {
                   className="mt-2"
                   size="sm"
                   variant="outline"
-                  onClick={() => withdrawOffer(o.id)}
+                  onClick={() => void withdrawOffer(o.id, o.job_id)}
                 >
                   {t.withdrawOffer}
                 </Button>

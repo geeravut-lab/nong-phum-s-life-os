@@ -22,4 +22,34 @@ export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom", "@tanstack/react-router"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Keep the third-party libraries out of the app's own entry chunk.
+         *
+         * Everything shared landed in one 560 kB index chunk, so any change to
+         * our code - a label, a fix - invalidated React, the router, Supabase
+         * and Radix along with it, and every returning visitor downloaded the
+         * lot again. Splitting by package group gives those libraries their own
+         * long-lived files: they only change when the dependency does.
+         *
+         * Whole packages stay together (react with react-dom, all of
+         * @tanstack), because splitting inside a package is what breaks
+         * initialisation order.
+         */
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id))
+            return "vendor-react";
+          if (id.includes("node_modules/@tanstack/")) return "vendor-tanstack";
+          if (id.includes("node_modules/@supabase/")) return "vendor-supabase";
+          if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
+          if (id.includes("node_modules/lucide-react/")) return "vendor-icons";
+          if (id.includes("node_modules/zod/")) return "vendor-zod";
+          return undefined;
+        },
+      },
+    },
+  },
 });

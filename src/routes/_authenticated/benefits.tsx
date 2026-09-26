@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { createBenefitShare } from "@/lib/benefit-share.functions";
+import { CopyButton } from "@/components/CopyButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -77,15 +79,11 @@ function BenefitsPage() {
       })) as { token: string };
       const url = `${window.location.origin}/benefits-share/${res.token}`;
       setShareUrl(url);
-      try {
-        await navigator.clipboard.writeText(url);
-        toast.success(t.benShareCreated);
-      } catch {
-        // Clipboard can be blocked; the link is shown below either way.
-        toast.success(t.saved);
-      }
+      // No auto-copy: it failed silently in in-app browsers, and the link now
+      // has its own copy button that reports what happened.
+      toast.success(t.benShareCreated);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setSharing(false);
     }
@@ -239,7 +237,7 @@ function BenefitsPage() {
         toast.success(t.benInterviewDone);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setInterviewBusy(false);
     }
@@ -517,7 +515,10 @@ function BenefitsPage() {
             {t.benShareButton}
           </Button>
           {shareUrl ? (
-            <p className="mt-2 break-all rounded-lg border border-border p-2 text-xs">{shareUrl}</p>
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-border p-2">
+              <p className="min-w-0 flex-1 break-all text-xs">{shareUrl}</p>
+              <CopyButton value={shareUrl} label={t.benShareCopy} className="shrink-0" />
+            </div>
           ) : null}
         </section>
       ) : null}

@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -227,7 +228,7 @@ function DocsPage() {
                 toast.success(`${t.r3SyncDone}: ${res.created}`);
                 void qc.invalidateQueries({ queryKey: ["reminders"] });
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : t.error);
+                toast.error(errorText(e, t));
               } finally {
                 setBusy(false);
               }

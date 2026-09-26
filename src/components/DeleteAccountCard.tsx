@@ -100,6 +100,7 @@ export function DeleteAccountCard() {
                         <li>{t.deleteItemHelpMe}</li>
                       )}
                       {p.counts.benefit_profiles > 0 && <li>{t.deleteItemBenefits}</li>}
+                      {p.otherRows > 0 && <li>{t.deleteItemMore(p.otherRows)}</li>}
                       {p.isSsoUser && <li>{t.deleteItemSso}</li>}
                       {p.isLineLinked && <li>{t.deleteItemLine}</li>}
                       {p.donations > 0 && <li>{t.deleteItemDonations}</li>}

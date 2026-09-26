@@ -35,6 +35,33 @@ export type Database = {
   };
   public: {
     Tables: {
+      usage_daily: {
+        Row: {
+          id: string;
+          user_id: string;
+          day: string;
+          path: string;
+          views: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          day?: string;
+          path: string;
+          views?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          day?: string;
+          path?: string;
+          views?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       app_notifications: {
         Row: {
           body: string;
@@ -83,7 +110,7 @@ export type Database = {
           id: string;
           removed: Json;
           requested_by: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           aivora_user_id?: string | null;
@@ -147,7 +174,7 @@ export type Database = {
       premium_payments: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           plan_tier: string;
           period: string;
           amount: number;
@@ -458,6 +485,7 @@ export type Database = {
       };
       documents: {
         Row: {
+          search_text: string | null;
           amount: number | null;
           category: string;
           counterparty: string | null;
@@ -573,7 +601,7 @@ export type Database = {
           promptpay_id: string;
           ref: string | null;
           status: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           amount_baht: number;
@@ -698,7 +726,7 @@ export type Database = {
         Row: {
           id: string;
           family_id: string;
-          created_by: string;
+          created_by: string | null;
           title: string;
           starts_at: string;
           ends_at: string | null;
@@ -836,7 +864,7 @@ export type Database = {
         Row: {
           alerted_at: string | null;
           created_at: string;
-          created_by: string;
+          created_by: string | null;
           family_id: string;
           grace_days: number;
           id: string;
@@ -881,7 +909,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          logged_by: string;
+          logged_by: string | null;
           logged_on: string;
           note: string;
           routine_id: string;
@@ -2116,6 +2144,8 @@ export type Database = {
       };
       digital_wreaths: {
         Row: {
+          kind: string;
+          tree_partner: string | null;
           amount: number;
           created_at: string;
           from_name: string;
@@ -2127,6 +2157,8 @@ export type Database = {
           promptpay_id: string | null;
         };
         Insert: {
+          kind?: string;
+          tree_partner?: string | null;
           amount?: number;
           created_at?: string;
           from_name: string;
@@ -2138,6 +2170,8 @@ export type Database = {
           promptpay_id?: string | null;
         };
         Update: {
+          kind?: string;
+          tree_partner?: string | null;
           amount?: number;
           created_at?: string;
           from_name?: string;
@@ -2153,6 +2187,12 @@ export type Database = {
       funeral_plans: {
         Row: {
           admin_notes: string | null;
+          admin_status: string;
+          admin_reviewed_at: string | null;
+          admin_reviewed_by: string | null;
+          fulfilment: string;
+          representative_name: string | null;
+          representative_contact: string | null;
           created_at: string;
           death_case_id: string | null;
           id: string;
@@ -2166,6 +2206,12 @@ export type Database = {
         };
         Insert: {
           admin_notes?: string | null;
+          admin_status?: string;
+          admin_reviewed_at?: string | null;
+          admin_reviewed_by?: string | null;
+          fulfilment?: string;
+          representative_name?: string | null;
+          representative_contact?: string | null;
           created_at?: string;
           death_case_id?: string | null;
           id?: string;
@@ -2179,6 +2225,12 @@ export type Database = {
         };
         Update: {
           admin_notes?: string | null;
+          admin_status?: string;
+          admin_reviewed_at?: string | null;
+          admin_reviewed_by?: string | null;
+          fulfilment?: string;
+          representative_name?: string | null;
+          representative_contact?: string | null;
           created_at?: string;
           death_case_id?: string | null;
           id?: string;
@@ -2189,6 +2241,75 @@ export type Database = {
           total_budget?: number | null;
           updated_at?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+      funeral_installments: {
+        Row: {
+          id: string;
+          plan_id: string;
+          seq: number;
+          due_on: string;
+          amount: number;
+          payment_status: string;
+          paid_at: string | null;
+          payer_ref: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          seq: number;
+          due_on: string;
+          amount: number;
+          payment_status?: string;
+          paid_at?: string | null;
+          payer_ref?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          seq?: number;
+          due_on?: string;
+          amount?: number;
+          payment_status?: string;
+          paid_at?: string | null;
+          payer_ref?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      funeral_evidence: {
+        Row: {
+          id: string;
+          plan_id: string;
+          kind: string;
+          title: string;
+          note: string;
+          file_path: string | null;
+          uploaded_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          kind?: string;
+          title: string;
+          note?: string;
+          file_path?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          kind?: string;
+          title?: string;
+          note?: string;
+          file_path?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -2457,6 +2578,7 @@ export type Database = {
       };
       platform_settings: {
         Row: {
+          feature_flags: Json;
           cancel_fee_pct: number;
           commission_rate: number;
           created_at: string;
@@ -2469,6 +2591,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          feature_flags?: Json;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;
@@ -2480,6 +2603,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          feature_flags?: Json;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;
@@ -2496,7 +2620,7 @@ export type Database = {
       privacy_audit_log: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           action: string;
           detail: string;
           meta: Json;
@@ -2757,6 +2881,16 @@ export type Database = {
       is_family_member: {
         Args: { _family_id: string; _user_id: string };
         Returns: boolean;
+      };
+      bump_usage: { Args: { p_path: string }; Returns: undefined };
+      usage_active_users: { Args: { p_days: number }; Returns: number };
+      usage_top_paths: {
+        Args: { p_days: number; p_limit: number };
+        Returns: Array<{ path: string; views: number; users: number }>;
+      };
+      usage_daily_totals: {
+        Args: { p_days: number };
+        Returns: Array<{ day: string; views: number; users: number }>;
       };
     };
     Enums: {

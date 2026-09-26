@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { notifyAdmins, notifyUsers } from "./notify.server";
+import { appError } from "@/lib/errors";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -274,14 +275,15 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
           reason: "payg_required" as const,
           remaining: 0,
           overageSatang: settings.paygUnitSatang,
-          message: `เกินโควต้าฟรี — ชำระ ${settings.paygUnitSatang} สตางค์/ครั้ง หรืออัปเกรด Premium`,
+          // A code, not a sentence: the caller turns it into the user's language.
+          message: "app:quota_payg_required",
         };
       }
       return {
         allowed: false as const,
         reason: "limit" as const,
         remaining: 0,
-        message: "เกินโควต้าฟรีเดือนนี้ — อัปเกรด Premium ได้ที่เมนูสนับสนุน",
+        message: "app:quota_exhausted",
       };
     }
 
@@ -313,7 +315,7 @@ export const createPremiumOrder = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const settings = await loadBillingSettings();
-    if (!settings.promptpayId) throw new Error("ยังไม่ได้ตั้ง PromptPay สำหรับบิลลิ่ง");
+    if (!settings.promptpayId) throw appError("billing_no_promptpay");
 
     const amount =
       data.planTier === "premium"
@@ -374,7 +376,7 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
     if (pay.user_id !== context.userId && !isAdmin) throw new Error("Forbidden");
     // User reports transfer — draft → pending for admin
     if (pay.payment_status === "paid") return { ok: true as const, status: "paid" as const };
-    if (pay.payment_status === "rejected") throw new Error("รายการนี้ถูกปฏิเสธแล้ว");
+    if (pay.payment_status === "rejected") throw appError("billing_already_rejected");
 
     await supabaseAdmin
       .from("premium_payments")
@@ -512,7 +514,10 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
       })
       .eq("id", data.paymentId);
 
-    if (pay.plan_tier !== "payg") {
+    // A payment outlives the account that made it: the row is kept as a ledger
+    // entry with user_id nulled when the user is deleted. There is then nobody
+    // to grant the plan to, and the payment is still marked paid above.
+    if (pay.plan_tier !== "payg" && pay.user_id) {
       await supabaseAdmin
         .from("profiles")
         .update({
@@ -551,7 +556,7 @@ export const createPaygOrder = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const settings = await loadBillingSettings();
     if (!settings.paygEnabled) throw new Error("PAYG is disabled");
-    if (!settings.promptpayId) throw new Error("ยังไม่ได้ตั้ง PromptPay");
+    if (!settings.promptpayId) throw appError("billing_no_promptpay");
     if (await isPremiumActive(context.userId)) {
       return { amount: 0, paymentId: null as string | null, message: "premium_skip" as const };
     }

@@ -1,5 +1,6 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -292,7 +293,7 @@ function FamilyPage() {
       void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -347,7 +348,7 @@ function FamilyPage() {
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -360,7 +361,7 @@ function FamilyPage() {
       toast.success(t.routineLogged);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -375,7 +376,7 @@ function FamilyPage() {
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -390,7 +391,7 @@ function FamilyPage() {
       void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -497,7 +498,12 @@ function FamilyPage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-            <h2 className="mb-3 text-sm font-semibold">{t.sharedItems}</h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">{t.sharedItems}</h2>
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/family/timeline">{t.tlOpen}</Link>
+              </Button>
+            </div>
             {/* One column on every width. In three columns the task rows had no
                 room for the title, the date, the assignee and the edit button,
                 so they wrapped into an unreadable stack anyway. */}
@@ -596,7 +602,7 @@ function FamilyPage() {
                     void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
                     toast.success(t.saved);
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }
@@ -818,7 +824,7 @@ function FamilyPage() {
                       void qc.invalidateQueries({ queryKey: ["family-checkins", familyId] });
                       toast.success(t.saved);
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setBusy(false);
                     }
@@ -903,7 +909,7 @@ function FamilyPage() {
                     void qc.invalidateQueries({ queryKey: ["reminders"] });
                     toast.success(t.saved);
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }
@@ -974,7 +980,7 @@ function FamilyPage() {
                           void qc.invalidateQueries({ queryKey: ["family-perms", familyId] });
                           toast.success(t.saved);
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : t.error);
+                          toast.error(errorText(e, t));
                         } finally {
                           setBusy(false);
                         }

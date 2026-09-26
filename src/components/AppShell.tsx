@@ -19,9 +19,11 @@ import {
   Wallet,
   Download,
   Search,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -29,6 +31,66 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { markNotificationsReadForPath, useInboxBadges } from "@/hooks/useInboxBadges";
+import { useTrackUsage } from "@/hooks/useTrackUsage";
+
+/**
+ * A scrolling list that says when there is more above or below it.
+ *
+ * The menu on a phone is a short window onto a long list, and nothing in it
+ * suggested that scrolling would reveal anything - so items at the ends went
+ * unseen. The cue is a fading edge plus a chevron, shown only on the side that
+ * actually has more content, and it is not interactive: it reports, the list
+ * still scrolls normally.
+ */
+function ScrollHint({ children, className = "" }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [more, setMore] = useState({ up: false, down: false });
+
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    // A few pixels of slack: sub-pixel heights would otherwise leave the bottom
+    // cue showing on a list that is already scrolled to the end.
+    setMore({
+      up: el.scrollTop > 4,
+      down: el.scrollTop + el.clientHeight < el.scrollHeight - 4,
+    });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    // The list grows and shrinks without being scrolled - the admin link
+    // appears, labels wrap at a different width - so watch the box too.
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        ref={ref}
+        onScroll={measure}
+        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${className}`}
+      >
+        {children}
+      </div>
+      {more.up ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex h-6 items-start justify-center bg-gradient-to-b from-sidebar to-transparent">
+          <ChevronUp className="size-3.5 animate-pulse text-muted-foreground" />
+        </div>
+      ) : null}
+      {more.down ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-6 items-end justify-center bg-gradient-to-t from-sidebar to-transparent">
+          <ChevronDown className="size-3.5 animate-pulse text-muted-foreground" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
@@ -57,6 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
   const { user } = useAuthUser();
+  useTrackUsage();
 
   const planQ = useQuery({
     queryKey: ["my-plan-badge", user?.id],
@@ -252,22 +315,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className={linkClass}
-              activeProps={{ className: activeClass }}
-            >
-              <span className="relative">
-                <item.icon className="size-4 shrink-0" />
-                <NavDot show={hasBadge(item.to)} />
-              </span>
-              <span className="truncate">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <ScrollHint className="p-3">
+          <nav className="flex flex-col gap-1">
+            {nav.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={linkClass}
+                activeProps={{ className: activeClass }}
+              >
+                <span className="relative">
+                  <item.icon className="size-4 shrink-0" />
+                  <NavDot show={hasBadge(item.to)} />
+                </span>
+                <span className="truncate">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </ScrollHint>
 
         <div className="shrink-0 space-y-1 border-t border-border p-3">
           {isAdmin ? (
@@ -369,7 +434,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </SheetTitle>
             </SheetHeader>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+            <ScrollHint className="p-3">
               <div className="flex flex-col gap-1">
                 {moreNav.map((item) => (
                   <Link
@@ -387,7 +452,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </Link>
                 ))}
               </div>
-            </div>
+            </ScrollHint>
 
             <div className="shrink-0 space-y-1 border-t border-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               {isAdmin ? (

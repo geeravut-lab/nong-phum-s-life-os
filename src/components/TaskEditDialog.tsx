@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -81,7 +82,7 @@ function TaskEditForm({
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -96,7 +97,7 @@ function TaskEditForm({
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }

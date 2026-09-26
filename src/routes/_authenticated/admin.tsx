@@ -1,9 +1,14 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BarChart3 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { FEATURE_FLAGS } from "@/lib/flags";
+import { setFeatureFlag } from "@/lib/admin.functions";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,6 +188,9 @@ function AdminPage() {
       <MarketplaceHubCard />
       <SafetyHubCard />
       <PaymentsHubCard />
+      <FuneralHubCard />
+      <UsageHubCard />
+      <FeatureFlagsCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -619,6 +627,96 @@ function LineQuotaCard() {
   );
 }
 
+function FeatureFlagsCard() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const save = useServerFn(setFeatureFlag);
+  const q = useQuery({
+    queryKey: ["feature-flags-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("feature_flags")
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.feature_flags ?? {}) as Record<string, boolean>;
+    },
+  });
+
+  const toggle = async (flag: (typeof FEATURE_FLAGS)[number], enabled: boolean) => {
+    try {
+      await save({ data: { flag, enabled } });
+      toast.success(t.saved);
+      void qc.invalidateQueries({ queryKey: ["feature-flags-admin"] });
+      void qc.invalidateQueries({ queryKey: ["feature-flags"] });
+    } catch (e) {
+      toast.error(errorText(e, t));
+    }
+  };
+
+  return (
+    <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <h2 className="text-sm font-semibold">{t.flagsTitle}</h2>
+      <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.flagsSub}</p>
+      <ul className="space-y-2">
+        {FEATURE_FLAGS.map((flag) => {
+          // Absent means on, so only an explicit false is off.
+          const on = q.data?.[flag] !== false;
+          return (
+            <li key={flag} className="flex items-center justify-between gap-3 text-sm">
+              <span>{t[`flag_${flag}`]}</span>
+              <Switch checked={on} onCheckedChange={(v) => void toggle(flag, v === true)} />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function FuneralHubCard() {
+  const { t } = useI18n();
+  const waiting = useQuery({
+    queryKey: ["funeral-plans-reviewing-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("funeral_plans")
+        .select("id", { count: "exact", head: true })
+        .eq("admin_status", "reviewing");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  return (
+    <Link
+      to="/admin/funeral"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.fnAdminCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.fnAdminCardSub}</p>
+      </div>
+      {!!waiting.data && <Badge variant="destructive">{waiting.data}</Badge>}
+    </Link>
+  );
+}
+
+function UsageHubCard() {
+  const { t } = useI18n();
+  return (
+    <Link
+      to="/admin/usage"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.adminUsageCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.adminUsageCardSub}</p>
+      </div>
+      <BarChart3 className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
+  );
+}
+
 // Link card to /admin/support with the one number that matters at a glance.
 // Loaded once by React Query — no re-render loop is possible here, unlike the
 // hand-rolled state in the source playbook.
@@ -868,7 +966,7 @@ function AdminBillingPanel() {
             setDraft({});
             void q.refetch();
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : t.error);
+            toast.error(errorText(e, t));
           } finally {
             setBusy(false);
           }

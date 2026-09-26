@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { appError } from "@/lib/errors";
 
 /** Lazy server-only admin client (keeps this module importable from client routes). */
 async function admin() {
@@ -179,7 +180,7 @@ export const setPromotedListing = createServerFn({ method: "POST" })
           .eq("id", context.userId)
           .maybeSingle();
         if ((prof?.plan_tier as string) === "free") {
-          throw new Error("ต้องการแพ็ก Premium เพื่อโปรโมทโปรไฟล์");
+          throw appError("promote_needs_premium");
         }
       }
 

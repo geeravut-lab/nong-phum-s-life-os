@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -197,7 +198,7 @@ function MerchantDashboardPage() {
       void qc.invalidateQueries({ queryKey: ["my-local-events", user?.id] });
       void qc.invalidateQueries({ queryKey: ["local-events"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -212,7 +213,7 @@ function MerchantDashboardPage() {
       void qc.invalidateQueries({ queryKey: ["local-events"] });
       toast.success(t.saved);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -388,7 +389,7 @@ function MerchantDashboardPage() {
       void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
       void qc.invalidateQueries({ queryKey: ["local-deals"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }

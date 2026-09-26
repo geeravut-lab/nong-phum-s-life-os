@@ -24,7 +24,9 @@ async function requireQuota(task: "chat" | "document" | "decision" | "transcribe
     message?: string;
   };
   if (!res.allowed) {
-    throw new Error(res.message ?? "AI quota exceeded — upgrade Premium or wait next month");
+    // The message is an app: error code, so the page can say it in the user's
+    // language; the fallback only fires if the quota check ever stops setting one.
+    throw new Error(res.message ?? "app:quota_exhausted");
   }
 }
 

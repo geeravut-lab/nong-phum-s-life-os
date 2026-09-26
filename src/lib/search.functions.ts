@@ -91,7 +91,11 @@ export const universalSearch = createServerFn({ method: "POST" })
         .from("documents")
         .select("id, title, summary, category, doc_date, due_date, is_shared")
         .or(visible())
-        .or(`title.ilike.${pat},summary.ilike.${pat},category.ilike.${pat}`)
+        // search_text is a generated column carrying the title, the summary,
+        // the counterparty and the whole `extracted` object, with a trigram
+        // index behind it - so a word from inside the document matches, not
+        // only one from its title.
+        .or(`search_text.ilike.${pat}`)
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("reminders")

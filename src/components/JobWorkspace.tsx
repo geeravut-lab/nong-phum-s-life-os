@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { notifyJobChat } from "@/lib/marketplace-notify.functions";
@@ -98,7 +99,7 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
       setBody("");
       qc.invalidateQueries({ queryKey: ["job-messages", jobId] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }

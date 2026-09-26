@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ import {
 } from "@/lib/local.shared";
 import { directionsUrl, isOpenNow, mapsUrl } from "@/lib/local-hours";
 import { formatDay } from "@/lib/format";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 export const Route = createFileRoute("/_authenticated/local")({
   head: () => ({ meta: routeMeta("local") }),
@@ -76,6 +78,7 @@ function LocalPage() {
   // What the detail sheet is showing. A card is a summary by necessity - the
   // description, the full window and the price only fit once one is opened.
   const [detail, setDetail] = useState<DetailView | null>(null);
+  const flags = useFeatureFlags();
 
   /** "26 Sep 2026, 18:00 – 21:00", collapsing the date when it does not change. */
   const fmtWindow = (startsAt: string | null, endsAt: string | null): string | null => {
@@ -253,6 +256,12 @@ function LocalPage() {
    * inside the results block, so it only showed when it was not needed.
    */
   const loadGooglePlaces = async (opts: { lat?: number; lng?: number; query?: string }) => {
+    // Billed per call, so an admin can switch it off without a deploy.
+    if (!flags.enabled("google_places")) {
+      setGooglePlaces([]);
+      setGoogleMsg(null);
+      return;
+    }
     try {
       const res = (await runGoogle({
         data: {
@@ -403,7 +412,7 @@ function LocalPage() {
       });
       toast.success(t.localSearchDone);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -699,7 +708,9 @@ function LocalPage() {
         {(googlePlaces.length > 0 || googleMsg) && (
           <section className="mb-5 space-y-2">
             <h2 className="text-sm font-semibold">Google Places</h2>
-            {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
+            {googleMsg ? (
+              <p className="text-xs text-muted-foreground">{errorText(googleMsg, t)}</p>
+            ) : null}
             <ul className="space-y-2">
               {googlePlaces.map((g) => (
                 <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
@@ -763,6 +774,9 @@ function LocalPage() {
                           lng: g.lng,
                           address: g.address,
                           venue: g.name,
+                          // Google gave us the id, so Maps can be told exactly
+                          // which shop the name refers to.
+                          placeId: g.googlePlaceId,
                         })
                       }
                     >
