@@ -24,6 +24,7 @@ import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
@@ -113,6 +114,11 @@ const AuthenticatedLocalRoute = AuthenticatedLocalRouteImport.update({
 const AuthenticatedMoneyRoute = AuthenticatedMoneyRouteImport.update({
   id: '/money',
   path: '/money',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -214,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -245,6 +252,7 @@ export interface FileRoutesByTo {
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
+  '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/_authenticated/legacy': typeof AuthenticatedLegacyRoute
   '/_authenticated/local': typeof AuthenticatedLocalRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
+  '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/legacy'
     | '/local'
     | '/money'
+    | '/search'
     | '/settings'
     | '/support'
     | '/tasks'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/legacy'
     | '/local'
     | '/money'
+    | '/search'
     | '/settings'
     | '/support'
     | '/tasks'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/_authenticated/legacy'
     | '/_authenticated/local'
     | '/_authenticated/money'
+    | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/_authenticated/support'
     | '/_authenticated/tasks'
@@ -507,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMoneyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -628,6 +647,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
   AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
+  AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
@@ -655,6 +675,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
   AuthenticatedLocalRoute: AuthenticatedLocalRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,
+  AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
