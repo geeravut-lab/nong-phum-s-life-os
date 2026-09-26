@@ -130,6 +130,21 @@
 | Admin ประวัติ: ชื่อ → email → 6 ตัวแรกของ UID    | 🧪    | email ต้องดึงฝั่ง server (auth.users) |
 | Netlify build (`npm ci`)                         | ✅    | ยืนยันจาก production deploy จริง      |
 
+### ของใหม่รอบนี้ (ปิดช่องว่างจากสเปก)
+
+| Feature                                | สถานะ | หมายเหตุ                                           |
+| -------------------------------------- | ----- | -------------------------------------------------- |
+| Universal Search `/search`             | 🧪    | ค้นข้าม 7 ตาราง จำกัดสิทธิ์ในตัว handler           |
+| Data Export (PDPA) ในหน้าตั้งค่า       | 🧪    | JSON + signed url ของไฟล์แนบ + audit log           |
+| Routine Tracking + Change Detection    | 🧪    | ตรวจจับใน tick แบบ deterministic ไม่ใช้ AI         |
+| Share ผลสิทธิ `/benefits-share/$token` | 🧪    | snapshot เท่านั้น ไม่ส่งโปรไฟล์ หมดอายุ 30 วัน     |
+| Local Events + แผนเที่ยวหลายจุด        | 🧪    | logic จัดเส้นทางทดสอบแล้ว                          |
+| พินัยกรรมและมรดก `/legacy`             | 🧪    | เก็บตำแหน่งฉบับจริง ไม่ได้ทำพินัยกรรมให้           |
+| Admin เลือก Commission / Service Fee   | ✅    | **มีอยู่แล้วก่อนหน้านี้** ที่ `/admin/marketplace` |
+
+**migration ใหม่ 4 ไฟล์ยังไม่ได้ apply ที่ไหนเลย** — ต้อง `supabase db push` ก่อนฟีเจอร์เหล่านี้จะทำงาน:
+`family_routines`, `benefit_shares`, `local_events`, `legacy_will`
+
 ---
 
 ## Google Places — สิ่งที่ยังต้องยืนยัน

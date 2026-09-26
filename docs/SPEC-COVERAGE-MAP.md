@@ -2,6 +2,10 @@
 
 จัดทำ 2026-09-26 จากการอ่านสเปก 3 ไฟล์เทียบกับโค้ดใน repo (ไม่ใช่เทียบกับเอกสารสถานะเดิม)
 
+**อัปเดต 2026-09-26 รอบที่ 2:** ปิดช่องว่าง 6 ข้อจาก 7 ข้อในสรุปท้ายเอกสารแล้ว (ข้อ 5 ตรวจใหม่พบว่ามีอยู่แล้ว)
+ของใหม่ทั้งหมดเป็น 🧪 = โค้ดครบ build/lint/typecheck ผ่าน แต่ยังไม่ได้กดใช้ในเบราว์เซอร์ที่ล็อกอินจริง
+และ **migration ยังไม่ถูก apply ที่ไหนเลย** (4 ไฟล์: family_routines, benefit_shares, local_events, legacy_will)
+
 สเปกต้นทาง:
 
 1. `Functions&Features for 7 Systems & LIFE OS.pdf` (18 หน้า)
@@ -34,7 +38,7 @@
 | Recurring Tasks                    | `recurrence.ts` + `cron.server.ts` tick | ✅    |
 | Privacy Center                     | `/settings` · `privacy.functions.ts`    | ✅    |
 | Monetization (Free/Premium/Family) | `/support` · `billing.functions.ts`     | ✅    |
-| **Search & Personal Memory**       | —                                       | ❌    |
+| Search & Personal Memory           | `/search` · `search.functions.ts`       | 🧪    |
 
 **ช่องว่างสำคัญ:** สเปกเขียนถึง "ค้นข้อมูลของผู้ใช้ด้วยภาษาธรรมชาติ" และ LIFE OS Core ก็ระบุ
 **Universal Search** ไว้ แต่ไม่พบฟังก์ชันค้นหาข้ามโมดูลในโค้ดเลย (`/docs` มีตัวกรองในหน้าเท่านั้น)
@@ -84,8 +88,8 @@ service_fee บวกเพิ่มให้ผู้จ่าย) · default �
 | Privacy & Consent         | `/settings` `/family`               | ✅    |
 | AI Family Assistant       | `/chat`                             | 🟡    |
 | Emergency Info            | Legacy trusted contacts             | 🟡    |
-| **Routine Tracking**      | —                                   | ❌    |
-| **Change Detection**      | —                                   | ❌    |
+| Routine Tracking          | `/family` · `routines.functions.ts` | 🧪    |
+| Change Detection          | tick: `detectRoutineChanges`        | 🧪    |
 | **Family Expense ร่วม**   | —                                   | ❌    |
 
 **ช่องว่างสำคัญ:** 3 ข้อท้ายคือหัวใจของ "Family Radar" ตามสเปกหน้า 10–11 — ตัวอย่างในสเปกคือ
@@ -109,7 +113,7 @@ _"แม่ไม่ได้ทำกิจกรรมตามปกติใ
 | Deadline Reminder            | ผ่าน reminders                | 🟡    |
 | Province/Local Benefits      | —                             | ❌    |
 | Save & Compare               | —                             | ❌    |
-| Share ผลลัพธ์ให้ครอบครัว     | —                             | ❌    |
+| Share ผลลัพธ์ให้ครอบครัว     | `/benefits-share/$token`      | 🧪    |
 
 **ช่องว่างสำคัญ:** "Share ผลลัพธ์" เป็นกลไก viral ที่สเปกเน้นมาก (หน้า 12: _"ลองเช็กดูว่าคุณมีสิทธิอะไรบ้าง"_
 คนแชร์ให้พ่อแม่ทันที) และอยู่ในหัวข้อ Growth & Viral (หน้า 5) ด้วย — ยังไม่มี
@@ -118,21 +122,21 @@ _"แม่ไม่ได้ทำกิจกรรมตามปกติใ
 
 ## 5. ของดีใกล้บ้าน (Local) → `/local` `/local/merchant`
 
-| สเปก                            | หน้า/ที่อยู่                | สถานะ |
-| ------------------------------- | --------------------------- | ----- |
-| Location-aware Home             | `/local`                    | ✅    |
-| AI Natural Search               | `parseLocalQuery`           | ✅    |
-| Personalized Recommendations    | `rankPlaces`                | ✅    |
-| Open Now                        | `local-hours.ts`            | ✅    |
-| Local Business Profiles         | `/local/merchant`           | ✅    |
-| Community Content               | `/local/merchant`           | ✅    |
-| Local Deals (คูปอง/โปรโมชัน)    | `local_deals`               | ✅    |
-| Merchant Dashboard              | `/local/merchant`           | ✅    |
-| Reviews & Trust                 | `local_review` (มีตาราง)    | 🟡    |
-| Google Places                   | `local-places.functions.ts` | 🟡    |
-| AI Local Guide (วางแผนสนทนา)    | `/chat`                     | 🟡    |
-| **Event**                       | —                           | ❌    |
-| **Route & Itinerary (หลายจุด)** | —                           | ❌    |
+| สเปก                         | หน้า/ที่อยู่                | สถานะ |
+| ---------------------------- | --------------------------- | ----- |
+| Location-aware Home          | `/local`                    | ✅    |
+| AI Natural Search            | `parseLocalQuery`           | ✅    |
+| Personalized Recommendations | `rankPlaces`                | ✅    |
+| Open Now                     | `local-hours.ts`            | ✅    |
+| Local Business Profiles      | `/local/merchant`           | ✅    |
+| Community Content            | `/local/merchant`           | ✅    |
+| Local Deals (คูปอง/โปรโมชัน) | `local_deals`               | ✅    |
+| Merchant Dashboard           | `/local/merchant`           | ✅    |
+| Reviews & Trust              | `local_review` (มีตาราง)    | 🟡    |
+| Google Places                | `local-places.functions.ts` | 🟡    |
+| AI Local Guide (วางแผนสนทนา) | `/chat`                     | 🟡    |
+| Event                        | `local_events` · `/local`   | 🧪    |
+| Route & Itinerary            | `itinerary.ts` · `/local`   | 🧪    |
 
 **ช่องว่างสำคัญ:** สเปกหน้า 13–14 บรรยายการใช้งานหลักว่า _"เย็นนี้มีอะไรน่าทำกับลูกบ้าง งบไม่เกิน 500?"_
 แล้วระบบรวม **Event / Workshop / ตลาด / Community event** มาจัดเป็นแผน — ปัจจุบันมีแต่ "สถานที่"
@@ -163,20 +167,20 @@ _"แม่ไม่ได้ทำกิจกรรมตามปกติใ
 
 ## 7. Life Archive → `/docs`
 
-| สเปก                 | หน้า/ที่อยู่              | สถานะ |
-| -------------------- | ------------------------- | ----- |
-| Secure Vault         | `/docs` (storage private) | ✅    |
-| OCR & Classification | `doc-intake.ts`           | ✅    |
-| Metadata Extraction  | `/docs`                   | ✅    |
-| Expiration Tracker   | `/docs` + reminders       | ✅    |
-| Warranty Tracker     | `warranty` (9 ไฟล์)       | ✅    |
-| AI Summary           | `/docs`                   | ✅    |
-| Sharing & Permission | `/docs` (is_shared)       | ✅    |
-| Relationship Links   | `source_document_id`      | 🟡    |
-| Asset Register       | Legacy assets (`/legacy`) | 🟡    |
-| **Full-text Search** | —                         | ❌    |
-| **Family Timeline**  | —                         | ❌    |
-| **Export & Backup**  | —                         | ❌    |
+| สเปก                 | หน้า/ที่อยู่                        | สถานะ |
+| -------------------- | ----------------------------------- | ----- |
+| Secure Vault         | `/docs` (storage private)           | ✅    |
+| OCR & Classification | `doc-intake.ts`                     | ✅    |
+| Metadata Extraction  | `/docs`                             | ✅    |
+| Expiration Tracker   | `/docs` + reminders                 | ✅    |
+| Warranty Tracker     | `warranty` (9 ไฟล์)                 | ✅    |
+| AI Summary           | `/docs`                             | ✅    |
+| Sharing & Permission | `/docs` (is_shared)                 | ✅    |
+| Relationship Links   | `source_document_id`                | 🟡    |
+| Asset Register       | Legacy assets (`/legacy`)           | 🟡    |
+| **Full-text Search** | —                                   | ❌    |
+| **Family Timeline**  | —                                   | ❌    |
+| Export & Backup      | `/settings` · `export.functions.ts` | 🧪    |
 
 **ช่องว่างสำคัญ:** Export & Backup ไม่ใช่แค่ฟีเจอร์ขาย — มันอยู่ในหัวข้อ Security & Trust (หน้า 5)
 ว่า **"Data export and deletion"** และผูกกับ PDPA ปัจจุบันมีเส้นทางลบบัญชี (`account.server.ts`)
@@ -186,14 +190,14 @@ _"แม่ไม่ได้ทำกิจกรรมตามปกติใ
 
 ## 8. LIFE OS Core (หน้า 4–5 ของสเปก)
 
-| สเปก                 | หน้า/ที่อยู่                     | สถานะ |
-| -------------------- | -------------------------------- | ----- |
-| One-box AI Inbox     | `/chat` + QuickBar               | ✅    |
-| AI Router (intent)   | `phum.server.ts`                 | ✅    |
-| Today Dashboard      | `/today`                         | ✅    |
-| Command Center       | `phum-actions.ts`                | ✅    |
-| Mobile-first + PWA   | `manifest.webmanifest` + `sw.js` | ✅    |
-| **Universal Search** | —                                | ❌    |
+| สเปก               | หน้า/ที่อยู่                     | สถานะ |
+| ------------------ | -------------------------------- | ----- |
+| One-box AI Inbox   | `/chat` + QuickBar               | ✅    |
+| AI Router (intent) | `phum.server.ts`                 | ✅    |
+| Today Dashboard    | `/today`                         | ✅    |
+| Command Center     | `phum-actions.ts`                | ✅    |
+| Mobile-first + PWA | `manifest.webmanifest` + `sw.js` | ✅    |
+| Universal Search   | `/search`                        | 🧪    |
 
 ### Life Modules ตามสเปก
 
@@ -240,7 +244,7 @@ SSO ✅ (`sso.*`) · **Email/calendar ❌** · **Cloud storage ❌** ·
 
 Consent management ✅ · RBAC ✅ (`has_role`) · Encryption in transit ✅ ·
 Human confirmation before irreversible actions ✅ · Audit log 🟡 ·
-Data deletion ✅ (`account.server.ts`) · **Data export ❌** ·
+Data deletion ✅ (`account.server.ts`) · Data export 🧪 (`export.functions.ts`) ·
 **Device/session management ❌** · Sensitive-data minimization 🟡 ·
 Privacy policy consent records 🟡
 
@@ -260,7 +264,7 @@ Privacy policy consent records 🟡
 | 3   | เอกสารสำคัญ                                | `/legacy` · `docs-legacy.functions.ts` | ✅    |
 | 4   | ทรัพย์สินและภาระ                           | `/legacy` (legacy assets)              | ✅    |
 | 5   | ตู้เซฟของฉัน (Secure Vault)                | `/legacy`                              | ✅    |
-| 6   | **พินัยกรรมและมรดก (Will & Estate)**       | —                                      | ❌    |
+| 6   | พินัยกรรมและมรดก                           | `/legacy` · `legacy-will.functions.ts` | 🧪    |
 | 7   | งานที่ต้องจัดการ (After-Life Checklist)    | `/legacy/after`                        | ✅    |
 | 8   | งานศพ (Funeral Planner)                    | `funeral.functions.ts`                 | ✅    |
 | 9   | สิ่งที่ฉันอยากฝากไว้ (Legacy Messages)     | `/legacy`                              | ✅    |
