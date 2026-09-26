@@ -29,10 +29,28 @@ const OWNED_TABLES = [
   "user_benefits",
 ] as const;
 
+// Also cascaded, and counted together as one line in the dialog: these are the
+// tables the PDPA migration wired up, and the confirmation has to say they go
+// too rather than listing only the nine above.
+const OTHER_OWNED_TABLES = [
+  "legacy_wishes",
+  "legacy_assets",
+  "legacy_contacts",
+  "legacy_checklist",
+  "decisions",
+  "funeral_plans",
+  "place_reviews",
+] as const;
+
+// The same, addressed by owner_user_id instead of user_id.
+const OWNER_TABLES = ["local_places", "local_events"] as const;
+
 export type OwnedFamily = { id: string; name: string; otherMembers: number };
 
 export type DeletionPreview = {
   counts: Record<(typeof OWNED_TABLES)[number], number>;
+  /** Everything in OTHER_OWNED_TABLES and OWNER_TABLES, as one number. */
+  otherRows: number;
   storageFiles: number;
   /** Families this user owns; deleting the account dissolves each one. */
   ownedFamilies: OwnedFamily[];
@@ -74,6 +92,26 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
     .eq("user_id", userId);
   const memberOfFamilies = Math.max(0, (memberships ?? 0) - ownedFamilies.length);
 
+  // One number for the rest: the dialog says "and n more records", which is
+  // honest without turning the confirmation into a schema tour.
+  const otherCounts = await Promise.all([
+    ...OTHER_OWNED_TABLES.map(async (table) => {
+      const { count } = await db
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      return count ?? 0;
+    }),
+    ...OWNER_TABLES.map(async (table) => {
+      const { count } = await db
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", userId);
+      return count ?? 0;
+    }),
+  ]);
+  const otherRows = otherCounts.reduce((n, c) => n + c, 0);
+
   const storageFiles = (await listUserFiles(userId)).length;
 
   const { data: link } = await supabaseAdmin
@@ -93,6 +131,7 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
 
   return {
     counts,
+    otherRows,
     storageFiles,
     ownedFamilies,
     memberOfFamilies,

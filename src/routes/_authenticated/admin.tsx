@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -886,7 +887,7 @@ function AdminBillingPanel() {
             setDraft({});
             void q.refetch();
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : t.error);
+            toast.error(errorText(e, t));
           } finally {
             setBusy(false);
           }

@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -292,7 +293,7 @@ function FamilyPage() {
       void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -347,7 +348,7 @@ function FamilyPage() {
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -360,7 +361,7 @@ function FamilyPage() {
       toast.success(t.routineLogged);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -375,7 +376,7 @@ function FamilyPage() {
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -390,7 +391,7 @@ function FamilyPage() {
       void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -596,7 +597,7 @@ function FamilyPage() {
                     void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
                     toast.success(t.saved);
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }
@@ -818,7 +819,7 @@ function FamilyPage() {
                       void qc.invalidateQueries({ queryKey: ["family-checkins", familyId] });
                       toast.success(t.saved);
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setBusy(false);
                     }
@@ -903,7 +904,7 @@ function FamilyPage() {
                     void qc.invalidateQueries({ queryKey: ["reminders"] });
                     toast.success(t.saved);
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }
@@ -974,7 +975,7 @@ function FamilyPage() {
                           void qc.invalidateQueries({ queryKey: ["family-perms", familyId] });
                           toast.success(t.saved);
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : t.error);
+                          toast.error(errorText(e, t));
                         } finally {
                           setBusy(false);
                         }

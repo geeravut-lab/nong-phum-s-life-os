@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -121,7 +122,7 @@ function MemorialPublicPage() {
       }
       void qc.invalidateQueries({ queryKey: ["digital-wreaths", memQ.data.id] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -278,7 +279,7 @@ function MemorialPublicPage() {
                       queryKey: ["digital-wreaths", m.id],
                     });
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }

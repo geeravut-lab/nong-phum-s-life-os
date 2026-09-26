@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -168,7 +169,7 @@ function LegacyAfterPage() {
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
       void qc.invalidateQueries({ queryKey: ["verifier-duties"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -193,7 +194,7 @@ function LegacyAfterPage() {
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
       void qc.invalidateQueries({ queryKey: ["my-memorials"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -217,7 +218,7 @@ function LegacyAfterPage() {
       setPlanResult(res as typeof planResult);
       toast.success(t.p6PlanReady);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -237,7 +238,7 @@ function LegacyAfterPage() {
       setPayInfo(res);
       toast.success(t.p6PayReady);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -251,7 +252,7 @@ function LegacyAfterPage() {
       toast.success(t.p6PaidMarked);
       setPayInfo(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -420,7 +421,7 @@ function LegacyAfterPage() {
                         toast.success(t.r2MakePublic);
                         void qc.invalidateQueries({ queryKey: ["memorials"] });
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
+                        toast.error(errorText(e, t));
                       } finally {
                         setBusy(false);
                       }
@@ -455,7 +456,7 @@ function LegacyAfterPage() {
                         toast.success(t.r2VideoSaved);
                         void qc.invalidateQueries({ queryKey: ["memorials"] });
                       } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
+                        toast.error(errorText(e, t));
                       } finally {
                         setBusy(false);
                       }
@@ -486,7 +487,7 @@ function LegacyAfterPage() {
               void qc.invalidateQueries({ queryKey: ["death-notify", selectedCaseId] });
               void qc.invalidateQueries({ queryKey: ["memorials"] });
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : t.error);
+              toast.error(errorText(e, t));
             } finally {
               setBusy(false);
             }
@@ -611,7 +612,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }
@@ -635,7 +636,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }
@@ -659,7 +660,7 @@ function LegacyAfterPage() {
                                     queryKey: ["post-life-actions", selectedCaseId],
                                   });
                                 } catch (e) {
-                                  toast.error(e instanceof Error ? e.message : t.error);
+                                  toast.error(errorText(e, t));
                                 } finally {
                                   setBusy(false);
                                 }

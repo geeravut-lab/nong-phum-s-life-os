@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -353,7 +354,7 @@ function SupportPage() {
                         setPremRef("");
                       }
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setPremBusy(false);
                     }
@@ -407,7 +408,7 @@ function SupportPage() {
                       });
                       setPremRef("");
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setPremBusy(false);
                     }
@@ -460,7 +461,7 @@ function SupportPage() {
                       });
                       setPremRef("");
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setPremBusy(false);
                     }
@@ -524,7 +525,7 @@ function SupportPage() {
                   void qc.invalidateQueries({ queryKey: ["my-plan"] });
                   void qc.invalidateQueries({ queryKey: ["my-premium-payments"] });
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : t.error);
+                  toast.error(errorText(e, t));
                 } finally {
                   setPremBusy(false);
                 }

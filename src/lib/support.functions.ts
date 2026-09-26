@@ -156,7 +156,9 @@ export const getDonationReport = createServerFn({ method: "GET" })
       at: r.confirmed_at ?? r.created_at,
       amountBaht: Number(r.amount_baht) || 0,
       donorKey: r.user_id,
-      who: r.display_name || r.email || `${r.user_id.slice(0, 8)}…`,
+      // A donation from a since-deleted account keeps the money but loses the
+      // person, so there may be no id to shorten.
+      who: r.display_name || r.email || (r.user_id ? `${r.user_id.slice(0, 8)}…` : "—"),
       ref: r.ref,
     }));
   });

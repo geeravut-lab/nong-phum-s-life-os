@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Download } from "lucide-react";
@@ -31,7 +32,7 @@ export function ExportDataCard() {
       URL.revokeObjectURL(url);
       toast.success(t.exportDone);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }

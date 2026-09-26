@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { appError } from "@/lib/errors";
 
 export type AgendaSource = "task" | "family_event" | "money" | "helpme" | "warranty";
 
@@ -299,7 +300,7 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
         .single();
       if (error || !r) throw new Error(error?.message ?? "not found");
       if (r.status !== "open" && r.status !== "pending") {
-        throw new Error("รายการนี้แก้ไขไม่ได้แล้ว");
+        throw appError("agenda_locked");
       }
       // allow owner or family member on shared
       if (r.user_id !== uid && r.is_shared && r.family_id) {
@@ -319,14 +320,14 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
       // has to be a member of the one this reminder is shared with - otherwise
       // a task could be pushed onto someone outside it.
       if (data.assigneeUserId !== undefined && data.assigneeUserId !== null) {
-        if (!r.family_id) throw new Error("ต้องแชร์กับครอบครัวก่อนจึงจะมอบหมายได้");
+        if (!r.family_id) throw appError("agenda_share_first");
         const { data: mem } = await supabaseAdmin
           .from("family_members")
           .select("id")
           .eq("family_id", r.family_id as string)
           .eq("user_id", data.assigneeUserId)
           .maybeSingle();
-        if (!mem) throw new Error("ผู้รับมอบหมายไม่ได้อยู่ในครอบครัวนี้");
+        if (!mem) throw appError("agenda_assignee_not_in_family");
       }
 
       const { error: up } = await supabaseAdmin
@@ -351,7 +352,7 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
         .single();
       if (error || !e) throw new Error(error?.message ?? "not found");
       if (!isFutureOrToday(e.starts_at as string)) {
-        throw new Error("นัดที่ผ่านไปแล้วแก้ไขไม่ได้");
+        throw appError("agenda_past_event");
       }
       const { data: mem } = await supabaseAdmin
         .from("family_members")
@@ -381,7 +382,7 @@ export const updateAgendaItem = createServerFn({ method: "POST" })
     if (error || !j) throw new Error(error?.message ?? "not found");
     if (j.user_id !== uid) throw new Error("Forbidden");
     if (!["open", "quoted", "booked", "assigned"].includes(j.status as string)) {
-      throw new Error("งานนี้แก้ไขเวลานัดไม่ได้แล้ว");
+      throw appError("agenda_task_time_locked");
     }
     const { error: up } = await supabaseAdmin
       .from("jobs")

@@ -119,7 +119,7 @@ export const searchGooglePlaces = createServerFn({ method: "POST" })
       return {
         places: [] as GooglePlaceItem[],
         error: "missing_api_key" as const,
-        message: "ยังไม่ได้ตั้ง GOOGLE_MAPS_API_KEY ใน Netlify — แสดงเฉพาะสถานที่จากผู้ใช้ในระบบ",
+        message: "app:google_key_missing",
       };
     }
 

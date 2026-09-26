@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -123,7 +124,7 @@ function DecidePage() {
       qc.invalidateQueries({ queryKey: ["decisions"] });
       toast.success(t.decideAnalyzed);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }

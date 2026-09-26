@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,7 +37,7 @@ function AdminSafetyPage() {
       toast.success(t.saved);
       qc.invalidateQueries({ queryKey: ["safety-reports"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : t.error),
+    onError: (e) => toast.error(errorText(e, t)),
   });
 
   return (

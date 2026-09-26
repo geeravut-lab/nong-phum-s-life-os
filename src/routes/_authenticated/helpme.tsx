@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -295,7 +296,7 @@ function RequesterTab() {
       setPayRef("");
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -310,7 +311,7 @@ function RequesterTab() {
       setPayPanel(null);
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -323,7 +324,7 @@ function RequesterTab() {
       toast.success(t.payReleased);
       qc.invalidateQueries({ queryKey: ["my-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setPayBusy(false);
     }
@@ -911,7 +912,7 @@ function HelperTab() {
       toast.success(t.payServiceEnded);
       qc.invalidateQueries({ queryKey: ["my-assigned-jobs"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     }
   };
 

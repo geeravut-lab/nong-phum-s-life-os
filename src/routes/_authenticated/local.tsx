@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -403,7 +404,7 @@ function LocalPage() {
       });
       toast.success(t.localSearchDone);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -699,7 +700,9 @@ function LocalPage() {
         {(googlePlaces.length > 0 || googleMsg) && (
           <section className="mb-5 space-y-2">
             <h2 className="text-sm font-semibold">Google Places</h2>
-            {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
+            {googleMsg ? (
+              <p className="text-xs text-muted-foreground">{errorText(googleMsg, t)}</p>
+            ) : null}
             <ul className="space-y-2">
               {googlePlaces.map((g) => (
                 <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">

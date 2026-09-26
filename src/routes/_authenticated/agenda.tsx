@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -146,7 +147,7 @@ function AgendaPage() {
       toast.success(t.agendaDeleted);
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -417,7 +418,7 @@ function AgendaPage() {
                       setEdit(null);
                       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setBusy(false);
                     }
@@ -448,7 +449,7 @@ function AgendaPage() {
                       setEdit(null);
                       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
                     } catch (e) {
-                      toast.error(e instanceof Error ? e.message : t.error);
+                      toast.error(errorText(e, t));
                     } finally {
                       setBusy(false);
                     }

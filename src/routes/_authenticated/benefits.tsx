@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -82,7 +83,7 @@ function BenefitsPage() {
       // has its own copy button that reports what happened.
       toast.success(t.benShareCreated);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setSharing(false);
     }
@@ -236,7 +237,7 @@ function BenefitsPage() {
         toast.success(t.benInterviewDone);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setInterviewBusy(false);
     }

@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -102,7 +103,7 @@ function LegacyPage() {
       toast.success(t.saved);
       void qc.invalidateQueries({ queryKey: ["legacy-will"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -421,7 +422,7 @@ function LegacyPage() {
       setAiResult(result as LegacyAiResult);
       toast.success(t.legacyAiDone);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -465,7 +466,7 @@ function LegacyPage() {
       void qc.invalidateQueries({ queryKey: ["legacy-wishes"] });
       void qc.invalidateQueries({ queryKey: ["legacy-checklist"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t.error);
+      toast.error(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -566,7 +567,7 @@ function LegacyPage() {
                   const res = await runPlanCode();
                   setPlanCodeInfo(res);
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : t.error);
+                  toast.error(errorText(e, t));
                 } finally {
                   setBusy(false);
                 }
@@ -620,7 +621,7 @@ function LegacyPage() {
                 setImportKeys(new Set());
                 if (!(res.candidates ?? []).length) toast.message(t.r3ImportEmpty);
               } catch (e) {
-                toast.error(e instanceof Error ? e.message : t.error);
+                toast.error(errorText(e, t));
               } finally {
                 setBusy(false);
               }
@@ -688,7 +689,7 @@ function LegacyPage() {
                     void qc.invalidateQueries({ queryKey: ["legacy-wishes"] });
                     void qc.invalidateQueries({ queryKey: ["legacy-checklist"] });
                   } catch (e) {
-                    toast.error(e instanceof Error ? e.message : t.error);
+                    toast.error(errorText(e, t));
                   } finally {
                     setBusy(false);
                   }
@@ -851,7 +852,7 @@ function LegacyPage() {
                           toast.success(t.invLinkCreated);
                           void qc.invalidateQueries({ queryKey: ["legacy-contacts"] });
                         } catch (e) {
-                          toast.error(e instanceof Error ? e.message : t.error);
+                          toast.error(errorText(e, t));
                         } finally {
                           setBusy(false);
                         }

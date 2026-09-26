@@ -110,7 +110,7 @@ export type Database = {
           id: string;
           removed: Json;
           requested_by: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           aivora_user_id?: string | null;
@@ -174,7 +174,7 @@ export type Database = {
       premium_payments: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           plan_tier: string;
           period: string;
           amount: number;
@@ -600,7 +600,7 @@ export type Database = {
           promptpay_id: string;
           ref: string | null;
           status: string;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           amount_baht: number;
@@ -725,7 +725,7 @@ export type Database = {
         Row: {
           id: string;
           family_id: string;
-          created_by: string;
+          created_by: string | null;
           title: string;
           starts_at: string;
           ends_at: string | null;
@@ -863,7 +863,7 @@ export type Database = {
         Row: {
           alerted_at: string | null;
           created_at: string;
-          created_by: string;
+          created_by: string | null;
           family_id: string;
           grace_days: number;
           id: string;
@@ -908,7 +908,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
-          logged_by: string;
+          logged_by: string | null;
           logged_on: string;
           note: string;
           routine_id: string;
@@ -2523,7 +2523,7 @@ export type Database = {
       privacy_audit_log: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           action: string;
           detail: string;
           meta: Json;

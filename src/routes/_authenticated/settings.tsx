@@ -1,3 +1,4 @@
+import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -181,7 +182,7 @@ function SettingsPage() {
                   void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
                   toast.success(t.saved);
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : t.error);
+                  toast.error(errorText(e, t));
                 } finally {
                   setBusy(false);
                 }
@@ -238,7 +239,7 @@ function SettingsPage() {
                   void qc.invalidateQueries({ queryKey: ["my-plan"] });
                   void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : t.error);
+                  toast.error(errorText(e, t));
                 } finally {
                   setBusy(false);
                 }
@@ -258,7 +259,7 @@ function SettingsPage() {
                   void qc.invalidateQueries({ queryKey: ["my-plan"] });
                   void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : t.error);
+                  toast.error(errorText(e, t));
                 } finally {
                   setBusy(false);
                 }
