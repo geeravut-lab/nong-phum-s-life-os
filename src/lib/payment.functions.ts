@@ -21,7 +21,20 @@ export const submitPaymentRef = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { submitPayerRef } = await import("./payment.server");
-    return submitPayerRef(context.supabase, context.userId, data.jobId, data.payerRef);
+    const res = await submitPayerRef(context.supabase, context.userId, data.jobId, data.payerRef);
+    const { notifyAdmins } = await import("./notify.server");
+    await notifyAdmins(
+      {
+        kind: "payment_review",
+        title: "มีการแจ้งโอนค่าจ้าง",
+        body: "รอตรวจสอบและยืนยันยอดที่รับเข้า",
+        href: "/admin/payments",
+        refTable: "jobs",
+        refId: data.jobId,
+      },
+      context.userId,
+    );
+    return res;
   });
 
 /** Job owner confirms service received → released + payout queue. */
@@ -30,7 +43,21 @@ export const verifyJobService = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => JobId.parse(input))
   .handler(async ({ data, context }) => {
     const { verifyServiceByPayer } = await import("./payment.server");
-    return verifyServiceByPayer(context.supabase, context.userId, data.jobId);
+    const res = await verifyServiceByPayer(context.supabase, context.userId, data.jobId);
+    const { notifyJobParties } = await import("./notify.server");
+    await notifyJobParties(
+      data.jobId,
+      {
+        kind: "job_verified",
+        title: "ผู้ว่าจ้างยืนยันรับงานแล้ว",
+        body: "เงินถูกปล่อยเข้าคิวจ่ายให้ผู้รับงาน",
+        href: "/helper-dashboard",
+        refTable: "jobs",
+        refId: data.jobId,
+      },
+      context.userId,
+    );
+    return res;
   });
 
 /** Helper marks service ended. */
@@ -39,7 +66,21 @@ export const markServiceEnded = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => JobId.parse(input))
   .handler(async ({ data, context }) => {
     const { markServiceEndedByHelper } = await import("./payment.server");
-    return markServiceEndedByHelper(context.supabase, context.userId, data.jobId);
+    const res = await markServiceEndedByHelper(context.supabase, context.userId, data.jobId);
+    const { notifyJobParties } = await import("./notify.server");
+    await notifyJobParties(
+      data.jobId,
+      {
+        kind: "job_ended",
+        title: "ผู้รับงานแจ้งว่าทำงานเสร็จแล้ว",
+        body: "กรุณาตรวจงานและยืนยันเพื่อปล่อยเงิน",
+        href: "/helpme",
+        refTable: "jobs",
+        refId: data.jobId,
+      },
+      context.userId,
+    );
+    return res;
   });
 
 /** Admin: pending → held (money received). */

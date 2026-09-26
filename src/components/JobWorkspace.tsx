@@ -1,4 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { notifyJobChat } from "@/lib/marketplace-notify.functions";
 import { useEffect, useRef, useState } from "react";
 import { Flag, ImagePlus, Loader2, Siren, Send, ShieldBan } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
   const { t } = useI18n();
   const { user } = useAuthUser();
   const qc = useQueryClient();
+  const runNotifyChat = useServerFn(notifyJobChat);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -89,6 +92,9 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
     setBusy(true);
     try {
       await sendJobMessage(jobId, body);
+      // The insert above runs as the sender, so it cannot write the other
+      // side's notification; this asks the server to do it.
+      await runNotifyChat({ data: { jobId } }).catch(() => undefined);
       setBody("");
       qc.invalidateQueries({ queryKey: ["job-messages", jobId] });
     } catch (e) {

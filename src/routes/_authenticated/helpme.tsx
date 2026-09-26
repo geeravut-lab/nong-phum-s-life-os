@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { notifyJobOffer } from "@/lib/marketplace-notify.functions";
 import { useI18n } from "@/lib/i18n";
 import {
   draftJob,
@@ -90,6 +91,7 @@ function RequesterTab() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runDraft = useServerFn(draftJob);
+  const runNotifyOffer = useServerFn(notifyJobOffer);
   const runMatch = useServerFn(matchHelpers);
   const runPrice = useServerFn(suggestJobPrice);
   const runCreatePay = useServerFn(createJobPayment);
@@ -206,6 +208,7 @@ function RequesterTab() {
         ? Number(settings?.service_fee ?? 0)
         : Math.round(((price ?? 0) * rate) / 100);
     await supabase.from("job_offers").update({ status: "accepted" }).eq("id", offerId);
+    await runNotifyOffer({ data: { jobId, event: "accepted" } }).catch(() => undefined);
     await supabase
       .from("jobs")
       .update({
@@ -828,6 +831,7 @@ function HelperTab() {
   const qc = useQueryClient();
   const runSkills = useServerFn(suggestHelperSkills);
   const runMarkEnded = useServerFn(markServiceEnded);
+  const runNotifyOffer = useServerFn(notifyJobOffer);
 
   const withdrawOffer = async (offerId: string) => {
     const { error } = await supabase
@@ -1004,6 +1008,11 @@ function HelperTab() {
       expires_at: expires,
       round: 1,
     });
+    if (!error) {
+      // Lets the person who posted the job know a quote arrived; the insert
+      // above runs as the helper and cannot notify them directly.
+      await runNotifyOffer({ data: { jobId, event: "offered" } }).catch(() => undefined);
+    }
     if (error) {
       toast.error(error.message);
       return;

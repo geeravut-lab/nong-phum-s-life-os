@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { notifyAdmins, notifyUsers } from "./notify.server";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -382,6 +383,17 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
         payer_ref: data.payerRef ?? null,
       })
       .eq("id", data.paymentId);
+    await notifyAdmins(
+      {
+        kind: "billing_review",
+        title: "มีสลิปรอตรวจสอบ",
+        body: "ผู้ใช้แจ้งว่าโอนแล้ว รอยืนยันการชำระเงิน",
+        href: "/admin/premium",
+        refTable: "premium_payments",
+        refId: data.paymentId,
+      },
+      context.userId,
+    );
 
     return { ok: true as const, status: "pending" as const };
   });
@@ -396,11 +408,28 @@ export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
       _role: "admin",
     });
     if (!isAdmin) throw new Error("Forbidden");
-    await supabaseAdmin
+    // Returning the row tells us who to notify, and an empty result means the
+    // payment was not pending any more - someone else already handled it, so
+    // there is nothing to announce.
+    const { data: rejected } = await supabaseAdmin
       .from("premium_payments")
       .update({ payment_status: "rejected" })
       .eq("id", data.paymentId)
-      .eq("payment_status", "pending");
+      .eq("payment_status", "pending")
+      .select("user_id")
+      .maybeSingle();
+    await notifyUsers(
+      [rejected?.user_id as string | undefined],
+      {
+        kind: "billing_result",
+        title: "การชำระเงินไม่ผ่านการตรวจสอบ",
+        body: "กรุณาตรวจสอบสลิปแล้วแจ้งใหม่อีกครั้ง",
+        href: "/support",
+        refTable: "premium_payments",
+        refId: data.paymentId,
+      },
+      context.userId,
+    );
     return { ok: true as const };
   });
 
@@ -500,6 +529,18 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
         notes: `premium_payment:${pay.id}`,
       });
     }
+    await notifyUsers(
+      [pay.user_id as string],
+      {
+        kind: "billing_result",
+        title: "ยืนยันการชำระเงินแล้ว",
+        body: "แพ็กของคุณเริ่มใช้งานได้แล้ว",
+        href: "/support",
+        refTable: "premium_payments",
+        refId: data.paymentId,
+      },
+      context.userId,
+    );
 
     return { ok: true as const, expiresAt: end.toISOString() };
   });
