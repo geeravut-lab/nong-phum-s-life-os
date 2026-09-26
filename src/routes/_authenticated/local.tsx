@@ -63,14 +63,25 @@ function LocalPage() {
   const [googleMsg, setGoogleMsg] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
+  // What the user actually searched for. Filtering on the live input would
+  // rewrite the list while they are still typing.
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [intent, setIntent] = useState<LocalSearchIntent | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // Every extra kilometre widens the Places query and the bill with it, and
+  // "near home" stops meaning anything much past this.
+  const MAX_RADIUS_KM = 20;
   const [radiusKm, setRadiusKm] = useState(5);
   const [openOnly, setOpenOnly] = useState(false);
   // The itinerary is a local selection: places and events the user picked for
   // one outing. Not persisted - it is a scratch plan, not a saved document.
   const [plan, setPlan] = useState<Stop[]>([]);
+  // Google Maps takes 9 waypoints plus a destination on a shared link, so a
+  // plan longer than 10 could not be opened in full.
+  const MAX_STOPS = 10;
+  // Once the user drags the order themselves, stop re-sorting it under them.
+  const [manualOrder, setManualOrder] = useState(false);
   const [reviewPlaceId, setReviewPlaceId] = useState<string | null>(null);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -97,10 +108,15 @@ function LocalPage() {
   const dealsQ = useQuery({
     queryKey: ["local-deals"],
     queryFn: async () => {
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from("local_deals")
         .select("*")
         .eq("is_active", true)
+        // Outside its window a promotion is not on offer, so it is not shown.
+        // Null on either end means "no limit that way".
+        .or(`starts_at.is.null,starts_at.lte.${nowIso}`)
+        .or(`ends_at.is.null,ends_at.gte.${nowIso}`)
         .limit(50);
       if (error) throw error;
       return (data ?? []) as unknown as LocalDeal[];
@@ -112,6 +128,32 @@ function LocalPage() {
       (p) => (p as { is_demo?: boolean }).is_demo !== true,
     );
     let list = places;
+    // Free-text terms actually filter. Ranking alone still returned every
+    // place, so searching "วัด" listed shops with nothing to do with a temple,
+    // just lower down.
+    const terms: string[] = [
+      ...(intent?.tags ?? []),
+      ...(intent?.areaHint ? [intent.areaHint] : []),
+      ...(submittedQuery.trim() ? [submittedQuery.trim()] : []),
+    ]
+      .map((k: string) => k.toLowerCase())
+      .filter((k: string) => k.length >= 2);
+    if (terms.length > 0) {
+      list = list.filter((p) => {
+        const hay = [
+          p.name,
+          (p as { name_en?: string | null }).name_en,
+          p.description,
+          p.area,
+          p.category,
+          ...(Array.isArray(p.tags) ? (p.tags as string[]) : []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return terms.some((k: string) => hay.includes(k));
+      });
+    }
     if (openOnly) {
       list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
     }
@@ -151,7 +193,15 @@ function LocalPage() {
         score: p.score + (p.is_promoted ? 40 : 0),
       })),
     );
-  }, [placesQ.data, intent, coords, openOnly, radiusKm]);
+  }, [placesQ.data, intent, coords, openOnly, radiusKm, submittedQuery]);
+
+  const placeNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of placesQ.data ?? []) {
+      m.set(p.id, lang === "en" && p.name_en ? p.name_en : p.name);
+    }
+    return m;
+  }, [placesQ.data, lang]);
 
   const dealsByPlace = useMemo(() => {
     const m = new Map<string, LocalDeal[]>();
@@ -275,10 +325,33 @@ function LocalPage() {
   const inPlan = (id: string) => plan.some((p) => p.id === id);
 
   const addToPlan = (stop: Stop) => {
-    setPlan((cur) => (cur.some((p) => p.id === stop.id) ? cur : [...cur, stop]));
+    setPlan((cur) => {
+      if (cur.some((p) => p.id === stop.id)) return cur;
+      if (cur.length >= MAX_STOPS) {
+        toast.message(t.planMax);
+        return cur;
+      }
+      return [...cur, stop];
+    });
   };
 
-  const orderedPlan = useMemo(() => orderStops(plan, coords), [plan, coords]);
+  const moveStop = (id: string, delta: -1 | 1) => {
+    setManualOrder(true);
+    setPlan((cur) => {
+      const from = cur.findIndex((p) => p.id === id);
+      const to = from + delta;
+      if (from < 0 || to < 0 || to >= cur.length) return cur;
+      const next = [...cur];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item!);
+      return next;
+    });
+  };
+
+  const orderedPlan = useMemo(
+    () => (manualOrder ? plan : orderStops(plan, coords)),
+    [plan, coords, manualOrder],
+  );
   const planKm = useMemo(() => routeDistanceKm(orderedPlan, coords), [orderedPlan, coords]);
 
   const search = async () => {
@@ -289,6 +362,7 @@ function LocalPage() {
         data: { query: query.trim(), lang: lang === "en" ? "en" : "th" },
       });
       setIntent(result);
+      setSubmittedQuery(query.trim());
       // The AI intent parser only ranks places already in the database. Search
       // has to ask Google too, or typing a query never reaches it and the page
       // just reports "ranked" over local rows.
@@ -370,10 +444,12 @@ function LocalPage() {
             <Input
               type="number"
               min={1}
-              max={50}
+              max={MAX_RADIUS_KM}
               className="h-8 w-16"
               value={radiusKm}
-              onChange={(e) => setRadiusKm(Math.max(1, Math.min(50, Number(e.target.value) || 5)))}
+              onChange={(e) =>
+                setRadiusKm(Math.max(1, Math.min(MAX_RADIUS_KM, Number(e.target.value) || 5)))
+              }
             />
           </label>
           <Button size="sm" variant="outline" onClick={useMyLocation}>
@@ -425,15 +501,7 @@ function LocalPage() {
                     </Badge>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(e.startsAt).toLocaleString(lang === "th" ? "th-TH" : "en-US", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                  {e.area ? ` · ${e.area}` : ""}
-                </p>
+                <p className="text-xs text-muted-foreground">{e.placeName ?? e.area ?? ""}</p>
                 {e.description ? (
                   <p className="mt-1 text-xs line-clamp-2">{e.description}</p>
                 ) : null}
@@ -449,9 +517,10 @@ function LocalPage() {
                       lat: e.lat,
                       lng: e.lng,
                       startsAt: e.startsAt,
-                      // The venue is what Maps can find; an event title like
-                      // "แข่งกิน" is not a place and routes to nothing.
-                      address: e.address || e.placeName,
+                      address: e.address,
+                      // What Maps routes to when there is no pin: the shop,
+                      // never the event's own name.
+                      venue: e.placeName,
                     })
                   }
                 >
@@ -480,13 +549,35 @@ function LocalPage() {
                       ? ` · ${new Date(st.startsAt).toLocaleTimeString(lang === "th" ? "th-TH" : "en-US", { hour: "2-digit", minute: "2-digit" })}`
                       : ""}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setPlan((cur) => cur.filter((x) => x.id !== st.id))}
-                  >
-                    {t.planRemove}
-                  </Button>
+                  <span className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t.planMoveUp}
+                      title={t.planMoveUp}
+                      disabled={i === 0}
+                      onClick={() => moveStop(st.id, -1)}
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t.planMoveDown}
+                      title={t.planMoveDown}
+                      disabled={i === orderedPlan.length - 1}
+                      onClick={() => moveStop(st.id, 1)}
+                    >
+                      ↓
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setPlan((cur) => cur.filter((x) => x.id !== st.id))}
+                    >
+                      {t.planRemove}
+                    </Button>
+                  </span>
                 </li>
               ))}
             </ol>
@@ -501,7 +592,14 @@ function LocalPage() {
                   {t.planOpenRoute}
                 </a>
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setPlan([])}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setPlan([]);
+                  setManualOrder(false);
+                }}
+              >
                 {t.planClear}
               </Button>
             </div>
@@ -522,7 +620,9 @@ function LocalPage() {
                 className="min-w-[200px] shrink-0 rounded-xl border border-border bg-card p-3 text-sm shadow-soft"
               >
                 <p className="font-medium">{d.title}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2">{d.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {placeNameById.get(d.place_id) ?? ""}
+                </p>
                 {d.discount_label && (
                   <Badge className="mt-1" variant="secondary">
                     {d.discount_label}
@@ -551,14 +651,12 @@ function LocalPage() {
                   <p className="text-xs text-muted-foreground">{g.address}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     {g.mapsUrl ? (
-                      <a
-                        className="text-xs text-primary underline"
-                        href={g.mapsUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {t.localOpenMap}
-                      </a>
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={g.mapsUrl} target="_blank" rel="noreferrer">
+                          <ExternalLink className="mr-1 size-3.5" />
+                          {t.localMap}
+                        </a>
+                      </Button>
                     ) : null}
                     <Button
                       size="sm"
@@ -571,6 +669,7 @@ function LocalPage() {
                           lat: g.lat,
                           lng: g.lng,
                           address: g.address,
+                          venue: g.name,
                         })
                       }
                     >
@@ -671,6 +770,23 @@ function LocalPage() {
                       </a>
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={inPlan(p.id)}
+                    onClick={() =>
+                      addToPlan({
+                        id: p.id,
+                        title: placeName(p),
+                        lat: p.lat,
+                        lng: p.lng,
+                        address: (p as { address?: string | null }).address ?? p.area,
+                        venue: placeName(p),
+                      })
+                    }
+                  >
+                    {inPlan(p.id) ? t.evtInPlan : t.evtAddToPlan}
+                  </Button>
                   {dir && (
                     <Button size="sm" variant="outline" asChild>
                       <a href={dir} target="_blank" rel="noreferrer">

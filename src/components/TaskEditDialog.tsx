@@ -24,14 +24,31 @@ export type MemberOption = { userId: string; label: string };
  * task edits the same way everywhere, and the rules stay in the two server
  * functions it calls rather than being re-implemented per page.
  */
-export function TaskEditDialog({
+export function TaskEditDialog(props: {
+  task: EditableTask | null;
+  /** Family members available as assignees; empty when not in a family. */
+  members: MemberOption[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  // Mount only when there is a task, and key by its id.
+  //
+  // The fields are useState initialisers, which run once per mount. Rendering
+  // this component permanently and returning null for "no task" meant those
+  // initialisers ran while task was still null, so the form stayed empty when
+  // a task arrived, and kept the previous task's values when another was
+  // opened. The key makes React build a fresh form per task.
+  if (!props.task) return null;
+  return <TaskEditForm key={props.task.id} {...props} task={props.task} />;
+}
+
+function TaskEditForm({
   task,
   members,
   onClose,
   onSaved,
 }: {
-  task: EditableTask | null;
-  /** Family members available as assignees; empty when not in a family. */
+  task: EditableTask;
   members: MemberOption[];
   onClose: () => void;
   onSaved: () => void;
@@ -40,12 +57,10 @@ export function TaskEditDialog({
   const runUpdate = useServerFn(updateAgendaItem);
   const runDelete = useServerFn(deleteAgendaItem);
   const [busy, setBusy] = useState(false);
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [when, setWhen] = useState(() => toLocalInput(task?.dueAt ?? null));
-  const [notes, setNotes] = useState(task?.notes ?? "");
-  const [assignee, setAssignee] = useState(task?.assigneeUserId ?? "");
-
-  if (!task) return null;
+  const [title, setTitle] = useState(task.title);
+  const [when, setWhen] = useState(() => toLocalInput(task.dueAt));
+  const [notes, setNotes] = useState(task.notes);
+  const [assignee, setAssignee] = useState(task.assigneeUserId ?? "");
 
   const save = async () => {
     setBusy(true);
@@ -92,7 +107,13 @@ export function TaskEditDialog({
       <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
         <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        <Input
+          type="datetime-local"
+          step={60}
+          lang="en-GB"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
+        />
         <Input value={notes} placeholder={t.note} onChange={(e) => setNotes(e.target.value)} />
         {members.length > 0 ? (
           <select
