@@ -22,6 +22,8 @@ export type LocalEventRow = {
   lat: number | null;
   lng: number | null;
   mapsUrl: string | null;
+  /** Name of the linked place, for routing and display. */
+  placeName: string | null;
   startsAt: string;
   endsAt: string | null;
   priceMin: number | null;
@@ -31,6 +33,20 @@ export type LocalEventRow = {
 };
 
 function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
+  // Fall back to the linked place for the things a route needs. Inheriting at
+  // write time only helps events saved since; reading it here also fixes rows
+  // created before that, and keeps working if the place is later moved.
+  const place = (r["local_places"] ?? null) as {
+    name?: string | null;
+    address?: string | null;
+    area?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
+  const lat = (r["lat"] as number | null) ?? place?.lat ?? null;
+  const lng = (r["lng"] as number | null) ?? place?.lng ?? null;
+  const address = (r["address"] as string | null) || place?.address || place?.area || null;
+
   return {
     id: r["id"] as string,
     placeId: (r["place_id"] as string | null) ?? null,
@@ -38,9 +54,10 @@ function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
     description: (r["description"] as string) ?? "",
     category: (r["category"] as string) ?? "event",
     area: (r["area"] as string | null) ?? null,
-    address: (r["address"] as string | null) ?? null,
-    lat: (r["lat"] as number | null) ?? null,
-    lng: (r["lng"] as number | null) ?? null,
+    address,
+    lat,
+    lng,
+    placeName: place?.name ?? null,
     mapsUrl: (r["maps_url"] as string | null) ?? null,
     startsAt: r["starts_at"] as string,
     endsAt: (r["ends_at"] as string | null) ?? null,
@@ -75,7 +92,10 @@ export const listUpcomingLocalEvents = createServerFn({ method: "POST" })
     const now = new Date();
     const until = new Date(now.getTime() + (data.withinDays ?? 14) * 86400000);
 
-    let qb = supabaseAdmin.from("local_events").select("*").limit(60);
+    let qb = supabaseAdmin
+      .from("local_events")
+      .select("*, local_places(name, address, area, lat, lng)")
+      .limit(60);
 
     if (data.mineOnly) {
       // The owner's own management list: everything they have, newest first,

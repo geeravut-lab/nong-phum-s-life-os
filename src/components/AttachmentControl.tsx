@@ -25,7 +25,7 @@ import {
 import { useI18n } from "@/lib/i18n";
 
 // The file slot on an expense / income / reminder card. Three states:
-//   nothing linked          → "แนบใบเสร็จ"
+//   nothing linked          → "แนบเอกสาร"
 //   kind = 'attachment'     → thumbnail (image) or file chip, open on tap,
 //                             replace / remove
 //   kind = 'analyzed'       → "เอกสารต้นทาง" chip opening the vault's file;

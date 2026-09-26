@@ -1,4 +1,20 @@
-/** open_hours JSON shape: { open: "09:00", close: "18:00" } or per-day keys */
+/**
+ * open_hours JSON, two accepted shapes:
+ *
+ *   legacy, same window every day:  { open: "09:00", close: "18:00" }
+ *   per day:  { mon: { open: "09:00", close: "18:00" }, tue: null, ... }
+ *
+ * A day present with null (or missing entirely, when any per-day key exists)
+ * means closed that day. The legacy shape is still read so places saved before
+ * per-day hours keep working.
+ */
+export const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export type DayKey = (typeof DAY_KEYS)[number];
+export type DayHours = { open: string; close: string } | null;
+export type OpenHours = Partial<Record<DayKey, DayHours>> & {
+  open?: string;
+  close?: string;
+};
 
 function parseHm(s: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
@@ -10,12 +26,27 @@ function parseHm(s: string): number | null {
 }
 
 export function isOpenNow(
-  openHours: Record<string, string> | null | undefined,
+  openHours: Record<string, unknown> | null | undefined,
   now = new Date(),
 ): boolean | null {
   if (!openHours || typeof openHours !== "object") return null;
-  const open = openHours["open"] ?? openHours["start"];
-  const close = openHours["close"] ?? openHours["end"];
+
+  // Per-day wins when the object carries any day key, so a place that is shut
+  // on Monday reads as closed rather than falling back to a general window.
+  const hasPerDay = DAY_KEYS.some((d) => d in openHours);
+  let open: string | undefined;
+  let close: string | undefined;
+
+  if (hasPerDay) {
+    const today = openHours[DAY_KEYS[now.getDay()] as string];
+    if (!today || typeof today !== "object") return false; // closed today
+    const t = today as { open?: string; close?: string };
+    open = t.open;
+    close = t.close;
+  } else {
+    open = (openHours["open"] ?? openHours["start"]) as string | undefined;
+    close = (openHours["close"] ?? openHours["end"]) as string | undefined;
+  }
   if (!open || !close) return null;
   const o = parseHm(open);
   const c = parseHm(close);

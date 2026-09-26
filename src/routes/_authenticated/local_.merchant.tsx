@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
+import { DAY_KEYS } from "@/lib/local-hours";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import {
   deleteLocalEvent,
@@ -117,6 +118,15 @@ function MerchantDashboardPage() {
   const [evtKids, setEvtKids] = useState(false);
   const [evtPlace, setEvtPlace] = useState("");
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [evtEnd, setEvtEnd] = useState("");
+
+  // Per-day opening hours for the place form. Unticked = closed that day.
+  const [hours, setHours] = useState<Record<string, { on: boolean; open: string; close: string }>>(
+    () =>
+      Object.fromEntries(
+        DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "18:00" }]),
+      ) as Record<string, { on: boolean; open: string; close: string }>,
+  );
 
   const myEvents = useQuery({
     enabled: !!user,
@@ -133,6 +143,7 @@ function MerchantDashboardPage() {
     setEditingEventId(null);
     setEvtName("");
     setEvtWhen("");
+    setEvtEnd("");
     setEvtMin("");
     setEvtMax("");
     setEvtKids(false);
@@ -145,6 +156,12 @@ function MerchantDashboardPage() {
     // datetime-local wants local wall-clock, not UTC.
     const d = new Date(e.startsAt);
     setEvtWhen(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    if (e.endsAt) {
+      const de = new Date(e.endsAt);
+      setEvtEnd(new Date(de.getTime() - de.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    } else {
+      setEvtEnd("");
+    }
     setEvtMin(e.priceMin != null ? String(e.priceMin) : "");
     setEvtMax(e.priceMax != null ? String(e.priceMax) : "");
     setEvtKids(e.kidFriendly);
@@ -160,6 +177,7 @@ function MerchantDashboardPage() {
           ...(editingEventId ? { id: editingEventId } : {}),
           title: evtName.trim(),
           startsAt: new Date(evtWhen).toISOString(),
+          ...(evtEnd ? { endsAt: new Date(evtEnd).toISOString() } : {}),
           ...(evtPlace ? { placeId: evtPlace } : {}),
           ...(evtMin ? { priceMin: Number(evtMin) } : {}),
           ...(evtMax ? { priceMax: Number(evtMax) } : {}),
@@ -192,6 +210,42 @@ function MerchantDashboardPage() {
     }
   };
 
+  /** hours state -> open_hours json. Unticked days are stored as null = closed. */
+  const hoursToJson = () => {
+    const anyOn = DAY_KEYS.some((d) => hours[d]?.on);
+    if (!anyOn) return null; // nothing set: keep "unknown" rather than "closed all week"
+    return Object.fromEntries(
+      DAY_KEYS.map((d) => {
+        const h = hours[d];
+        return [d, h?.on ? { open: h.open, close: h.close } : null];
+      }),
+    );
+  };
+
+  /** open_hours json -> hours state, accepting the legacy single-window shape. */
+  const jsonToHours = (raw: unknown) => {
+    const base = Object.fromEntries(
+      DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "18:00" }]),
+    ) as Record<string, { on: boolean; open: string; close: string }>;
+    if (!raw || typeof raw !== "object") return base;
+    const o = raw as Record<string, unknown>;
+    const hasPerDay = DAY_KEYS.some((d) => d in o);
+    if (hasPerDay) {
+      for (const d of DAY_KEYS) {
+        const v = o[d] as { open?: string; close?: string } | null | undefined;
+        if (v && typeof v === "object" && v.open && v.close) {
+          base[d] = { on: true, open: v.open, close: v.close };
+        }
+      }
+      return base;
+    }
+    // legacy: one window applied to every day
+    const open = o["open"] as string | undefined;
+    const close = o["close"] as string | undefined;
+    if (open && close) for (const d of DAY_KEYS) base[d] = { on: true, open, close };
+    return base;
+  };
+
   const savePlace = async () => {
     if (!user || !form.name.trim()) return;
     setBusy(true);
@@ -205,6 +259,7 @@ function MerchantDashboardPage() {
           area: form.area.trim() || null,
           phone: form.phone.trim() || null,
           price_level: Number(form.price_level) || 2,
+          open_hours: hoursToJson(),
           tags: form.tags
             .split(",")
             .map((s) => s.trim())
@@ -254,6 +309,7 @@ function MerchantDashboardPage() {
         .map((s) => s.trim())
         .filter(Boolean),
       price_level: Number(form.price_level) || null,
+      open_hours: hoursToJson(),
       phone: form.phone.trim() || null,
       is_active: true,
     } as never);
@@ -486,6 +542,60 @@ function MerchantDashboardPage() {
             />
           </div>
         </div>
+        <div className="mb-3 rounded-xl border border-border p-3">
+          <p className="mb-1 text-sm font-medium">{t.hoursTitle}</p>
+          <p className="mb-2 text-xs text-muted-foreground">{t.hoursNote}</p>
+          <div className="space-y-1.5">
+            {DAY_KEYS.map((d) => {
+              const label = {
+                sun: t.daySun,
+                mon: t.dayMon,
+                tue: t.dayTue,
+                wed: t.dayWed,
+                thu: t.dayThu,
+                fri: t.dayFri,
+                sat: t.daySat,
+              }[d];
+              const h = hours[d] ?? { on: false, open: "09:00", close: "18:00" };
+              return (
+                <div key={d} className="flex flex-wrap items-center gap-2 text-sm">
+                  <label className="flex w-28 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={h.on}
+                      onChange={(e) =>
+                        setHours((cur) => ({ ...cur, [d]: { ...h, on: e.target.checked } }))
+                      }
+                    />
+                    {label}
+                  </label>
+                  <Input
+                    type="time"
+                    className="w-28"
+                    aria-label={`${label} ${t.hoursFrom}`}
+                    value={h.open}
+                    disabled={!h.on}
+                    onChange={(e) =>
+                      setHours((cur) => ({ ...cur, [d]: { ...h, open: e.target.value } }))
+                    }
+                  />
+                  <span className="text-xs text-muted-foreground">{t.hoursTo}</span>
+                  <Input
+                    type="time"
+                    className="w-28"
+                    aria-label={`${label} ${t.hoursTo}`}
+                    value={h.close}
+                    disabled={!h.on}
+                    onChange={(e) =>
+                      setHours((cur) => ({ ...cur, [d]: { ...h, close: e.target.value } }))
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <Button disabled={busy} onClick={savePlace}>
           {t.localSavePlace}
         </Button>
@@ -520,6 +630,7 @@ function MerchantDashboardPage() {
                       variant="secondary"
                       onClick={() => {
                         setEditingPlaceId(p.id);
+                        setHours(jsonToHours((p as { open_hours?: unknown }).open_hours));
                         setForm({
                           name: p.name ?? "",
                           category: p.category ?? "cafe",
@@ -601,6 +712,13 @@ function MerchantDashboardPage() {
             aria-label={t.evtWhen}
             value={evtWhen}
             onChange={(e) => setEvtWhen(e.target.value)}
+          />
+          <Input
+            type="datetime-local"
+            aria-label={t.evtEndWhen}
+            placeholder={t.evtEndWhen}
+            value={evtEnd}
+            onChange={(e) => setEvtEnd(e.target.value)}
           />
           <select
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"

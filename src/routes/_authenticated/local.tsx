@@ -449,7 +449,9 @@ function LocalPage() {
                       lat: e.lat,
                       lng: e.lng,
                       startsAt: e.startsAt,
-                      address: e.address,
+                      // The venue is what Maps can find; an event title like
+                      // "แข่งกิน" is not a place and routes to nothing.
+                      address: e.address || e.placeName,
                     })
                   }
                 >
