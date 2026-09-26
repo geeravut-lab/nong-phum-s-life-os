@@ -117,7 +117,7 @@ export async function attachFile(
     if (prev?.kind === "attachment") previous = prev;
   }
 
-  const path = `${userId}/att-${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
+  const path = `${userId}/att-${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
   const { data: doc, error: insErr } = await supabase
     .from("documents")
     .insert({

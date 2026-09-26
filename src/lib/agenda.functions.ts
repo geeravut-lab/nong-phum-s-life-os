@@ -59,7 +59,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .maybeSingle();
     const familyId = membership?.family_id as string | undefined;
 
-    let reminderQuery = supabaseAdmin
+    const reminderQuery = supabaseAdmin
       .from("reminders")
       .select(
         "id, title, due_at, status, priority, is_shared, family_id, assignee_user_id, notes, user_id",
@@ -158,7 +158,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .eq("user_id", uid)
       .maybeSingle();
 
-    let jobsQuery = supabaseAdmin
+    const jobsQuery = supabaseAdmin
       .from("jobs")
       .select("id, title, scheduled_at, status, user_id, assigned_helper_id, location_text")
       .not("scheduled_at", "is", null)

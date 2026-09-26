@@ -67,7 +67,7 @@ export async function intakeDocument(
   lang: Lang,
   userId: string,
 ): Promise<IntakeResult> {
-  const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
+  const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
   const mimeType = file.type || "application/pdf";
 
   const { data: doc, error: insErr } = await supabase
