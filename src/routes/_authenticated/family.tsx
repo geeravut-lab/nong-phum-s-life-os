@@ -69,6 +69,7 @@ function FamilyPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [routineEditId, setRoutineEditId] = useState<string | null>(null);
   const [routineName, setRoutineName] = useState("");
   const [routineSubject, setRoutineSubject] = useState("");
   const [routineInterval, setRoutineInterval] = useState("1");
@@ -311,12 +312,30 @@ function FamilyPage() {
   const refreshRoutines = () =>
     void qc.invalidateQueries({ queryKey: ["family-routines", familyId] });
 
-  const addRoutine = async () => {
+  const resetRoutineForm = () => {
+    setRoutineEditId(null);
+    setRoutineName("");
+    setRoutineSubject("");
+    setRoutineInterval("1");
+    setRoutineGrace("2");
+  };
+
+  /** Loads a routine into the form above the list, so editing reuses one form. */
+  const startEditRoutine = (r: RoutineRow) => {
+    setRoutineEditId(r.id);
+    setRoutineName(r.title);
+    setRoutineSubject(r.subjectUserId);
+    setRoutineInterval(String(r.intervalDays));
+    setRoutineGrace(String(r.graceDays));
+  };
+
+  const saveRoutine = async () => {
     if (!familyId || !routineName.trim() || !routineSubject) return;
     setBusy(true);
     try {
       await runUpsertRoutine({
         data: {
+          ...(routineEditId ? { id: routineEditId } : {}),
           familyId,
           subjectUserId: routineSubject,
           title: routineName.trim(),
@@ -324,7 +343,7 @@ function FamilyPage() {
           graceDays: Math.max(0, Math.min(30, Number(routineGrace) || 0)),
         },
       });
-      setRoutineName("");
+      resetRoutineForm();
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
@@ -352,6 +371,7 @@ function FamilyPage() {
     setBusy(true);
     try {
       await runDeleteRoutine({ data: { id } });
+      if (routineEditId === id) resetRoutineForm();
       toast.success(t.saved);
       refreshRoutines();
     } catch (e) {
@@ -478,7 +498,10 @@ function FamilyPage() {
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
             <h2 className="mb-3 text-sm font-semibold">{t.sharedItems}</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* One column on every width. In three columns the task rows had no
+                room for the title, the date, the assignee and the edit button,
+                so they wrapped into an unreadable stack anyway. */}
+            <div className="space-y-4">
               <div>
                 <p className="mb-2 text-xs font-medium text-muted-foreground">{t.docsTitle}</p>
                 <ul className="space-y-1 text-sm">
@@ -628,12 +651,85 @@ function FamilyPage() {
           {/* Family Radar: routine tracking + deterministic change detection */}
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
             <h2 className="text-sm font-semibold">{t.routineTitle}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t.routineWhatIs}</p>
             <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.routineSub}</p>
 
+            {/* The form sits above the list: it is what a first-time visitor
+                needs, and editing loads an existing routine back into it. */}
+            <div className="space-y-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="routine-name">{t.routineName}</Label>
+                <Input
+                  id="routine-name"
+                  placeholder={t.routineName}
+                  value={routineName}
+                  onChange={(e) => setRoutineName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="routine-subject">{t.routineSubject}</Label>
+                <select
+                  id="routine-subject"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  value={routineSubject}
+                  onChange={(e) => setRoutineSubject(e.target.value)}
+                >
+                  <option value="">{t.routineSubject}</option>
+                  {(members ?? []).map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {labelFor(m.user_id, m.display_name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="routine-interval">{t.routineInterval}</Label>
+                  <Input
+                    id="routine-interval"
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={routineInterval}
+                    onChange={(e) => setRoutineInterval(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">{t.routineIntervalHelp}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="routine-grace">{t.routineGrace}</Label>
+                  <Input
+                    id="routine-grace"
+                    type="number"
+                    min={0}
+                    max={30}
+                    value={routineGrace}
+                    onChange={(e) => setRoutineGrace(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">{t.routineGraceHelp}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  disabled={busy || !routineName.trim() || !routineSubject}
+                  onClick={() => void saveRoutine()}
+                >
+                  {routineEditId ? t.save : t.routineAdd}
+                </Button>
+                {routineEditId ? (
+                  <Button size="sm" variant="ghost" disabled={busy} onClick={resetRoutineForm}>
+                    {t.cancel}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
             {(routinesQ.data ?? []).length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t.routineEmpty}</p>
+              <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                {t.routineEmpty}
+              </p>
             ) : (
-              <ul className="mb-3 space-y-2 text-sm">
+              <ul className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
                 {(routinesQ.data ?? []).map((r) => (
                   <li key={r.id} className="rounded-lg border border-border p-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -641,7 +737,10 @@ function FamilyPage() {
                       {r.overdue ? <Badge variant="destructive">{t.routineOverdue}</Badge> : null}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {labelFor(r.subjectUserId)} ·{" "}
+                      {labelFor(r.subjectUserId)} · {t.routineInterval} {r.intervalDays} ·{" "}
+                      {t.routineGrace} {r.graceDays}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {r.lastLoggedOn
                         ? `${t.routineLastLogged}: ${r.daysSince === 0 ? t.routineLogged : `${r.daysSince} ${t.routineDaysAgo}`}`
                         : t.routineNever}
@@ -659,6 +758,14 @@ function FamilyPage() {
                         size="sm"
                         variant="ghost"
                         disabled={busy}
+                        onClick={() => startEditRoutine(r)}
+                      >
+                        {t.routineEdit}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
                         aria-label={t.delete}
                         title={t.delete}
                         onClick={() => void removeRoutine(r.id)}
@@ -670,54 +777,6 @@ function FamilyPage() {
                 ))}
               </ul>
             )}
-
-            <div className="space-y-2 border-t border-border pt-3">
-              <Input
-                placeholder={t.routineName}
-                value={routineName}
-                onChange={(e) => setRoutineName(e.target.value)}
-              />
-              <select
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                value={routineSubject}
-                onChange={(e) => setRoutineSubject(e.target.value)}
-                aria-label={t.routineSubject}
-              >
-                <option value="">{t.routineSubject}</option>
-                {(members ?? []).map((m) => (
-                  <option key={m.user_id} value={m.user_id}>
-                    {labelFor(m.user_id, m.display_name)}
-                  </option>
-                ))}
-              </select>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={1}
-                  max={90}
-                  value={routineInterval}
-                  onChange={(e) => setRoutineInterval(e.target.value)}
-                  aria-label={t.routineInterval}
-                  placeholder={t.routineInterval}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  max={30}
-                  value={routineGrace}
-                  onChange={(e) => setRoutineGrace(e.target.value)}
-                  aria-label={t.routineGrace}
-                  placeholder={t.routineGrace}
-                />
-              </div>
-              <Button
-                size="sm"
-                disabled={busy || !routineName.trim() || !routineSubject}
-                onClick={() => void addRoutine()}
-              >
-                {t.routineAdd}
-              </Button>
-            </div>
           </section>
 
           {/* R4 Care check-in */}

@@ -60,10 +60,13 @@ export function isOpenNow(
   return mins >= o || mins < c;
 }
 
-export function mapsUrl(lat: number | null, lng: number | null, name?: string): string | null {
+export function mapsUrl(lat: number | null, lng: number | null): string | null {
   if (lat == null || lng == null) return null;
-  const q = name ? encodeURIComponent(name) : `${lat},${lng}`;
-  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query=${q}`;
+  // Coordinates only. This used to pass query twice - once as the pin and once
+  // as the name - and Google keeps just one of them, so a link meant for a shop
+  // could open a text search for its name somewhere else entirely. The name is
+  // already on the card; what the link has to get right is the place.
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
 
 export function directionsUrl(

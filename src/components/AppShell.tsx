@@ -306,6 +306,22 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
+        {/* Mobile header. The desktop sidebar carries the app name and plan
+            badge, and phones have no sidebar, so without this the plan a user
+            is on is invisible on the device most of them use. */}
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+          <Link to="/today" className="flex min-w-0 items-center gap-2">
+            <PhumMark className="size-7" />
+            <span className="truncate font-semibold tracking-tight">{t.appName}</span>
+          </Link>
+          <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {planLabel}
+          </span>
+          {visibleTotal > 0 && (
+            <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
+          )}
+        </header>
+
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-5 md:px-6 md:py-8">
           {children}
         </main>
@@ -347,6 +363,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SheetTitle className="flex items-center gap-2 text-left">
                 <PhumMark className="size-8" />
                 {t.appName}
+                <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {planLabel}
+                </span>
               </SheetTitle>
             </SheetHeader>
 
