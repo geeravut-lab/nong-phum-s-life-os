@@ -120,7 +120,9 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
 export const markFuneralPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ paymentId: z.string().uuid(), payerRef: z.string().max(80).optional() }).parse(input),
+    z
+      .object({ paymentId: z.string().uuid(), payerRef: z.string().max(80).optional() })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const isAdmin = await context.supabase.rpc("has_role", {
@@ -143,9 +145,6 @@ export const markFuneralPaid = createServerFn({ method: "POST" })
         paid_at: new Date().toISOString(),
       })
       .eq("id", data.paymentId);
-    await context.supabase
-      .from("funeral_plans")
-      .update({ status: "paid" })
-      .eq("id", pay.plan_id);
+    await context.supabase.from("funeral_plans").update({ status: "paid" }).eq("id", pay.plan_id);
     return { ok: true };
   });

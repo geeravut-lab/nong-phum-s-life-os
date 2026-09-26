@@ -52,7 +52,10 @@ function TodayPage() {
           .order("due_at", { ascending: true })
           .limit(6),
         supabase.from("expenses").select("amount").gte("spent_on", monthStart),
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("kind", "analyzed"),
+        supabase
+          .from("documents")
+          .select("id", { count: "exact", head: true })
+          .eq("kind", "analyzed"),
       ]);
       return {
         name: profile.data?.display_name ?? "",
@@ -71,7 +74,8 @@ function TodayPage() {
   });
 
   const complete = useMutation({
-    mutationFn: (r: { id: string; due_at: string | null; recurrence: string }) => completeReminder(r),
+    mutationFn: (r: { id: string; due_at: string | null; recurrence: string }) =>
+      completeReminder(r),
     onSuccess: ({ advancedTo }) => {
       qc.invalidateQueries({ queryKey: ["today"] });
       toast.success(advancedTo ? t.advancedTo(formatDay(advancedTo, lang)) : t.done);
@@ -106,7 +110,11 @@ function TodayPage() {
           {t.todayTitle} {data?.name ? `${data.name} 👋` : "👋"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {dueNow.length ? t.dueNowCount(dueNow.length) : urgent.length ? t.todayCount(urgent.length) : t.todayNone}
+          {dueNow.length
+            ? t.dueNowCount(dueNow.length)
+            : urgent.length
+              ? t.todayCount(urgent.length)
+              : t.todayNone}
         </p>
       </header>
 
@@ -126,13 +134,22 @@ function TodayPage() {
                   <p className="truncate text-sm font-medium">{r.title}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                     <span>{r.due_at ? formatDay(new Date(r.due_at), lang, true) : "—"}</span>
-                    {r.due_at && new Date(r.due_at) < dayStart && <Badge variant="destructive">{t.overdue}</Badge>}
+                    {r.due_at && new Date(r.due_at) < dayStart && (
+                      <Badge variant="destructive">{t.overdue}</Badge>
+                    )}
                     {isRepeating(r.recurrence) && (
-                      <Badge variant="outline">{r.recurrence === "monthly" ? t.monthly : t.yearly}</Badge>
+                      <Badge variant="outline">
+                        {r.recurrence === "monthly" ? t.monthly : t.yearly}
+                      </Badge>
                     )}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" disabled={complete.isPending} onClick={() => complete.mutate(r)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={complete.isPending}
+                  onClick={() => complete.mutate(r)}
+                >
                   {doneLabel(r)}
                 </Button>
               </li>
@@ -206,7 +223,12 @@ function TodayPage() {
                     {r.due_at ? formatDay(new Date(r.due_at), lang, true) : "—"}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" disabled={complete.isPending} onClick={() => complete.mutate(r)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={complete.isPending}
+                  onClick={() => complete.mutate(r)}
+                >
                   {doneLabel(r)}
                 </Button>
               </li>

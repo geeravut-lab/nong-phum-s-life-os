@@ -135,11 +135,7 @@ export const startPlanTrial = createServerFn({ method: "POST" })
       .update({ plan_tier: data.planTier, plan_expires_at: expires })
       .eq("id", context.userId);
 
-    await writePrivacyAudit(
-      context.userId,
-      "plan_trial_start",
-      `${data.planTier} trial ${days}d`,
-    );
+    await writePrivacyAudit(context.userId, "plan_trial_start", `${data.planTier} trial ${days}d`);
 
     return { planTier: data.planTier, expiresAt: expires };
   });

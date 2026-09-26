@@ -15,7 +15,9 @@ export const getDeletionPreview = createServerFn({ method: "GET" })
 
 export const deleteMyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ confirmation: z.string().trim().max(50) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ confirmation: z.string().trim().max(50) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     // Checked on the server too: the dialog's disabled button is UX, not a guard.
     if (!(DELETE_CONFIRMATION_PHRASES as readonly string[]).includes(data.confirmation)) {

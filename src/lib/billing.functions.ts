@@ -111,7 +111,9 @@ export const getBillingPublic = createServerFn({ method: "GET" })
       .eq("year_month", ym)
       .maybeSingle();
     const premium = await isPremiumActive(context.userId);
-    const { data: prof } = await (await admin())
+    const { data: prof } = await (
+      await admin()
+    )
       .from("profiles")
       .select("plan_tier, plan_expires_at")
       .eq("id", context.userId)
@@ -294,10 +296,7 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
     return {
       allowed: true as const,
       reason: "free" as const,
-      remaining: Math.min(
-        limits[data.task] - usedTask - 1,
-        settings.freeTotal - usedTotal - 1,
-      ),
+      remaining: Math.min(limits[data.task] - usedTask - 1, settings.freeTotal - usedTotal - 1),
     };
   });
 
@@ -389,9 +388,7 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
 
 export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ paymentId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ paymentId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabaseAdmin = await admin();
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
@@ -410,9 +407,7 @@ export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
 /** Admin: mark premium payment paid and activate plan */
 export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ paymentId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ paymentId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const supabaseAdmin = await admin();
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
@@ -464,7 +459,6 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
     return { ok: true as const, expiresAt: end.toISOString() };
   });
 
-
 /** Monthly PAYG settlement order (PromptPay) — admin confirms like Premium */
 export const createPaygOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -512,7 +506,6 @@ export const createPaygOrder = createServerFn({ method: "POST" })
       message: "ok" as const,
     };
   });
-
 
 /** User: list own premium / family / PAYG payments (not pure draft without report optional: show draft+pending+paid) */
 export const listMyPremiumPayments = createServerFn({ method: "GET" })

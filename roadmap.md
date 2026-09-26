@@ -1,6 +1,7 @@
 # Roadmap — น้องภูมิ Life OS (เฟสถัดไป)
 
 ## 1. Task Marketplace "ช่วยฉันที"
+
 - [x] DB: helper_profiles, jobs, job_offers, job_reviews, platform_settings
 - [x] AI รับเรื่อง: แชท → แปลงเป็น Job (งาน/สถานที่/เวลา/งบ)
 - [x] สมัครเป็นผู้ช่วย + AI สร้างทักษะจากคำบรรยาย
@@ -10,14 +11,20 @@
 - [x] เมนู "ช่วยฉันที" ใน AppShell + คำแปล TH/EN
 
 ## 2. สิทธิฉัน (Benefits) — เสร็จแล้ว
- - [x] ตาราง benefits (12 สิทธิ), benefit_profiles, user_benefits + RLS
- - [x] ตัวจับคู่สิทธิ (อายุ/รายได้/กลุ่ม/ประกันสังคม)
- - [x] หน้า /benefits: ฟอร์มโปรไฟล์ + รายการสิทธิ + สถานะ สนใจ/กำลังดำเนินการ/ได้รับแล้ว
- - [x] เมนู "สิทธิฉัน" + คำแปล TH/EN
+
+- [x] ตาราง benefits (12 สิทธิ), benefit_profiles, user_benefits + RLS
+- [x] ตัวจับคู่สิทธิ (อายุ/รายได้/กลุ่ม/ประกันสังคม)
+- [x] หน้า /benefits: ฟอร์มโปรไฟล์ + รายการสิทธิ + สถานะ สนใจ/กำลังดำเนินการ/ได้รับแล้ว
+- [x] เมนู "สิทธิฉัน" + คำแปล TH/EN
 
 ## 3. ของดีใกล้บ้าน (Local Deals)
+
 ## 4. Decision Board
+
 ## 5. Life Legacy (12 หมวดตามเอกสาร)
+
 ## 6. ระบบชำระเงิน (PromptPay QR + ผ่อน 12/24/36)
+
 ## 7. LINE notification
+
 ## 8. Admin dashboard

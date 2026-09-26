@@ -10,19 +10,19 @@
 
 เลขหัวข้อคงที่ ลำดับทำจริงคือตารางนี้ (ปรับ 2026-09-12 หลังสำรวจงาน A–E เทียบ repo — ดู 1.6–1.10)
 
-| ลำดับ | หัวข้อ | งาน | สถานะ | เหตุผลที่อยู่ตรงนี้ |
-|---|---|---|---|---|
-| 1 | **1.8 (hotfix)** | Timezone — Asia/Bangkok ทุกจุดที่ตัดสินว่า "วันนี้คือวันไหน" | ✅ `f4f5f69` | บั๊กที่ผู้ใช้เจอทุกเช้า 00:00–07:00 แก้ได้ 7 จุดโดยไม่แตะ schema ไม่มีเหตุผลให้รอ 1.2 |
-| 2 | **1.6** | i18n guard — บังคับ key ครบสองภาษาตอน build | ✅ `777f553` | ต้องมาก่อน 1.1 เพราะหน้า Admin จะเพิ่ม key ใหม่หลายสิบตัว ใส่ guard ก่อนแล้วของใหม่จะถูกบังคับตั้งแต่บรรทัดแรก |
-| 3 | **1.1** | Admin Console + AI provider/model switching | ✅ ทั้งขั้น (เหลือ cron ล้าง ai_events → 1.3) | ติดปัญหา quota รายวัน แก้แล้วได้ใช้ทันที และเป็นฐานของ Admin ที่ขั้นอื่นต้องใช้ |
-| 4 | **1.7** | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว | ✅ 2026-09-14 | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict |
-| 5 | **1.2 + 1.8 (schema)** | Data integrity & deletion path + คำถามเชิง schema เรื่องเวลา | ✅ 2026-09-14 (เหลือ: โอน owner ครอบครัว → ก่อนมีครอบครัวจริง) | งาน schema ยิ่งมีข้อมูลจริงมากยิ่งเติม FK ย้อนหลังยาก · การตัดสินใจเรื่อง attachments (1.9) ต้องทำในรอบนี้ |
-| 6 | **1.9** | แนบไฟล์ | ✅ 2026-09-19 | ทางที่ 1: `source_document_id` + `kind='attachment'` ไม่มีตารางใหม่ ไม่มี migration |
-| 7 | **1.3** | Scheduler + LINE notification + Recurring reminder | ✅ 2026-09-14 ปิดทั้งขั้น (ทดสอบเครื่องจริง iOS/Android ผ่าน) | Netlify Scheduled Function ทุก 5 นาที · LINE ผูกเอง + Flex 2 โหมด + quota guard |
-| 8 | **1.10** | เสียง | ⏳ | ต้องรอ 1.1 คุม quota ได้ก่อน เพราะวิธีที่ปลอดภัยใช้ RPD ×2 · และต้องผ่านด่าน `/mic-test` บนมือถือจริงก่อน |
-| 9 | **1.4** | Payment rails | ⏳ | ใหญ่และเป็นอิสระ |
-| 10 | **1.5** | งานค้างเล็ก ๆ | ⏳ | Help Me rating UI, `.validator()` deprecation, bundle 600 kB |
-| 11 | **1.11** | สนับสนุน (บริจาคพร้อมเพย์) | ✅ 2026-09-20 | ตาม playbook Harmony · แยกจาก 1.4 ซึ่งเป็น gateway/escrow ของ HelpMe |
+| ลำดับ | หัวข้อ                 | งาน                                                          | สถานะ                                                          | เหตุผลที่อยู่ตรงนี้                                                                                            |
+| ----- | ---------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 1     | **1.8 (hotfix)**       | Timezone — Asia/Bangkok ทุกจุดที่ตัดสินว่า "วันนี้คือวันไหน" | ✅ `f4f5f69`                                                   | บั๊กที่ผู้ใช้เจอทุกเช้า 00:00–07:00 แก้ได้ 7 จุดโดยไม่แตะ schema ไม่มีเหตุผลให้รอ 1.2                          |
+| 2     | **1.6**                | i18n guard — บังคับ key ครบสองภาษาตอน build                  | ✅ `777f553`                                                   | ต้องมาก่อน 1.1 เพราะหน้า Admin จะเพิ่ม key ใหม่หลายสิบตัว ใส่ guard ก่อนแล้วของใหม่จะถูกบังคับตั้งแต่บรรทัดแรก |
+| 3     | **1.1**                | Admin Console + AI provider/model switching                  | ✅ ทั้งขั้น (เหลือ cron ล้าง ai_events → 1.3)                  | ติดปัญหา quota รายวัน แก้แล้วได้ใช้ทันที และเป็นฐานของ Admin ที่ขั้นอื่นต้องใช้                                |
+| 4     | **1.7**                | เปลี่ยนชื่อ "ค่าใช้จ่าย" + เก็บกวาด i18n รอบเดียว            | ✅ 2026-09-14                                                  | งาน rename 3 key ไม่ควรบล็อก 1.1 ทำพร้อมย้าย inline string กับ title เข้า dict                                 |
+| 5     | **1.2 + 1.8 (schema)** | Data integrity & deletion path + คำถามเชิง schema เรื่องเวลา | ✅ 2026-09-14 (เหลือ: โอน owner ครอบครัว → ก่อนมีครอบครัวจริง) | งาน schema ยิ่งมีข้อมูลจริงมากยิ่งเติม FK ย้อนหลังยาก · การตัดสินใจเรื่อง attachments (1.9) ต้องทำในรอบนี้     |
+| 6     | **1.9**                | แนบไฟล์                                                      | ✅ 2026-09-19                                                  | ทางที่ 1: `source_document_id` + `kind='attachment'` ไม่มีตารางใหม่ ไม่มี migration                            |
+| 7     | **1.3**                | Scheduler + LINE notification + Recurring reminder           | ✅ 2026-09-14 ปิดทั้งขั้น (ทดสอบเครื่องจริง iOS/Android ผ่าน)  | Netlify Scheduled Function ทุก 5 นาที · LINE ผูกเอง + Flex 2 โหมด + quota guard                                |
+| 8     | **1.10**               | เสียง                                                        | ⏳                                                             | ต้องรอ 1.1 คุม quota ได้ก่อน เพราะวิธีที่ปลอดภัยใช้ RPD ×2 · และต้องผ่านด่าน `/mic-test` บนมือถือจริงก่อน      |
+| 9     | **1.4**                | Payment rails                                                | ⏳                                                             | ใหญ่และเป็นอิสระ                                                                                               |
+| 10    | **1.5**                | งานค้างเล็ก ๆ                                                | ⏳                                                             | Help Me rating UI, `.validator()` deprecation, bundle 600 kB                                                   |
+| 11    | **1.11**               | สนับสนุน (บริจาคพร้อมเพย์)                                   | ✅ 2026-09-20                                                  | ตาม playbook Harmony · แยกจาก 1.4 ซึ่งเป็น gateway/escrow ของ HelpMe                                           |
 
 > 1.3 / 1.10 / 1.4 ไม่พึ่งพากัน สลับลำดับกันเองได้ตามความจำเป็นตอนนั้น
 >
@@ -51,11 +51,11 @@ Admin เปิดหน้าเว็บ เลือก provider และ mo
 > `supabase.rpc('has_role', ...)` ได้เลยเพื่อซ่อนเมนู ไม่ต้องต่อท่อใหม่
 
 - [ ] Bootstrap admin คนแรกด้วย SQL ตรง ๆ ใน Dashboard (ไม่ต้องทำ UI) — เจ้าของโปรเจกต์รันเอง:
-      ```sql
-      insert into public.user_roles (user_id, role)
-      values ('26b22eca-67a8-4e2f-99ad-6f590f2fb072', 'admin')
-      on conflict do nothing;
-      ```
+      `sql
+insert into public.user_roles (user_id, role)
+values ('26b22eca-67a8-4e2f-99ad-6f590f2fb072', 'admin')
+on conflict do nothing;
+`
       (uuid = บัญชี `geeravut@gmail.com` · `user_roles` ไม่มี INSERT policy ให้ผู้ใช้ทั่วไป จึงต้องรันใน Dashboard เท่านั้น — ถูกต้องแล้ว)
 - [x] guard ฝั่ง server — `requireAdmin` ใน `auth-middleware.ts` ต่อจาก `requireSupabaseAuth` แล้ว `rpc('has_role')` (`af23c77`)
 - [x] Route `/admin` + ซ่อนเมนูฝั่ง client — ทำใน 1.1.6 (`c7956af`): `beforeLoad` เรียก `has_role` → redirect, `useIsAdmin` ซ่อนเมนู
@@ -69,12 +69,12 @@ Admin เปิดหน้าเว็บ เลือก provider และ mo
 
 เก็บ:
 
-| คอลัมน์ | ความหมาย |
-|---|---|
-| `default_provider` | `anthropic` / `openai` / `google` หรือ **`NULL` = ไม่ได้ตั้งใน DB ถอยไปใช้ env** |
-| `fallback_provider` | เจ้าสำรอง · `NULL` = ถอยไปใช้ env · **`'none'` = ปิด fallback** |
-| `model_overrides` | `jsonb` เก็บเป็น `{"google": {"chat": "...", "document": "...", "reasoning": "..."}, "anthropic": {...}}` — คีย์ไหนไม่มี = ใช้ค่า default ในโค้ด |
-| `updated_at`, `updated_by` | ใครแก้ เมื่อไหร่ (`updated_at` มี trigger) |
+| คอลัมน์                    | ความหมาย                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `default_provider`         | `anthropic` / `openai` / `google` หรือ **`NULL` = ไม่ได้ตั้งใน DB ถอยไปใช้ env**                                                                 |
+| `fallback_provider`        | เจ้าสำรอง · `NULL` = ถอยไปใช้ env · **`'none'` = ปิด fallback**                                                                                  |
+| `model_overrides`          | `jsonb` เก็บเป็น `{"google": {"chat": "...", "document": "...", "reasoning": "..."}, "anthropic": {...}}` — คีย์ไหนไม่มี = ใช้ค่า default ในโค้ด |
+| `updated_at`, `updated_by` | ใครแก้ เมื่อไหร่ (`updated_at` มี trigger)                                                                                                       |
 
 > **เปลี่ยนจากแผนเดิม:** เดิมเขียนว่า `NULL` ในช่อง fallback = ปิด แต่ถ้าทำแบบนั้น พอแถวมีอยู่ค่า `AI_FALLBACK_PROVIDER` จาก env จะถูกปิดทันที ขัดกับลำดับ DB → env → default ที่ตกลงกัน จึงใช้ `'none'` แทน ทั้งสองคอลัมน์มี CHECK จำกัดค่า
 
@@ -130,7 +130,8 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 - [x] **ต้องใช้ base URL เดียวกับที่ AI SDK ใช้** — พบบน production ว่า `@ai-sdk/openai` อ่าน `OPENAI_BASE_URL` และ `@ai-sdk/anthropic` อ่าน `ANTHROPIC_BASE_URL` (ตรวจใน `node_modules/@ai-sdk/*/dist` 2026-09-14) รอบแรก listModels ยิง host สาธารณะของ vendor ด้วย token ของ gateway → 401 ทั้งที่แชทผ่าน แก้แล้ว + โชว์ host ที่ใช้จริงใต้ชื่อ provider
 
 > **คำตอบเรื่อง quota Gemini free tier — นับ RPD แยกรายโมเดล** (ตัดสินว่า console นี้แก้ปัญหาได้จริงแม้มี key เจ้าเดียว)
-> - เอกสารทางการ ai.google.dev/gemini-api/docs/rate-limits ระบุตรง ๆ: *"Each model variation has an associated rate limit"* และ *"Limits vary depending on the specific model being used"* (limit ผูกกับ project ไม่ใช่ API key แต่**นิยามต่อ model**)
+>
+> - เอกสารทางการ ai.google.dev/gemini-api/docs/rate-limits ระบุตรง ๆ: _"Each model variation has an associated rate limit"_ และ _"Limits vary depending on the specific model being used"_ (limit ผูกกับ project ไม่ใช่ API key แต่**นิยามต่อ model**)
 > - หลักฐานเชิงประจักษ์ 2026-09-13 ระหว่างทดสอบ 1.1.8: การทดสอบทั้งวันทำให้ `gemini-3.7-flash` ติด **429 quota exceeded** ขณะที่ **key เดียวกัน นาทีเดียวกัน** `gemini-3.6-flash` ✅ 1.5 วิ และ `gemini-3.8-flash` ✅ 4.5 วิ → สลับ chat ไป 3.6 ผ่านหน้า Admin แล้วแชทกลับมาใช้ได้ทันที
 > - เคยเห็นแบบเดียวกันตอน Phase 0 (3.8 429 ขณะ 3.7 ผ่าน)
 
@@ -164,10 +165,12 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 - [x] console บน production ไม่มี error ใหม่ (warning "state update on unmounted component" ที่เห็นใน dev เป็น artifact ของ HMR — bisect แล้ว ไม่เกิดบน server ที่ start ใหม่และไม่เกิดบน production)
 
 > **พบบน production ระหว่างทดสอบ — ต้องรู้ก่อนตั้ง fallback:**
+>
 > - Netlify **AI Gateway** เปิดอยู่: `ANTHROPIC_BASE_URL` และ `OPENAI_BASE_URL` ชี้มาที่ `lavieos.netlify.app` เอง พร้อม token ของ gateway (ไม่ใช่ key ของ vendor)
 > - ผ่าน gateway นี้ **OpenAI ใช้ได้จริง** — `gpt-5.6-luna` ตอบใน ~800 ms (provider ที่เคยติดป้าย UNTESTED)
 > - แต่ **Anthropic ผ่าน gateway ตอบ `404 Not Found` ใน 59 ms** ทุกรุ่น และ `/models` ของ gateway ตอบ `400 Invalid Content-Type` (ไม่รองรับ GET) → รายการ Anthropic/OpenAI บน production เป็น "รายการในโค้ด" ถาวรตราบใดที่ยังใช้ gateway
 > - **ผลคือ `AI_FALLBACK_PROVIDER=anthropic` บน production ไม่เคยทำงานได้** — ควรเปลี่ยน fallback เป็น `openai` ผ่านหน้า Admin (หรือใส่ ANTHROPIC key จริงและถอด gateway ออกจาก Anthropic)
+
 ---
 
 # 1.2 Data integrity & deletion path
@@ -187,6 +190,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 > 4. ล้าง orphan (ข้อแรกของขอบเขต) ต้อง**ลิสต์แถวที่จะลบออกมาดูก่อน** แล้วค่อยลบ ไม่ใช่ `DELETE … WHERE NOT EXISTS` ทีเดียว
 
 ขอบเขต:
+
 - [x] ล้าง orphan ที่มีอยู่ก่อน — สำรวจ 2026-09-14: orphan แถว = **0** ทุกตาราง จึงไม่ต้องลบแถวใด · ไฟล์กำพร้า 1 ไฟล์ลบผ่าน Storage API หลังพี่สำรอง (`backups/20260914-053550`)
 - [x] เติม FK + `ON DELETE CASCADE` ทุกตารางที่อ้าง user — migration `20260914120000_data_integrity.sql` apply แล้ว: FK → `auth.users` 15 ตัว (CASCADE; `ai_settings.updated_by` SET NULL) · ซ่อม `incomes.family_id`/`source_document_id` → SET NULL · default วันที่ไทย · `documents.kind` ใหม่ + CHECK บน `status` เดิม (คอลัมน์ `status` มีอยู่แล้วตั้งแต่ migration แรก — สำรวจรอบแรกพลาด push ครั้งแรก rollback ทั้งไฟล์แล้วแก้) · `aivora_links` มี CASCADE อยู่แล้ว
 - [x] ลบไฟล์ใน storage เมื่อลบ document (มีอยู่แล้วใน docs.tsx) / ลบบัญชี (`account.server.ts` ลบผ่าน Storage API ก่อน `deleteUser`) (`ca7665f`)
@@ -195,6 +199,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 - [ ] **⚠️ โอนความเป็นเจ้าของครอบครัว หรือบล็อกการลบบัญชีจนกว่าจะโอน — ต้องทำก่อนที่จะมีครอบครัวจริงที่มีสมาชิกหลายคน** — migration รอบนี้ตั้ง `families.owner_id ON DELETE CASCADE` (ตัดสินใจ 2026-09-14) แปลว่าเจ้าของลบบัญชี = ครอบครัวสลาย: `family_members` ทุกคนถูกลบ ของที่สมาชิกอื่นแชร์ไว้กลับเป็นส่วนตัว (`family_id → NULL` ข้อมูลไม่หาย) **โดยที่พวกเขาไม่รู้ตัว** วันนี้ยังไม่มีครอบครัวจริงบน production จึงยอมรับได้ แต่ flow ลบบัญชี (ข้อบน) ต้องมีอย่างใดอย่างหนึ่ง: (ก) หน้าโอน owner ให้สมาชิกคนอื่นก่อนลบ หรือ (ข) ปฏิเสธการลบถ้ายังเป็น owner ของครอบครัวที่มีสมาชิกมากกว่า 1 พร้อมบอกเหตุผล
 
 งานที่ **1.9** ฝากมาไว้รอบนี้ (เพราะเป็นรอบที่ตัดสินเรื่อง FK ทั้งระบบ):
+
 - [ ] **ซ่อม `incomes.source_document_id`** — ตอนนี้ `REFERENCES documents(id)` โดย**ไม่มี ON DELETE** (= NO ACTION) ต่างจาก `reminders`/`expenses` ที่เป็น `SET NULL` → ลบเอกสารที่มี income อ้างถึงจะ error ต้องเปลี่ยนเป็น `SET NULL` ให้สม่ำเสมอ
 - [ ] ตัดสินใจ design ของแนบไฟล์ (1.9 ทางที่ 1 หรือ 2) **ในรอบนี้** แล้วค่อยเขียนโค้ดที่ 1.9
 - [ ] คำถามเชิง schema จาก 1.8 ที่รอตอบในรอบนี้ (ดู 1.8)
@@ -213,7 +218,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
   - ทำไมไม่ใช่ `pg_cron` + `pg_net`: งานทั้งสามต้องยิง HTTP ออก (LINE) และลบไฟล์ผ่าน Storage API ซึ่งเป็นโค้ด Node ที่มีโครงอยู่แล้ว · `pg_net` timeout default 2 วิ, response เก็บ 6 ชม., secret ต้องไปอยู่ใน Postgres · free project ของ Supabase ถูก pause ได้ถ้าเงียบ 7 วัน = cron ตายเงียบ · ทดสอบ pg_cron ในเครื่องต้อง Docker ซึ่งไม่มี
   - ราคาที่จ่าย: **30 วินาทีต่อ tick** (free plan ไม่มี background function) → ทุกงานเป็น batch เล็ก + idempotent · ทดสอบในเครื่องทำได้แค่ `netlify functions:invoke tick` (Netlify Dev ไม่รันตาม schedule)
 - [x] **LINE: Life OS ผูกบัญชีเอง ด้วย LINE Login channel ของตัวเองใต้ provider `Aivora Launcher`** (ตัดสินใจ 2026-09-14 แทนแบบ "hub ส่ง `line_user_id`" — ผู้ใช้ที่ล็อกอิน Google ในเบราว์เซอร์ไม่มี LINE id ให้ hub ส่ง) · **ไม่ต้องแก้ hub**
-  - หลักฐานว่า id ใช้ข้าม channel ได้ (เอกสาร Messaging API "Getting user IDs"): *"If the provider is the same, the user ID is the same regardless of the channel type (LINE Login channel or Messaging API channel)"* · `sub` ใน ID token = *"User ID for which the ID token is generated"* · รูปแบบ `U[0-9a-f]{32}`
+  - หลักฐานว่า id ใช้ข้าม channel ได้ (เอกสาร Messaging API "Getting user IDs"): _"If the provider is the same, the user ID is the same regardless of the channel type (LINE Login channel or Messaging API channel)"_ · `sub` ใน ID token = _"User ID for which the ID token is generated"_ · รูปแบบ `U[0-9a-f]{32}`
   - flow (server route ทั้งหมด): Settings กด "เชื่อมต่อ LINE" → `/line/connect` สร้าง `state` ผูก user (แถวหมดอายุ 10 นาที) → `access.line.me/oauth2/v2.1/authorize` scope `openid profile` + **`bot_prompt=aggressive`** (ชวนเพิ่ม OA เป็นเพื่อนในจอเดียวกัน ต้องตั้ง Linked LINE Official Account ที่ channel) → `/line/callback` ตรวจ state → `POST /oauth2/v2.1/token` → `POST /oauth2/v2.1/verify` (ห้าม trust id_token จาก client) → `sub` → upsert `line_links` · ตอน callback อ่าน `friendship_status_changed` และ `GET api.line.me/friendship/v1/status` (user token) → `friendFlag`
   - ตาราง **`line_links`** ใหม่ (`user_id` PK CASCADE, `line_user_id` UNIQUE CHECK รูปแบบ, `is_friend`, `friend_checked_at`, `linked_at`, `blocked_at`) + `line_link_states` — ไม่ใช้ `aivora_links` (มีเฉพาะคน SSO) ไม่ใช้ `profiles` (ผู้ใช้เขียนเองได้ตาม RLS) · เขียนเฉพาะ service role
   - ก่อน push ทุกครั้ง: `GET /v2/bot/profile/{userId}` ด้วย channel token — 200 = เพื่อน, **404** = ยังไม่เพิ่ม/บล็อก → mark `is_friend=false` ไม่ยิง · push ถึงคนบล็อก/ไม่ได้เพิ่ม **ได้ 200 แต่ไม่ถึงและไม่นับโควตา** (เอกสาร push + pricing) — การเช็คมีไว้เพื่อบอกผู้ใช้ ไม่ใช่ประหยัดโควตา
@@ -224,7 +229,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
   - **รูปแบบข้อความ = Flex Message** ไม่ใช่ text — อ้างอิงการ์ดของ WelCares: header แถบสี + ไอคอน + หัวข้อ, body เป็นแถว label–value · `altText` ต้องสื่อความจริง (คือสิ่งที่เห็นในแถบแจ้งเตือนและเครื่องที่แสดง Flex ไม่ได้) ห้ามใส่แค่ "แจ้งเตือน" · **ปุ่ม** เปิดหน้าที่เกี่ยวข้องตรง ๆ แทนข้อความบอกทาง — ตรวจว่าใช้ LIFF URL ได้ไหมจะได้เปิดในแอป LINE ไม่เด้งเบราว์เซอร์ · ข้อความไทย `wrap: true` ทดสอบจอแคบจริง · `immediate` = การ์ดเดียวเรื่องเดียว · `digest` = การ์ดเดียวหลายรายการ (หรือ carousel) — นับ 1 หน่วยเท่ากัน · วันที่เป็น พ.ศ. เหมือนในแอป · **ทดสอบบนเครื่องจริง iOS + Android ก่อนถือว่าเสร็จ** — Flex ที่ดูดีในเอกสารมักเพี้ยนบนจอจริง
 - [x] **โควตา OA 300 ข้อความ/เดือน → LINE มี 2 โหมด**: `immediate` ส่งทันทีเฉพาะ `priority = 'high'` · `digest` สรุปวันละครั้งต่อผู้ใช้สำหรับที่เหลือ · เมื่อใกล้เต็ม หยุด digest ก่อน เก็บที่เหลือให้ immediate
   - นับโควตาจาก `notification_log` (`channel='line' AND status='sent'` ในเดือนนี้ มี partial index) — ไม่มีตารางตัวนับแยก เพราะ log คือ ledger อยู่แล้ว ตัวนับแยกต้อง update ซ้ำทุกครั้งที่ส่ง + reset รายเดือน = state ที่เพี้ยนได้ · ตัวเลขทางการคือ `GET /v2/bot/message/quota/consumption` ของ LINE (`totalUsage` อาจอัปเดตช้า) tick อ่านครั้งเดียวต่อรอบ เก็บใน `cron_ticks.summary` แล้วใช้ค่าที่**มากกว่า**ระหว่างสองแหล่งตัดสิน · retention ของ `notification_log` ต้อง ≥ 2 เดือน (ตั้ง 90 วัน)
-  - ยืนยันจากหน้า pricing แล้ว: *"The number of messages is counted by the number of people you send a message to ... The number of message objects in a request doesn't affect the number of messages sent."* · นับ push/multicast/broadcast **reply ไม่นับ** · ส่งถึงคนบล็อก/ไม่มีตัวตน ไม่นับ
+  - ยืนยันจากหน้า pricing แล้ว: _"The number of messages is counted by the number of people you send a message to ... The number of message objects in a request doesn't affect the number of messages sent."_ · นับ push/multicast/broadcast **reply ไม่นับ** · ส่งถึงคนบล็อก/ไม่มีตัวตน ไม่นับ
 - [x] **Recurring: แจ้งเตือน ≠ จัดการเสร็จ** (ตัดสินใจ 2026-09-14 แทน "เลื่อนงวดตอนแจ้ง" — ถ้าเลื่อนทันทีที่แจ้ง reminder จะไม่มีวันปรากฏในแถบ "ถึงกำหนดแล้วแต่ยังไม่ได้จัดการ" ทั้งที่ยังไม่ได้จ่าย) · tick แค่ claim + log แถวคง open และโชว์ "เลยกำหนด" · **กด "ทำเสร็จ — เลื่อนไปเดือนหน้า/ปีหน้า"** ถึงเลื่อน `due_at` ไปงวดถัดไปหลังตอนนี้ (คำนวณเวลาไทย clamp วัน) reset claim บันทึก `last_completed_at` คง open · **ตาข่าย `rolloverStale`**: ครบ 1 งวดเต็มยังไม่กด → tick เลื่อนให้เองไปงวดล่าสุด ≤ ตอนนี้แล้วแจ้งใหม่ — คนที่อ่านแค่ LINE ไม่เงียบหายถาวร
   - ขอบเดือน (รันจริง): 31 ม.ค.+1 → 28 ก.พ. (29 ปีอธิกสุรทิน) · 29 ก.พ.+1 ปี → 28 ก.พ. · ค้าง 3 เดือนแล้วกด done → งวดเดียวถัดไป ไม่ยิงย้อน
   - **ค้างในแผน — drift ข้ามการเลื่อน**: พอ 31 ม.ค. ตกไป 28 ก.พ. แล้ว งวดถัดไปคือ 28 มี.ค. ไม่กลับไป 31 คนตั้งเตือนสิ้นเดือนผ่านไปปีหนึ่งวันจะเลื่อนไปเรื่อย ๆ · แก้ได้ต้องมีคอลัมน์เก็บวัน anchor (เช่น `recurrence_day`) ไม่ด่วน
@@ -289,6 +294,7 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 ## ที่ยังไม่ครอบคลุม → ทำใน 1.7
 
 ข้อความที่**อยู่นอก dict** ระบบนี้ตรวจไม่ถึง:
+
 - `lang === "en" ? "…" : "…"` ฝังในโค้ด **12 จุด ใน 8 ไฟล์**: `docs.tsx`, `settings.tsx`, `benefits.tsx`, `BenefitChatCards.tsx`, `phum.server.ts` ×4, `marketplace.server.ts` ×2, `ai-gateway.server.ts`, `benefits.ts`
 - `<title>` / og:description ของทุก route **ไทยล้วน 12 จุด** ไม่สลับภาษา
 - `catLabel()` ถ้าหมวดไม่มีในตาราง **โชว์ key ดิบ** (`categoryLabels[k]?.[lang] ?? k`)
@@ -308,12 +314,12 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 ## key ที่ต้องเปลี่ยน — **แค่ 3 key + 2 บรรทัด** ไม่ใช่ทั้งกลุ่ม
 
-| key | ใช้ที่ | ไทย | EN ตอนนี้ | เสนอ EN |
-|---|---|---|---|---|
-| `navMoney` | เมนูข้าง + แถบล่างมือถือ | ค่าใช้จ่าย | Expenses | **Money** (สั้น พอดีแถบล่าง 5 ช่อง) |
-| `moneyTitle` | H1 หน้าเงิน, การ์ด landing, หัวข้อในหน้า Family | บิลและค่าใช้จ่าย | Bills & money | **Income & expenses** |
-| `routedToExpense` | toast ตอนเอกสารถูกส่งไปหน้าเงิน | เพิ่มในค่าใช้จ่ายแล้ว | Added to Expenses | ให้**ตรงกับชื่อใหม่ของ tab** ไม่งั้นผู้ใช้หา "ค่าใช้จ่าย" ไม่เจอ |
-| `<title>` + og ใน `money.tsx:28,30` | tab เบราว์เซอร์ | บิลและค่าใช้จ่าย | (ไทยล้วน) | แก้คู่กัน — เป็น 1 ใน 12 จุดนอก dict |
+| key                                 | ใช้ที่                                          | ไทย                   | EN ตอนนี้         | เสนอ EN                                                          |
+| ----------------------------------- | ----------------------------------------------- | --------------------- | ----------------- | ---------------------------------------------------------------- |
+| `navMoney`                          | เมนูข้าง + แถบล่างมือถือ                        | ค่าใช้จ่าย            | Expenses          | **Money** (สั้น พอดีแถบล่าง 5 ช่อง)                              |
+| `moneyTitle`                        | H1 หน้าเงิน, การ์ด landing, หัวข้อในหน้า Family | บิลและค่าใช้จ่าย      | Bills & money     | **Income & expenses**                                            |
+| `routedToExpense`                   | toast ตอนเอกสารถูกส่งไปหน้าเงิน                 | เพิ่มในค่าใช้จ่ายแล้ว | Added to Expenses | ให้**ตรงกับชื่อใหม่ของ tab** ไม่งั้นผู้ใช้หา "ค่าใช้จ่าย" ไม่เจอ |
+| `<title>` + og ใน `money.tsx:28,30` | tab เบราว์เซอร์                                 | บิลและค่าใช้จ่าย      | (ไทยล้วน)         | แก้คู่กัน — เป็น 1 ใน 12 จุดนอก dict                             |
 
 - [x] เปลี่ยน 3 key: `navMoney` → "รายรับ-รายจ่าย"/"Money" · `moneyTitle` → "รายรับ-รายจ่าย"/"Income & expenses" · `routedToExpense` → "เพิ่มในรายรับ-รายจ่ายแล้ว"/"Added to Income & expenses" · title/og ของ money.tsx ย้ายเข้า dict พร้อมกัน
 - [x] **ไม่เปลี่ยน** เพราะหมายถึงรายจ่ายอย่างเดียวจริง: `monthSpend` (การ์ดหน้า Today นับแค่ expenses), `tabExpense`/`tabIncome`, `addExpense`/`addIncome`, `moneyEmpty`/`incomeEmpty` (แยกตาม tab อยู่แล้ว), `totalExpense`/`totalIncome`, `heroSub`
@@ -327,26 +333,26 @@ Admin ต้องเห็นรายการ model ทั้งหมดข�
 
 ## ชนิดคอลัมน์จริง (ตรวจแล้ว ออกแบบถูก ไม่ต้องแก้)
 
-| ตาราง | `date` | `timestamptz` | `created_at`/`updated_at` |
-|---|---|---|---|
-| expenses | `spent_on` (default `CURRENT_DATE`), `due_date` | — | ✅ |
-| incomes | `received_on` (default `CURRENT_DATE`) | — | ✅ |
-| reminders | — | `due_at` | ✅ |
-| documents | `doc_date`, `due_date` | — | ✅ |
+| ตาราง     | `date`                                          | `timestamptz` | `created_at`/`updated_at` |
+| --------- | ----------------------------------------------- | ------------- | ------------------------- |
+| expenses  | `spent_on` (default `CURRENT_DATE`), `due_date` | —             | ✅                        |
+| incomes   | `received_on` (default `CURRENT_DATE`)          | —             | ✅                        |
+| reminders | —                                               | `due_at`      | ✅                        |
+| documents | `doc_date`, `due_date`                          | —             | ✅                        |
 
 ## Hotfix ✅ `f4f5f69` — ทำก่อนทุกอย่างเพราะเป็นบั๊กที่ผู้ใช้เจอทุกเช้า
 
 **ก่อนแก้ ไม่มีที่ไหนในโค้ดระบุ timezone เลย** (grep `timezone|Asia/Bangkok|+07` = 0) ทุกจุดใช้ค่า default ของที่โค้ดรัน ซึ่งเบราว์เซอร์ = Bangkok แต่ Netlify Functions = UTC และ `toISOString()` = UTC เสมอแม้ในเบราว์เซอร์ → **00:00–07:00 น. ทุกวัน** ระบบคิดว่าเป็นเมื่อวาน
 
-| จุด | อาการ | แก้เป็น |
-|---|---|---|
-| `phum.server.ts` ×2 — `Today is …` ใน prompt | AI anchor วันผิด 7 ชม./วัน — "เตือนพรุ่งนี้" ตอน 6 โมงเช้าได้วันนี้ · prompt สั่ง "If a date is missing, use today" → รายจ่ายลงผิดวัน | `todayInBangkok()` + prompt ระบุ `(Asia/Bangkok, UTC+07:00)` |
-| `phum.server.ts` schema `dueAt` | บอกแค่ "ISO datetime" ไม่บอก TZ — AI คืนแบบไม่มี offset แล้วพึ่งโชคที่ `new Date()` รันในเบราว์เซอร์ | สั่ง `always with the +07:00 offset` — ยืนยันแล้ว AI คืน `2026-09-18T15:00:00+07:00` |
-| `phum-actions.ts` `today()` fallback | UTC ในเบราว์เซอร์ | `todayInBangkok()` |
-| `format.ts` `toDateInput` → ค่า default ช่องวันที่หน้าเงิน | ฟอร์มขึ้นวันเมื่อวาน | `todayInBangkok(d)` |
-| `today.tsx` ยอดเดือนนี้ | `setDate(1)` local + `toISOString` UTC → วันที่ 1 ช่วง 00:00–07:00 รวมวันสิ้นเดือนก่อน | `monthStartInBangkok()` |
-| `docs.tsx` reminder จากเอกสาร | `new Date("YYYY-MM-DD")` = UTC เที่ยงคืน = **07:00 ไทย** ทุกครั้ง | `bangkokDateAtHour(due_date, 9)` = 09:00 ไทย |
-| `doc-intake.ts` ×2 (**สำรวจรอบแรกพลาด**) | บั๊กเดียวกันทั้งสองแบบ สำหรับ reminder/รายจ่ายอัตโนมัติจากเอกสาร | เหมือนบน |
+| จุด                                                        | อาการ                                                                                                                                 | แก้เป็น                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `phum.server.ts` ×2 — `Today is …` ใน prompt               | AI anchor วันผิด 7 ชม./วัน — "เตือนพรุ่งนี้" ตอน 6 โมงเช้าได้วันนี้ · prompt สั่ง "If a date is missing, use today" → รายจ่ายลงผิดวัน | `todayInBangkok()` + prompt ระบุ `(Asia/Bangkok, UTC+07:00)`                         |
+| `phum.server.ts` schema `dueAt`                            | บอกแค่ "ISO datetime" ไม่บอก TZ — AI คืนแบบไม่มี offset แล้วพึ่งโชคที่ `new Date()` รันในเบราว์เซอร์                                  | สั่ง `always with the +07:00 offset` — ยืนยันแล้ว AI คืน `2026-09-18T15:00:00+07:00` |
+| `phum-actions.ts` `today()` fallback                       | UTC ในเบราว์เซอร์                                                                                                                     | `todayInBangkok()`                                                                   |
+| `format.ts` `toDateInput` → ค่า default ช่องวันที่หน้าเงิน | ฟอร์มขึ้นวันเมื่อวาน                                                                                                                  | `todayInBangkok(d)`                                                                  |
+| `today.tsx` ยอดเดือนนี้                                    | `setDate(1)` local + `toISOString` UTC → วันที่ 1 ช่วง 00:00–07:00 รวมวันสิ้นเดือนก่อน                                                | `monthStartInBangkok()`                                                              |
+| `docs.tsx` reminder จากเอกสาร                              | `new Date("YYYY-MM-DD")` = UTC เที่ยงคืน = **07:00 ไทย** ทุกครั้ง                                                                     | `bangkokDateAtHour(due_date, 9)` = 09:00 ไทย                                         |
+| `doc-intake.ts` ×2 (**สำรวจรอบแรกพลาด**)                   | บั๊กเดียวกันทั้งสองแบบ สำหรับ reminder/รายจ่ายอัตโนมัติจากเอกสาร                                                                      | เหมือนบน                                                                             |
 
 - helper เดียวใน `src/lib/time.ts` — `"Asia/Bangkok"` ปรากฏใน `src/` **ที่นี่ที่เดียว** ไม่มี React/server import ใช้ได้ทั้งสองฝั่ง
 - พิสูจน์ด้วย fake clock ในช่วงที่พังภายใต้ `TZ=UTC` และ `TZ=Asia/Bangkok` + ในแอปจริง override `Date` เป็น 03:30 น. 1 ต.ค. → ช่องวันที่ = `2026-10-01`, query ยอดเดือน = `spent_on=gte.2026-10-01`
@@ -379,30 +385,30 @@ documents (1) ──source_document_id──▶ reminders (n)   ON DELETE SET NU
 
 ### ทางที่ 1 — คอลัมน์อ้างอิงในแต่ละตาราง (ใช้ `source_document_id` ที่มีอยู่)
 
-| ข้อดี | ข้อเสีย |
-|---|---|
-| เล็ก query เดียวได้ครบ · `documents` **ก็คือ attachments table อยู่แล้ว** (มี `storage_path`, `mime_type`, `user_id`, RLS ครบ) | **1 รายการ = 1 ไฟล์** (ใบเสร็จ + ใบกำกับภาษี แนบคู่ไม่ได้) |
-| RLS ไม่ต้องเพิ่ม ไฟล์อยู่ใต้แถวที่ RLS คุมแล้ว | ต้องเพิ่มคอลัมน์ทุกตารางที่อยากแนบในอนาคต (jobs? benefits?) |
-| ไม่แก้ schema เลยนอกจากซ่อม FK ของ incomes | logic ลบไฟล์กระจาย 3 ที่ |
+| ข้อดี                                                                                                                          | ข้อเสีย                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| เล็ก query เดียวได้ครบ · `documents` **ก็คือ attachments table อยู่แล้ว** (มี `storage_path`, `mime_type`, `user_id`, RLS ครบ) | **1 รายการ = 1 ไฟล์** (ใบเสร็จ + ใบกำกับภาษี แนบคู่ไม่ได้)  |
+| RLS ไม่ต้องเพิ่ม ไฟล์อยู่ใต้แถวที่ RLS คุมแล้ว                                                                                 | ต้องเพิ่มคอลัมน์ทุกตารางที่อยากแนบในอนาคต (jobs? benefits?) |
+| ไม่แก้ schema เลยนอกจากซ่อม FK ของ incomes                                                                                     | logic ลบไฟล์กระจาย 3 ที่                                    |
 
 ### ทางที่ 2 — ตาราง `attachments` กลาง (polymorphic `target_type` + `target_id`)
 
-| ข้อดี | ข้อเสีย |
-|---|---|
-| หลายไฟล์ต่อรายการ · แนบกับอะไรก็ได้โดยไม่แก้ schema เดิม | `target_id` **ใส่ FK ไม่ได้** เพราะชี้หลายตาราง → orphan ต้องล้างเอง (ปัญหาเดียวกับที่ 1.2 กำลังแก้) |
-| จุดเดียวสำหรับ lifecycle ไฟล์ | RLS ซับซ้อน: อ่าน attachment ได้ต้องเช็กว่าอ่าน target ได้ (`CASE target_type` หรือ SECURITY DEFINER) |
-| ตอบโจทย์ระยะยาว | งานใหญ่กว่าเท่าตัว |
+| ข้อดี                                                    | ข้อเสีย                                                                                               |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| หลายไฟล์ต่อรายการ · แนบกับอะไรก็ได้โดยไม่แก้ schema เดิม | `target_id` **ใส่ FK ไม่ได้** เพราะชี้หลายตาราง → orphan ต้องล้างเอง (ปัญหาเดียวกับที่ 1.2 กำลังแก้)  |
+| จุดเดียวสำหรับ lifecycle ไฟล์                            | RLS ซับซ้อน: อ่าน attachment ได้ต้องเช็กว่าอ่าน target ได้ (`CASE target_type` หรือ SECURITY DEFINER) |
+| ตอบโจทย์ระยะยาว                                          | งานใหญ่กว่าเท่าตัว                                                                                    |
 
 **คำแนะนำ: ทางที่ 1** — ยังไม่มีหลักฐานว่าใครต้องแนบหลายไฟล์ต่อรายการ งานจริงคือ (ก) ปุ่ม "แนบใบเสร็จ" บนรายจ่าย/รายรับ/reminder (ข) ทางเข้าอัปโหลดที่**ข้าม AI** → insert `documents` แบบ `category: 'receipt'` (ค) set `source_document_id` (ง) โชว์ thumbnail/ปุ่มเปิดไฟล์บนการ์ด — และอ่านลิงก์ที่มีอยู่แล้วให้เห็นเสียที
 
 ## ทับซ้อนกับ 1.2
 
-| 1.2 | 1.9 |
-|---|---|
+| 1.2                                               | 1.9                                                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | "อัปโหลดสำเร็จแต่ AI ล้มเหลว ต้องไม่ทิ้งไฟล์ค้าง" | ทางเข้าใหม่ที่ข้าม AI **ต้องไม่สร้างรูรั่วแบบเดียวกัน** — upload → insert ต้อง atomic หรือมี cleanup |
-| "ลบไฟล์ใน storage เมื่อลบ document" | ลบ document ที่รายจ่ายอ้างถึง → รายจ่ายต้องรู้ (`SET NULL` ✅ / incomes ❌) |
-| "เติม FK + CASCADE" | **ซ่อม `incomes.source_document_id` เป็น SET NULL ในรอบเดียวกัน** |
-| ถ้าเลือกทางที่ 2 | ต้องออกแบบ**พร้อม** 1.2 ไม่งั้นเป็น migration รอบสอง |
+| "ลบไฟล์ใน storage เมื่อลบ document"               | ลบ document ที่รายจ่ายอ้างถึง → รายจ่ายต้องรู้ (`SET NULL` ✅ / incomes ❌)                          |
+| "เติม FK + CASCADE"                               | **ซ่อม `incomes.source_document_id` เป็น SET NULL ในรอบเดียวกัน**                                    |
+| ถ้าเลือกทางที่ 2                                  | ต้องออกแบบ**พร้อม** 1.2 ไม่งั้นเป็น migration รอบสอง                                                 |
 
 - [x] ตัดสินใจทางที่ 1 ตอน 1.2 (`documents.kind` + `status` มาจากรอบนั้น ไม่ต้องมี migration รอบสอง)
 - [x] ทางเข้าอัปโหลดแบบไม่ผ่าน AI — `src/lib/attachments.ts` `attachFile()`: insert `kind='attachment' status='pending'` → upload → `ready` → set `source_document_id` (ลำดับเดียวกับ 1.2 ไม่มีทางเกิดไฟล์กำพร้าใหม่ · แท็บปิดกลางทาง = pending ที่ tick ลบใน 1 ชม.) · รับรูป/PDF ≤ 10 MB
@@ -419,11 +425,11 @@ documents (1) ──source_document_id──▶ reminders (n)   ON DELETE SET NU
 
 ## Provider — ตรวจจากเอกสารทางการ 2026-09-12
 
-| Provider | รับ audio ในการเรียกแชท? | STT แยก | ไทย | ราคา | แหล่ง |
-|---|---|---|---|---|---|
-| **Google** | ✅ `gemini-3.7-flash` รับ 13 format (wav/mp3/aac/opus/webm…) ยาวถึง 9.5 ชม. · **32 token/วินาที** (1 นาที = 1,920 token) | `gemini-3.5-transcribe` ≤1 ชม. | ✅ `th-TH` ใน 85+ ภาษา | transcribe ≈ $0.005/นาที blended · มี free tier | ai.google.dev/gemini-api/docs/audio · /models/gemini-3.5-transcribe · /pricing |
-| **Anthropic** | ❌ หน้า models ระบุ "text and image input" · `/build-with-claude/audio` = 404 | ไม่มี | — | — | platform.claude.com/docs/en/about-claude/models/overview |
-| **OpenAI** | ❌ chat model ปกติไม่รับ (มีแต่ `gpt-realtime` = WebSocket คนละสถาปัตยกรรม) | `gpt-transcribe` $0.0045/นาที · `gpt-4o-mini-transcribe` $0.003 · `whisper-1` $0.006 · ไฟล์ ≤25 MB | ✅ `"th": "thai"` ใน Whisper | ตามซ้าย | developers.openai.com/api/docs/guides/speech-to-text · /pricing |
+| Provider      | รับ audio ในการเรียกแชท?                                                                                                 | STT แยก                                                                                            | ไทย                          | ราคา                                            | แหล่ง                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Google**    | ✅ `gemini-3.7-flash` รับ 13 format (wav/mp3/aac/opus/webm…) ยาวถึง 9.5 ชม. · **32 token/วินาที** (1 นาที = 1,920 token) | `gemini-3.5-transcribe` ≤1 ชม.                                                                     | ✅ `th-TH` ใน 85+ ภาษา       | transcribe ≈ $0.005/นาที blended · มี free tier | ai.google.dev/gemini-api/docs/audio · /models/gemini-3.5-transcribe · /pricing |
+| **Anthropic** | ❌ หน้า models ระบุ "text and image input" · `/build-with-claude/audio` = 404                                            | ไม่มี                                                                                              | —                            | —                                               | platform.claude.com/docs/en/about-claude/models/overview                       |
+| **OpenAI**    | ❌ chat model ปกติไม่รับ (มีแต่ `gpt-realtime` = WebSocket คนละสถาปัตยกรรม)                                              | `gpt-transcribe` $0.0045/นาที · `gpt-4o-mini-transcribe` $0.003 · `whisper-1` $0.006 · ไฟล์ ≤25 MB | ✅ `"th": "thai"` ใน Whisper | ตามซ้าย                                         | developers.openai.com/api/docs/guides/speech-to-text · /pricing                |
 
 **ผลกระทบเชิงสถาปัตยกรรม:** เสียงคือฟีเจอร์แรกที่ **provider 3 เจ้าไม่สลับกันได้** — ส่ง audio เข้า `withProviderFallback` แล้ว Google ล่ม fallback ไป Anthropic จะพังทันที ทางเดียวที่รักษา fallback คือ **ถอดความก่อน** (audio → text ด้วย Google) แล้วส่ง text เข้า router เดิม → นี่คือเหตุผลที่ 1.1.3 เปลี่ยน `supportsPdf` เป็น `capabilities: { pdf, audio }` ตั้งแต่ตอนนั้น
 
@@ -431,14 +437,14 @@ documents (1) ──source_document_id──▶ reminders (n)   ON DELETE SET NU
 
 ## เบราว์เซอร์ — ความเสี่ยงจริงของงานนี้
 
-| | Web Speech API | MediaRecorder + ส่งให้ AI |
-|---|---|---|
-| Safari iOS | "Partial" ตั้งแต่ 14.5 (caniuse) ไม่ระบุขาดอะไร | ✅ baseline ตั้งแต่ 14.1 |
-| Chrome Android | Partial · **ส่งเสียงไป server ของ Google** ไม่ offline | ✅ |
+|                                    | Web Speech API                                                                                                                                                                                                                                                   | MediaRecorder + ส่งให้ AI                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Safari iOS                         | "Partial" ตั้งแต่ 14.5 (caniuse) ไม่ระบุขาดอะไร                                                                                                                                                                                                                  | ✅ baseline ตั้งแต่ 14.1                                                                                                                                                          |
+| Chrome Android                     | Partial · **ส่งเสียงไป server ของ Google** ไม่ offline                                                                                                                                                                                                           | ✅                                                                                                                                                                                |
 | **LINE in-app (WKWebView บน iOS)** | ⚠️ **ขึ้นกับ LINE** — WebKit bug 239816 (RESOLVED WORKSFORME): `webkitSpeechRecognition` **มีบน `window` แต่โยน `service-not-allowed`** เว้นแต่**แอปเจ้าของ WebView** ประกาศ `NSSpeechRecognitionUsageDescription` — เราคุมไม่ได้ และ **feature detection หลอก** | ⚠️ `getUserMedia` ใน WKWebView ได้ตั้งแต่ iOS 14.3 ถ้าแอปมี `NSMicrophoneUsageDescription` — LINE มีแน่ (โทร/ส่งเสียง) จึงโอกาสสูงกว่ามาก แต่ Apple บังคับถาม permission ทุกครั้ง |
-| ไทย | engine ของเบราว์เซอร์ ควบคุม/วัดไม่ได้ | Gemini รองรับทางการ ปรับ prompt ได้ |
-| format | — | Safari อัด `audio/mp4` Chrome อัด `audio/webm` → ต้องตรวจ `isTypeSupported()` แล้วส่ง mediaType ให้ถูก (Gemini รับทั้งคู่) |
-| quota | 0 | ตามบน |
+| ไทย                                | engine ของเบราว์เซอร์ ควบคุม/วัดไม่ได้                                                                                                                                                                                                                           | Gemini รองรับทางการ ปรับ prompt ได้                                                                                                                                               |
+| format                             | —                                                                                                                                                                                                                                                                | Safari อัด `audio/mp4` Chrome อัด `audio/webm` → ต้องตรวจ `isTypeSupported()` แล้วส่ง mediaType ให้ถูก (Gemini รับทั้งคู่)                                                        |
+| quota                              | 0                                                                                                                                                                                                                                                                | ตามบน                                                                                                                                                                             |
 
 **คำแนะนำ: MediaRecorder → `gemini-3.5-transcribe` → text เข้า router เดิม** — ไม่พึ่ง LINE ว่าจะเปิด Speech permission ให้ไหม · fallback provider ยังทำงาน · คุณภาพไทยมาจาก Gemini ที่ตรวจสอบได้
 
@@ -483,7 +489,6 @@ QR static + ผู้ใช้กรอกอ้างอิงเอง · ไ�
 
 ---
 
-
 # SSO — Aivora Hub (มีอยู่บน production แล้ว ตั้งแต่ 2026-09-13)
 
 ไม่ใช่งานในแผน แต่เป็นระบบที่**อยู่บน production และมีผู้ใช้จริงผ่านมาแล้ว** บันทึกไว้เพื่อให้ทุกขั้นถัดไป (โดยเฉพาะ 1.2) รู้ว่ามันอยู่ตรงไหนและผูกกับอะไร
@@ -507,11 +512,11 @@ commit: `799a8f4` (ตาราง) · `eb75243` (โค้ด) · สเปก�
 
 ## ตารางที่เกี่ยวข้อง
 
-| ตาราง | บทบาท | FK / CASCADE |
-|---|---|---|
-| `auth.users` | ผู้ใช้ SSO เป็น user ปกติทุกอย่าง · `app_metadata.aivora_user_id` = id จาก hub · `app_metadata.provider = 'aivora'` (GoTrue เขียนทับเป็น `email` ใน JWT — ไม่กระทบ เราไม่อิง field นี้) · อีเมล = ของ hub ถ้ามี ไม่มี = `aivora+<hub id>@lavieos.netlify.app` | — |
-| **`aivora_links`** | `aivora_user_id text PK` → `user_id uuid UNIQUE` · **ตัวเดียวที่ใช้หาผู้ใช้** ห้ามหาด้วยอีเมล | ✅ `user_id REFERENCES auth.users(id) ON DELETE CASCADE` — **ตารางเดียวใน schema ที่มี FK ไป auth.users** · RLS เปิด ไม่มี policy ไม่มี GRANT ให้ authenticated = service role เท่านั้น |
-| `profiles` / `user_roles` | สร้างโดย trigger `on_auth_user_created` เหมือน signup ปกติ · role = `member` เสมอ **ไม่รับ roles จาก hub** · `display_name` จาก hub เติมเฉพาะตอนว่างหรือเป็น placeholder `aivora+…` ไม่ทับที่ผู้ใช้ตั้งเอง | ❌ ยังไม่มี FK (เหมือนตารางอื่น — งาน 1.2) |
+| ตาราง                     | บทบาท                                                                                                                                                                                                                                                         | FK / CASCADE                                                                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth.users`              | ผู้ใช้ SSO เป็น user ปกติทุกอย่าง · `app_metadata.aivora_user_id` = id จาก hub · `app_metadata.provider = 'aivora'` (GoTrue เขียนทับเป็น `email` ใน JWT — ไม่กระทบ เราไม่อิง field นี้) · อีเมล = ของ hub ถ้ามี ไม่มี = `aivora+<hub id>@lavieos.netlify.app` | —                                                                                                                                                                                       |
+| **`aivora_links`**        | `aivora_user_id text PK` → `user_id uuid UNIQUE` · **ตัวเดียวที่ใช้หาผู้ใช้** ห้ามหาด้วยอีเมล                                                                                                                                                                 | ✅ `user_id REFERENCES auth.users(id) ON DELETE CASCADE` — **ตารางเดียวใน schema ที่มี FK ไป auth.users** · RLS เปิด ไม่มี policy ไม่มี GRANT ให้ authenticated = service role เท่านั้น |
+| `profiles` / `user_roles` | สร้างโดย trigger `on_auth_user_created` เหมือน signup ปกติ · role = `member` เสมอ **ไม่รับ roles จาก hub** · `display_name` จาก hub เติมเฉพาะตอนว่างหรือเป็น placeholder `aivora+…` ไม่ทับที่ผู้ใช้ตั้งเอง                                                    | ❌ ยังไม่มี FK (เหมือนตารางอื่น — งาน 1.2)                                                                                                                                              |
 
 ## กฎความปลอดภัยที่ฝังอยู่ในโค้ด (อย่าแก้โดยไม่รู้ว่าทำไม)
 

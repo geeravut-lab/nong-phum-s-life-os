@@ -76,7 +76,7 @@ function LocalPage() {
         .from("local_places")
         .select("*")
         .eq("is_active", true)
-                // is_public: show shared places (default true)
+        // is_public: show shared places (default true)
         .order("is_promoted", { ascending: false })
         .order("rating", { ascending: false })
         .limit(100);
@@ -95,14 +95,16 @@ function LocalPage() {
         .from("local_deals")
         .select("*")
         .eq("is_active", true)
-                .limit(50);
+        .limit(50);
       if (error) throw error;
       return (data ?? []) as unknown as LocalDeal[];
     },
   });
 
   const ranked = useMemo(() => {
-    const places = (placesQ.data ?? []).filter((p) => (p as { is_demo?: boolean }).is_demo !== true);
+    const places = (placesQ.data ?? []).filter(
+      (p) => (p as { is_demo?: boolean }).is_demo !== true,
+    );
     let list = places;
     if (openOnly) {
       list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
@@ -163,22 +165,22 @@ function LocalPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         void (async () => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setCoords({ lat, lng });
-        toast.success(t.localGeoOk);
-        try {
-          const res = (await runGoogle({
-            data: { lat, lng, radiusKm, lang: lang === "en" ? "en" : "th" },
-          })) as {
-            places: typeof googlePlaces;
-            message: string | null;
-          };
-          setGooglePlaces(res.places ?? []);
-          setGoogleMsg(res.message);
-        } catch {
-          /* ignore */
-        }
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setCoords({ lat, lng });
+          toast.success(t.localGeoOk);
+          try {
+            const res = (await runGoogle({
+              data: { lat, lng, radiusKm, lang: lang === "en" ? "en" : "th" },
+            })) as {
+              places: typeof googlePlaces;
+              message: string | null;
+            };
+            setGooglePlaces(res.places ?? []);
+            setGoogleMsg(res.message);
+          } catch {
+            /* ignore */
+          }
         })();
       },
       () => toast.error(t.localGeoFail),
@@ -224,8 +226,7 @@ function LocalPage() {
     void qc.invalidateQueries({ queryKey: ["local-places"] });
   };
 
-  const placeName = (p: LocalPlace) =>
-    lang === "en" && p.name_en ? p.name_en : p.name;
+  const placeName = (p: LocalPlace) => (lang === "en" && p.name_en ? p.name_en : p.name);
 
   return (
     <AppShell>
@@ -302,7 +303,6 @@ function LocalPage() {
         )}
       </section>
 
-      
       {googlePlaces.length > 0 && (
         <section className="mb-5 space-y-2">
           <h2 className="text-sm font-semibold">Google Places</h2>
@@ -316,7 +316,12 @@ function LocalPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">{g.address}</p>
                 {g.mapsUrl ? (
-                  <a className="mt-1 inline-block text-xs text-primary underline" href={g.mapsUrl} target="_blank" rel="noreferrer">
+                  <a
+                    className="mt-1 inline-block text-xs text-primary underline"
+                    href={g.mapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     {t.localOpenMap}
                   </a>
                 ) : null}
@@ -325,7 +330,7 @@ function LocalPage() {
           </ul>
         </section>
       )}
-{(dealsQ.data ?? []).length > 0 && (
+      {(dealsQ.data ?? []).length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Tag className="size-4" />
@@ -361,8 +366,7 @@ function LocalPage() {
             const deals = dealsByPlace.get(p.id) ?? [];
             const open = isOpenNow(p.open_hours as Record<string, string>);
             const map =
-              (p as { maps_url?: string | null }).maps_url ||
-              mapsUrl(p.lat, p.lng, placeName(p));
+              (p as { maps_url?: string | null }).maps_url || mapsUrl(p.lat, p.lng, placeName(p));
             const dir =
               coords && p.lat != null && p.lng != null
                 ? directionsUrl(coords.lat, coords.lng, p.lat, p.lng)
@@ -408,9 +412,7 @@ function LocalPage() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{p.description}</p>
                 {p.community_note ? (
-                  <p className="mt-1 text-xs italic text-muted-foreground">
-                    “{p.community_note}”
-                  </p>
+                  <p className="mt-1 text-xs italic text-muted-foreground">“{p.community_note}”</p>
                 ) : null}
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(p.tags ?? []).slice(0, 6).map((tag) => (
@@ -430,9 +432,7 @@ function LocalPage() {
                       <li key={d.id} className="flex items-center gap-1">
                         <Tag className="size-3 text-primary" />
                         <span className="font-medium">{d.title}</span>
-                        {d.discount_label && (
-                          <Badge variant="secondary">{d.discount_label}</Badge>
-                        )}
+                        {d.discount_label && <Badge variant="secondary">{d.discount_label}</Badge>}
                       </li>
                     ))}
                   </ul>
@@ -499,11 +499,7 @@ function LocalPage() {
                       <Button size="sm" onClick={submitReview}>
                         {t.localReviewSubmit}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setReviewPlaceId(null)}
-                      >
+                      <Button size="sm" variant="ghost" onClick={() => setReviewPlaceId(null)}>
                         {t.cancel}
                       </Button>
                     </div>

@@ -15,11 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { analyzeDecision } from "@/lib/decision.functions";
-import {
-  DECISION_TEMPLATES,
-  scoreOption,
-  type DecisionBoard,
-} from "@/lib/decision.shared";
+import { DECISION_TEMPLATES, scoreOption, type DecisionBoard } from "@/lib/decision.shared";
 
 export const Route = createFileRoute("/_authenticated/decide")({
   head: () => ({ meta: routeMeta("decide") }),
@@ -303,8 +299,7 @@ function DecidePage() {
                 {board.criteria.map((c) => (
                   <tr key={c.id} className="border-t border-border">
                     <td className="p-3">
-                      {c.label}{" "}
-                      <span className="text-xs text-muted-foreground">×{c.weight}</span>
+                      {c.label} <span className="text-xs text-muted-foreground">×{c.weight}</span>
                     </td>
                     {board.options.map((o) => {
                       const s = o.scores[c.id] ?? 0;
@@ -335,7 +330,10 @@ function DecidePage() {
           {/* Option cards */}
           <div className="grid gap-4 md:grid-cols-2">
             {ranked.map((o) => (
-              <article key={o.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <article
+                key={o.id}
+                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold">{o.label}</h3>
                   <Badge variant="outline">{o.total}</Badge>
@@ -343,7 +341,9 @@ function DecidePage() {
                 <p className="mt-1 text-sm text-muted-foreground">{o.summary}</p>
                 <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
                   <div>
-                    <p className="font-medium text-emerald-700 dark:text-emerald-400">{t.decidePros}</p>
+                    <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                      {t.decidePros}
+                    </p>
                     <ul className="list-inside list-disc">
                       {o.pros.map((p, i) => (
                         <li key={i}>{p}</li>
@@ -369,7 +369,12 @@ function DecidePage() {
                     </ul>
                   </div>
                 )}
-                <Button className="mt-3" size="sm" variant="secondary" onClick={() => chooseOption(o.id)}>
+                <Button
+                  className="mt-3"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => chooseOption(o.id)}
+                >
                   {t.decideChooseThis}
                 </Button>
               </article>
@@ -413,53 +418,80 @@ function DecidePage() {
             {(journal.data ?? []).map((d) => {
               const open = expandedJournalId === d.id;
               return (
-              <li
-                key={d.id}
-                className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                  <div className="min-w-0 sm:flex-1">
-                    <span className="font-medium">{d.question}</span>
-                    {!open && d.recommendation && (
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{d.recommendation}</span>
-                    )}
+                <li
+                  key={d.id}
+                  className="rounded-xl border border-border bg-card px-3 py-2 text-sm"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    <div className="min-w-0 sm:flex-1">
+                      <span className="font-medium">{d.question}</span>
+                      {!open && d.recommendation && (
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {d.recommendation}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+                      <Badge variant="outline">{d.status}</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (open) {
+                            setExpandedJournalId(null);
+                            setBoard(null);
+                            setActiveId(null);
+                          } else {
+                            setExpandedJournalId(d.id);
+                            loadSaved(d);
+                          }
+                        }}
+                      >
+                        {open ? t.r6CollapseDetail : t.r6ViewDetail}
+                      </Button>
+                      {!d.outcome && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setOutcome(d.id, "good")}
+                          >
+                            👍
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "ok")}>
+                            👌
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "bad")}>
+                            👎
+                          </Button>
+                        </>
+                      )}
+                      {d.outcome && <Badge variant="secondary">{d.outcome}</Badge>}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1 sm:justify-end">
-                    <Badge variant="outline">{d.status}</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        if (open) { setExpandedJournalId(null); setBoard(null); setActiveId(null); }
-                        else {
-                          setExpandedJournalId(d.id);
-                          loadSaved(d);
-                        }
-                      }}
-                    >
-                      {open ? t.r6CollapseDetail : t.r6ViewDetail}
-                    </Button>
-                    {!d.outcome && (
-                      <>
-                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "good")}>👍</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "ok")}>👌</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setOutcome(d.id, "bad")}>👎</Button>
-                      </>
-                    )}
-                    {d.outcome && <Badge variant="secondary">{d.outcome}</Badge>}
-                  </div>
-                </div>
-                {open && (
-                  <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
-                    {d.recommendation && <p><span className="font-medium text-foreground">{t.decideRecommendation}: </span>{d.recommendation}</p>}
-                    {/* template optional */}
-                    <p className="text-[10px]">{new Date(d.created_at).toLocaleString()}</p>
-                    <Button size="sm" variant="ghost" className="mt-1" onClick={() => setExpandedJournalId(null)}>
-                      {t.r6CollapseDetail}
-                    </Button>
-                  </div>
-                )}
-              </li>
+                  {open && (
+                    <div className="mt-2 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                      {d.recommendation && (
+                        <p>
+                          <span className="font-medium text-foreground">
+                            {t.decideRecommendation}:{" "}
+                          </span>
+                          {d.recommendation}
+                        </p>
+                      )}
+                      {/* template optional */}
+                      <p className="text-[10px]">{new Date(d.created_at).toLocaleString()}</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-1"
+                        onClick={() => setExpandedJournalId(null)}
+                      >
+                        {t.r6CollapseDetail}
+                      </Button>
+                    </div>
+                  )}
+                </li>
               );
             })}
           </ul>

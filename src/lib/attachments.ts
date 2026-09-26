@@ -48,7 +48,9 @@ function isImage(mime: string | null | undefined): boolean {
  * The documents rows a page's items point at, keyed by id, with thumbnail
  * URLs for images. One round-trip for the whole list.
  */
-export async function loadLinkedDocs(ids: Array<string | null | undefined>): Promise<Record<string, LinkedDoc>> {
+export async function loadLinkedDocs(
+  ids: Array<string | null | undefined>,
+): Promise<Record<string, LinkedDoc>> {
   const wanted = [...new Set(ids.filter((x): x is string => !!x))];
   if (wanted.length === 0) return {};
   const { data, error } = await supabase
@@ -59,9 +61,13 @@ export async function loadLinkedDocs(ids: Array<string | null | undefined>): Pro
   const docs: Record<string, LinkedDoc> = {};
   for (const d of data ?? []) docs[d.id] = d;
 
-  const imagePaths = (data ?? []).filter((d) => isImage(d.mime_type) && d.storage_path).map((d) => d.storage_path!);
+  const imagePaths = (data ?? [])
+    .filter((d) => isImage(d.mime_type) && d.storage_path)
+    .map((d) => d.storage_path!);
   if (imagePaths.length > 0) {
-    const { data: signed } = await supabase.storage.from("documents").createSignedUrls(imagePaths, 300);
+    const { data: signed } = await supabase.storage
+      .from("documents")
+      .createSignedUrls(imagePaths, 300);
     for (const s of signed ?? []) {
       if (!s.signedUrl || !s.path) continue;
       const doc = (data ?? []).find((d) => d.storage_path === s.path);
@@ -83,13 +89,23 @@ export async function openAttachment(path: string): Promise<void> {
  * analyzed document), that old file and row are removed once the new link
  * is in place, so a replace never leaves the row without a file.
  */
-export async function attachFile(table: AttachableTable, rowId: string, file: File, userId: string): Promise<LinkedDoc> {
+export async function attachFile(
+  table: AttachableTable,
+  rowId: string,
+  file: File,
+  userId: string,
+): Promise<LinkedDoc> {
   if (file.size > MAX_ATTACHMENT_BYTES) throw new AttachmentError("too_large");
   const mimeType = file.type || "";
-  if (!isImage(mimeType) && mimeType !== "application/pdf") throw new AttachmentError("unsupported_type");
+  if (!isImage(mimeType) && mimeType !== "application/pdf")
+    throw new AttachmentError("unsupported_type");
 
   // What the row points at now, to clean up after the switch.
-  const { data: current, error: curErr } = await supabase.from(table).select("source_document_id").eq("id", rowId).single();
+  const { data: current, error: curErr } = await supabase
+    .from(table)
+    .select("source_document_id")
+    .eq("id", rowId)
+    .single();
   if (curErr) throw curErr;
   let previous: { id: string; storage_path: string | null } | null = null;
   if (current.source_document_id) {
@@ -101,10 +117,17 @@ export async function attachFile(table: AttachableTable, rowId: string, file: Fi
     if (prev?.kind === "attachment") previous = prev;
   }
 
-  const path = `${userId}/att-${Date.now()}-${file.name.replace(/[^\w.\-]/g, "_")}`;
+  const path = `${userId}/att-${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
   const { data: doc, error: insErr } = await supabase
     .from("documents")
-    .insert({ user_id: userId, title: file.name, status: "pending", kind: "attachment", storage_path: path, mime_type: mimeType })
+    .insert({
+      user_id: userId,
+      title: file.name,
+      status: "pending",
+      kind: "attachment",
+      storage_path: path,
+      mime_type: mimeType,
+    })
     .select("id")
     .single();
   if (insErr) throw insErr;
@@ -115,14 +138,21 @@ export async function attachFile(table: AttachableTable, rowId: string, file: Fi
     throw upErr;
   }
 
-  const { error: readyErr } = await supabase.from("documents").update({ status: "ready" }).eq("id", doc.id);
+  const { error: readyErr } = await supabase
+    .from("documents")
+    .update({ status: "ready" })
+    .eq("id", doc.id);
   if (readyErr) throw readyErr;
-  const { error: linkErr } = await supabase.from(table).update({ source_document_id: doc.id }).eq("id", rowId);
+  const { error: linkErr } = await supabase
+    .from(table)
+    .update({ source_document_id: doc.id })
+    .eq("id", rowId);
   if (linkErr) throw linkErr;
 
   // The old attachment is no longer referenced by anything: file first, then row.
   if (previous) {
-    if (previous.storage_path) await supabase.storage.from("documents").remove([previous.storage_path]);
+    if (previous.storage_path)
+      await supabase.storage.from("documents").remove([previous.storage_path]);
     await supabase.from("documents").delete().eq("id", previous.id);
   }
 
@@ -135,8 +165,15 @@ export async function attachFile(table: AttachableTable, rowId: string, file: Fi
  * for kind = 'attachment' — an analyzed source document belongs to the vault
  * and is left alone (the link is cleared, nothing is deleted).
  */
-export async function detachFile(table: AttachableTable, rowId: string, doc: LinkedDoc): Promise<void> {
-  const { error: unlinkErr } = await supabase.from(table).update({ source_document_id: null }).eq("id", rowId);
+export async function detachFile(
+  table: AttachableTable,
+  rowId: string,
+  doc: LinkedDoc,
+): Promise<void> {
+  const { error: unlinkErr } = await supabase
+    .from(table)
+    .update({ source_document_id: null })
+    .eq("id", rowId);
   if (unlinkErr) throw unlinkErr;
   if (doc.kind !== "attachment") return;
   if (doc.storage_path) {

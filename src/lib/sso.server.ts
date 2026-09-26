@@ -75,7 +75,11 @@ export async function exchangeWithHub(ticket: string): Promise<HubUser> {
       signal: controller.signal,
     });
   } catch (err) {
-    throw new SsoError("hub_unreachable", 502, `hub fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw new SsoError(
+      "hub_unreachable",
+      502,
+      `hub fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -103,10 +107,18 @@ export async function exchangeWithHub(ticket: string): Promise<HubUser> {
   }
   const parsed = HubResponse.safeParse(json);
   if (!parsed.success) {
-    throw new SsoError("bad_payload", 502, `hub response shape: ${parsed.error.issues.map((i) => i.path.join(".") + " " + i.message).join("; ")}`);
+    throw new SsoError(
+      "bad_payload",
+      502,
+      `hub response shape: ${parsed.error.issues.map((i) => i.path.join(".") + " " + i.message).join("; ")}`,
+    );
   }
   if (parsed.data.app_slug !== APP_SLUG) {
-    throw new SsoError("app_mismatch", 403, `ticket is for app "${parsed.data.app_slug}", not "${APP_SLUG}"`);
+    throw new SsoError(
+      "app_mismatch",
+      403,
+      `ticket is for app "${parsed.data.app_slug}", not "${APP_SLUG}"`,
+    );
   }
   return parsed.data.user;
 }
@@ -127,7 +139,9 @@ function syntheticEmailFor(hubId: string): string {
  * accounts is a separate, deliberate feature for a signed-in user, not a side
  * effect of SSO.
  */
-export async function findOrCreateLocalUser(hub: HubUser): Promise<{ userId: string; email: string; created: boolean }> {
+export async function findOrCreateLocalUser(
+  hub: HubUser,
+): Promise<{ userId: string; email: string; created: boolean }> {
   const { data: link, error: linkErr } = await supabaseAdmin
     .from("aivora_links")
     .select("user_id")
@@ -138,10 +152,18 @@ export async function findOrCreateLocalUser(hub: HubUser): Promise<{ userId: str
   if (link) {
     const { data: existing, error } = await supabaseAdmin.auth.admin.getUserById(link.user_id);
     if (error || !existing.user) {
-      throw new SsoError("session_failed", 500, `linked user ${link.user_id} missing: ${error?.message ?? "no user"}`);
+      throw new SsoError(
+        "session_failed",
+        500,
+        `linked user ${link.user_id} missing: ${error?.message ?? "no user"}`,
+      );
     }
     await fillEmptyProfileFields(existing.user.id, hub);
-    return { userId: existing.user.id, email: existing.user.email ?? syntheticEmailFor(hub.id), created: false };
+    return {
+      userId: existing.user.id,
+      email: existing.user.email ?? syntheticEmailFor(hub.id),
+      created: false,
+    };
   }
 
   const email = hub.email && hub.email.trim() !== "" ? hub.email.trim() : syntheticEmailFor(hub.id);
@@ -149,7 +171,10 @@ export async function findOrCreateLocalUser(hub: HubUser): Promise<{ userId: str
     email,
     email_confirm: true,
     app_metadata: { aivora_user_id: hub.id, provider: "aivora" },
-    user_metadata: { display_name: hub.display_name ?? undefined, avatar_url: hub.avatar_url ?? undefined },
+    user_metadata: {
+      display_name: hub.display_name ?? undefined,
+      avatar_url: hub.avatar_url ?? undefined,
+    },
   });
   if (createErr || !createdUser.user) {
     const msg = createErr?.message ?? "no user returned";
@@ -191,9 +216,16 @@ function isPlaceholderName(name: string | null): boolean {
 
 async function fillEmptyProfileFields(userId: string, hub: HubUser): Promise<void> {
   if (!hub.display_name) return;
-  const { data } = await supabaseAdmin.from("profiles").select("display_name").eq("id", userId).maybeSingle();
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
   if (data && isPlaceholderName(data.display_name)) {
-    await supabaseAdmin.from("profiles").update({ display_name: hub.display_name }).eq("id", userId);
+    await supabaseAdmin
+      .from("profiles")
+      .update({ display_name: hub.display_name })
+      .eq("id", userId);
   }
 }
 
@@ -206,15 +238,22 @@ async function fillEmptyProfileFields(userId: string, hub: HubUser): Promise<voi
  * supabase-js would otherwise store the resulting user session on the
  * service-role singleton and every later admin call would run as that user.
  */
-export async function issueSession(email: string): Promise<{ access_token: string; refresh_token: string }> {
+export async function issueSession(
+  email: string,
+): Promise<{ access_token: string; refresh_token: string }> {
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({ type: "magiclink", email });
   if (error || !data?.properties?.hashed_token) {
-    throw new SsoError("session_failed", 500, `generateLink: ${error?.message ?? "no hashed_token"}`);
+    throw new SsoError(
+      "session_failed",
+      500,
+      `generateLink: ${error?.message ?? "no hashed_token"}`,
+    );
   }
 
   const url = process.env["SUPABASE_URL"];
   const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
-  if (!url || !key) throw new SsoError("session_failed", 500, "SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY not set");
+  if (!url || !key)
+    throw new SsoError("session_failed", 500, "SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY not set");
 
   const res = await fetch(`${url}/auth/v1/verify`, {
     method: "POST",
@@ -222,7 +261,11 @@ export async function issueSession(email: string): Promise<{ access_token: strin
     body: JSON.stringify({ type: "magiclink", token_hash: data.properties.hashed_token }),
   });
   if (!res.ok) {
-    throw new SsoError("session_failed", 500, `verify: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    throw new SsoError(
+      "session_failed",
+      500,
+      `verify: ${res.status} ${(await res.text()).slice(0, 200)}`,
+    );
   }
   const session = (await res.json()) as { access_token?: string; refresh_token?: string };
   if (!session.access_token || !session.refresh_token) {
@@ -238,7 +281,10 @@ export async function runSsoExchange(ticket: string): Promise<SsoExchangeResult>
     const local = await findOrCreateLocalUser(hub);
     const tokens = await issueSession(local.email);
     console.info(`[sso] ok user=${local.userId} hub=${hub.id} created=${local.created}`);
-    return { ...tokens, profile: { display_name: hub.display_name ?? null, avatar_url: hub.avatar_url ?? null } };
+    return {
+      ...tokens,
+      profile: { display_name: hub.display_name ?? null, avatar_url: hub.avatar_url ?? null },
+    };
   } catch (err) {
     if (err instanceof SsoError) {
       console.error(`[sso] ${err.status} ${err.code}: ${err.message}`);

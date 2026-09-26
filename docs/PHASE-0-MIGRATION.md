@@ -13,13 +13,13 @@
 
 ## 0. สิ่งที่เจ้าของโปรเจกต์ต้องเตรียมเอง (AI ทำแทนไม่ได้)
 
-| # | สิ่งที่ต้องทำ | ได้อะไรกลับมา |
-|---|---|---|
-| 1 | สมัคร/เปิด Supabase project ใหม่ **region: Southeast Asia (Singapore)** | `SUPABASE_URL`, **publishable key** (`sb_publishable_...`), **secret key** (`sb_secret_...`), `DB password` — key แบบใหม่นี้ใช้ตามขั้น 2.4 และตารางใน 2.7 ไม่ใช่ `anon key`/`service_role key` แบบเก่า |
-| 2 | สร้าง Supabase Personal Access Token (Account → Access Tokens) — **ทำเมื่อจำเป็นเท่านั้น** | token สำหรับกรณีรัน CLI ใน CI หรือจะต่อ Supabase MCP เท่านั้น งานในเครื่องปกติใช้ `supabase login` เปิดเบราว์เซอร์ล็อกอินได้เลย ไม่ต้องสร้าง PAT ก่อน |
-| 3 | สมัคร AI provider + เติมเครดิต **อย่างน้อย 1 เจ้า** (ระบบรองรับ 3 เจ้า สลับได้) | `ANTHROPIC_API_KEY` และ/หรือ `OPENAI_API_KEY` และ/หรือ `GOOGLE_GENERATIVE_AI_API_KEY` |
-| 4 | สมัคร Netlify + เชื่อม GitHub repo — **Add new site → Import from Git → เลือก repo นี้** ตั้ง production branch เป็น `main` แล้วปล่อยให้ branch นี้ (`phase-0/*`) ได้ **Deploy Preview** อัตโนมัติ | site ว่าง ๆ 1 site ผูกกับ repo — หมายเหตุ: build จะพังไปก่อนจนกว่าจะทำขั้น 2.2 เสร็จ เป็นเรื่องปกติ ไม่ต้องแก้อะไรฝั่ง Netlify ตอนนี้ |
-| 5 | ติดตั้งในเครื่อง: **Node 20.19+ หรือ 22.12+** (ข้อกำหนดของ Vite 8), Supabase CLI — **ห้ามใช้ `npm i -g supabase`** (Supabase ไม่รองรับ global install ผ่าน npm) ให้ติดตั้งผ่าน Homebrew/Scoop/standalone binary ตามเอกสารทางการ หรือใช้ `npx supabase <cmd>` แทนแบบไม่ต้องติดตั้ง | CLI พร้อมใช้ — หมายเหตุ: เวอร์ชัน Node/Supabase CLI ในเครื่องไม่เกี่ยวกับการ deploy เพราะ Netlify build บนเครื่องของตัวเองและไม่แตะ database โดยตรง |
+| #   | สิ่งที่ต้องทำ                                                                                                                                                                                                                                                                     | ได้อะไรกลับมา                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | สมัคร/เปิด Supabase project ใหม่ **region: Southeast Asia (Singapore)**                                                                                                                                                                                                           | `SUPABASE_URL`, **publishable key** (`sb_publishable_...`), **secret key** (`sb_secret_...`), `DB password` — key แบบใหม่นี้ใช้ตามขั้น 2.4 และตารางใน 2.7 ไม่ใช่ `anon key`/`service_role key` แบบเก่า |
+| 2   | สร้าง Supabase Personal Access Token (Account → Access Tokens) — **ทำเมื่อจำเป็นเท่านั้น**                                                                                                                                                                                        | token สำหรับกรณีรัน CLI ใน CI หรือจะต่อ Supabase MCP เท่านั้น งานในเครื่องปกติใช้ `supabase login` เปิดเบราว์เซอร์ล็อกอินได้เลย ไม่ต้องสร้าง PAT ก่อน                                                  |
+| 3   | สมัคร AI provider + เติมเครดิต **อย่างน้อย 1 เจ้า** (ระบบรองรับ 3 เจ้า สลับได้)                                                                                                                                                                                                   | `ANTHROPIC_API_KEY` และ/หรือ `OPENAI_API_KEY` และ/หรือ `GOOGLE_GENERATIVE_AI_API_KEY`                                                                                                                  |
+| 4   | สมัคร Netlify + เชื่อม GitHub repo — **Add new site → Import from Git → เลือก repo นี้** ตั้ง production branch เป็น `main` แล้วปล่อยให้ branch นี้ (`phase-0/*`) ได้ **Deploy Preview** อัตโนมัติ                                                                                | site ว่าง ๆ 1 site ผูกกับ repo — หมายเหตุ: build จะพังไปก่อนจนกว่าจะทำขั้น 2.2 เสร็จ เป็นเรื่องปกติ ไม่ต้องแก้อะไรฝั่ง Netlify ตอนนี้                                                                  |
+| 5   | ติดตั้งในเครื่อง: **Node 20.19+ หรือ 22.12+** (ข้อกำหนดของ Vite 8), Supabase CLI — **ห้ามใช้ `npm i -g supabase`** (Supabase ไม่รองรับ global install ผ่าน npm) ให้ติดตั้งผ่าน Homebrew/Scoop/standalone binary ตามเอกสารทางการ หรือใช้ `npx supabase <cmd>` แทนแบบไม่ต้องติดตั้ง | CLI พร้อมใช้ — หมายเหตุ: เวอร์ชัน Node/Supabase CLI ในเครื่องไม่เกี่ยวกับการ deploy เพราะ Netlify build บนเครื่องของตัวเองและไม่แตะ database โดยตรง                                                    |
 
 **ข้อควรระวังเรื่อง key:** **secret key** (`sb_secret_...`) แบบใหม่ข้ามผ่าน RLS ได้ทั้งหมดเหมือน `service_role` เดิม ห้ามใส่ในตัวแปรที่ขึ้นต้นด้วย `VITE_` และห้าม commit ลง git เด็ดขาด ใช้ได้เฉพาะในไฟล์ `*.server.ts` เท่านั้น — key แบบใหม่นี้**ไม่ใช่ JWT** ถ้าจะเรียกจาก `pg_net`/Database Webhooks (จะใช้ตอน Phase 1) ต้องส่งบน header `apikey` ไม่ใช่ `Authorization: Bearer` เหมือน JWT แบบเก่า
 
@@ -29,24 +29,25 @@
 
 จากการตรวจ repo พบจุดผูกกับ Lovable ดังนี้:
 
-| ตำแหน่ง | ปัญหา | ทำอย่างไร |
-|---|---|---|
-| `vite.config.ts` | ใช้ `@lovable.dev/vite-tanstack-config` ซึ่งห่อ tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (default preset = cloudflare), VITE_ env injection, `@` alias, dedupe, error logger, sandbox detection ไว้ทั้งหมด | เขียน `vite.config.ts` ใหม่แบบ explicit |
-| `package.json` → `@lovable.dev/cloud-auth-js` | ระบบ auth ของ Lovable | ถอดออก ใช้ `supabase.auth` แทน |
-| `bun.lock` | มี URL ชี้ไป private registry `europe-west1-npm.pkg.dev/lovable-core-prod/...` หลายรายการ **จะติดตั้งไม่ผ่านนอก Lovable** | ลบ `bun.lock` ทิ้ง แล้ว generate `package-lock.json` ใหม่ด้วย npm |
-| `src/lib/ai-gateway.server.ts` | ยิงไป `https://ai.gateway.lovable.dev/v1` ด้วย `LOVABLE_API_KEY` | เปลี่ยน provider |
-| `src/lib/lovable-error-reporting.ts` | ส่ง error กลับ Lovable | ถอดออก หรือแทนด้วย console/Sentry |
-| `src/routes/__root.tsx` | meta `author: "Lovable"`, `twitter:site: "@Lovable"` | แก้เป็นของเรา |
-| `README.md` | เนื้อหา Lovable ทั้งไฟล์ | เขียนใหม่ |
-| `src/integrations/supabase/client.ts` | ชี้ Lovable Cloud | ชี้ Supabase project ใหม่ |
-| `src/integrations/lovable/index.ts` | wrapper เรียก `createLovableAuth()` จาก `@lovable.dev/cloud-auth-js` — ใช้จริงใน Google sign-in ที่ `src/routes/auth.tsx` (ไม่ใช่แค่ import เฉยๆ) | ลบไฟล์ทิ้ง แก้ `auth.tsx` ให้เรียก `supabase.auth.signInWithOAuth({ provider: 'google' })` ตรงๆ |
-| `src/integrations/supabase/previewAuthStorage.ts` | auth storage ที่ broker session ผ่าน `postMessage` ไปยัง Lovable editor (เช็ค hostname กับ `lovableproject.com`/`lovable.app`/`gpt-eng.com` ฯลฯ) ถูก wire เข้าไปใน `client.ts` เป็น `auth.storage` | ลบไฟล์ทิ้ง เปลี่ยน `auth.storage` ใน `client.ts` ให้ใช้ `localStorage` ตรงๆ (ค่า default ของ supabase-js) |
+| ตำแหน่ง                                           | ปัญหา                                                                                                                                                                                                                         | ทำอย่างไร                                                                                                 |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts`                                  | ใช้ `@lovable.dev/vite-tanstack-config` ซึ่งห่อ tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (default preset = cloudflare), VITE_ env injection, `@` alias, dedupe, error logger, sandbox detection ไว้ทั้งหมด | เขียน `vite.config.ts` ใหม่แบบ explicit                                                                   |
+| `package.json` → `@lovable.dev/cloud-auth-js`     | ระบบ auth ของ Lovable                                                                                                                                                                                                         | ถอดออก ใช้ `supabase.auth` แทน                                                                            |
+| `bun.lock`                                        | มี URL ชี้ไป private registry `europe-west1-npm.pkg.dev/lovable-core-prod/...` หลายรายการ **จะติดตั้งไม่ผ่านนอก Lovable**                                                                                                     | ลบ `bun.lock` ทิ้ง แล้ว generate `package-lock.json` ใหม่ด้วย npm                                         |
+| `src/lib/ai-gateway.server.ts`                    | ยิงไป `https://ai.gateway.lovable.dev/v1` ด้วย `LOVABLE_API_KEY`                                                                                                                                                              | เปลี่ยน provider                                                                                          |
+| `src/lib/lovable-error-reporting.ts`              | ส่ง error กลับ Lovable                                                                                                                                                                                                        | ถอดออก หรือแทนด้วย console/Sentry                                                                         |
+| `src/routes/__root.tsx`                           | meta `author: "Lovable"`, `twitter:site: "@Lovable"`                                                                                                                                                                          | แก้เป็นของเรา                                                                                             |
+| `README.md`                                       | เนื้อหา Lovable ทั้งไฟล์                                                                                                                                                                                                      | เขียนใหม่                                                                                                 |
+| `src/integrations/supabase/client.ts`             | ชี้ Lovable Cloud                                                                                                                                                                                                             | ชี้ Supabase project ใหม่                                                                                 |
+| `src/integrations/lovable/index.ts`               | wrapper เรียก `createLovableAuth()` จาก `@lovable.dev/cloud-auth-js` — ใช้จริงใน Google sign-in ที่ `src/routes/auth.tsx` (ไม่ใช่แค่ import เฉยๆ)                                                                             | ลบไฟล์ทิ้ง แก้ `auth.tsx` ให้เรียก `supabase.auth.signInWithOAuth({ provider: 'google' })` ตรงๆ           |
+| `src/integrations/supabase/previewAuthStorage.ts` | auth storage ที่ broker session ผ่าน `postMessage` ไปยัง Lovable editor (เช็ค hostname กับ `lovableproject.com`/`lovable.app`/`gpt-eng.com` ฯลฯ) ถูก wire เข้าไปใน `client.ts` เป็น `auth.storage`                            | ลบไฟล์ทิ้ง เปลี่ยน `auth.storage` ใน `client.ts` ให้ใช้ `localStorage` ตรงๆ (ค่า default ของ supabase-js) |
 
 ---
 
 ## 2. ลำดับงาน (ทำทีละขั้น — commit ทุกขั้น อย่ารวบ)
 
 ### ขั้น 2.1 — ตั้งฐาน
+
 - [ ] `git checkout -b phase-0/migrate-off-lovable`
 - [ ] ลบ `bun.lock`, ลบ `node_modules`
 - [ ] เปลี่ยน `package.json` → `"name": "nong-phum-life-os"`
@@ -127,7 +128,7 @@ export default defineConfig({
 #### 2.4.1 ถอด `@lovable.dev/cloud-auth-js` — ✅ เสร็จแล้ว (commit `544e9ee`)
 
 - [x] ลบไฟล์ `src/integrations/lovable/index.ts` (wrapper ที่เรียก `createLovableAuth()`)
-- [x] แก้ `src/routes/auth.tsx` — เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/today\` } })` และตัด `navigate()` หลังเรียกออก เพราะ OAuth redirect เบราว์เซอร์ออกไปเลย
+- [x] แก้ `src/routes/auth.tsx` — เปลี่ยนเป็น `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: \`${window.location.origin}/today\` } })`และตัด`navigate()` หลังเรียกออก เพราะ OAuth redirect เบราว์เซอร์ออกไปเลย
 - [x] แทนที่ทุกจุดอื่นที่ใช้ `@lovable.dev/cloud-auth-js` — ตรวจแล้วว่า**มีไฟล์เดียวเท่านั้น**ที่ import package นี้ จึงไม่มีจุดอื่นให้แก้
 - [x] `src/routes/_authenticated/route.tsx` ใช้ `supabase.auth.getUser()` อยู่แล้ว — ยังไม่ได้ทดสอบ login จริงเพราะ database ยังว่าง (รอขั้น 2.3)
 
@@ -187,10 +188,18 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
   },
 };
 
-export function resolveProvider(): ProviderId { /* อ่าน AI_PROVIDER, default "anthropic" */ }
-export function getModel(task: TaskKind, override?: ProviderId) { /* ... */ }
-export function providerSupportsPdf(id: ProviderId): boolean { /* ... */ }
-export function availableProviders(): ProviderId[] { /* เจ้าที่มี API key ครบเท่านั้น */ }
+export function resolveProvider(): ProviderId {
+  /* อ่าน AI_PROVIDER, default "anthropic" */
+}
+export function getModel(task: TaskKind, override?: ProviderId) {
+  /* ... */
+}
+export function providerSupportsPdf(id: ProviderId): boolean {
+  /* ... */
+}
+export function availableProviders(): ProviderId[] {
+  /* เจ้าที่มี API key ครบเท่านั้น */
+}
 ```
 
 - [ ] **ห้าม hardcode ชื่อรุ่นโมเดลจากความจำ** — ตอนลงมือทำให้เปิดหน้า models ของแต่ละเจ้าแล้วใส่ชื่อรุ่นล่าสุดที่ใช้งานได้จริง แล้วเขียนคอมเมนต์กำกับวันที่ตรวจสอบไว้
@@ -242,17 +251,17 @@ export function availableProviders(): ProviderId[] { /* เจ้าที่ม
 - [ ] สร้าง `netlify.toml`: `command = "npm run build"`, `publish` และ functions ตามที่ plugin กำหนด
 - [ ] ตั้ง environment variables ใน Netlify UI:
 
-| ตัวแปร | ฝั่ง | หมายเหตุ |
-|---|---|---|
-| `VITE_SUPABASE_URL` | client | เปิดเผยได้ |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | client | เปิดเผยได้ (RLS คุ้มครองอยู่) — ชื่อนี้ต้องตรงกับที่ `client.ts` อ่านจริง (`sb_publishable_...` แบบใหม่ ไม่ใช่ JWT anon key แบบเก่า) ห้ามตั้งชื่อเป็น `VITE_SUPABASE_ANON_KEY` |
-| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | server | fallback ที่ `client.ts` อ่านจาก `process.env` ตอน SSR — ตั้งค่าเดียวกับตัว `VITE_` ด้านบน |
-| `SUPABASE_SERVICE_ROLE_KEY` | server | **ห้ามขึ้นต้น VITE_** |
-| `AI_PROVIDER` | server | `anthropic` \| `openai` \| `google` (ไม่ใส่ = anthropic) |
-| `AI_FALLBACK_PROVIDER` | server | เว้นว่าง = ปิด fallback |
-| `ANTHROPIC_API_KEY` | server | ใส่เฉพาะเจ้าที่จะใช้ · **ห้ามขึ้นต้น VITE_** |
-| `OPENAI_API_KEY` | server | **ห้ามขึ้นต้น VITE_** |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | server | **ห้ามขึ้นต้น VITE_** |
+| ตัวแปร                                      | ฝั่ง   | หมายเหตุ                                                                                                                                                                       |
+| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_SUPABASE_URL`                         | client | เปิดเผยได้                                                                                                                                                                     |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`             | client | เปิดเผยได้ (RLS คุ้มครองอยู่) — ชื่อนี้ต้องตรงกับที่ `client.ts` อ่านจริง (`sb_publishable_...` แบบใหม่ ไม่ใช่ JWT anon key แบบเก่า) ห้ามตั้งชื่อเป็น `VITE_SUPABASE_ANON_KEY` |
+| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | server | fallback ที่ `client.ts` อ่านจาก `process.env` ตอน SSR — ตั้งค่าเดียวกับตัว `VITE_` ด้านบน                                                                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`                 | server | **ห้ามขึ้นต้น VITE_**                                                                                                                                                          |
+| `AI_PROVIDER`                               | server | `anthropic` \| `openai` \| `google` (ไม่ใส่ = anthropic)                                                                                                                       |
+| `AI_FALLBACK_PROVIDER`                      | server | เว้นว่าง = ปิด fallback                                                                                                                                                        |
+| `ANTHROPIC_API_KEY`                         | server | ใส่เฉพาะเจ้าที่จะใช้ · **ห้ามขึ้นต้น VITE_**                                                                                                                                   |
+| `OPENAI_API_KEY`                            | server | **ห้ามขึ้นต้น VITE_**                                                                                                                                                          |
+| `GOOGLE_GENERATIVE_AI_API_KEY`              | server | **ห้ามขึ้นต้น VITE_**                                                                                                                                                          |
 
 - [ ] Deploy preview ก่อน → ทดสอบ → แล้วค่อย production
 - [ ] เพิ่ม redirect URL ของ Netlify เข้าไปใน Supabase Auth settings
@@ -334,14 +343,14 @@ Netlify อ่าน `netlify.toml` จาก branch ที่กำลัง de
 
 ## 6. Roadmap ถัดไป (อ้างอิงเฉย ๆ อย่าเพิ่งทำ)
 
-| Phase | ขอบเขต |
-|---|---|
-| 1 | **Data integrity & deletion path** (ดูหมายเหตุใต้ตาราง — เร่งด่วนสุด) · Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
-| 2 | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance) |
-| 3 | สิทธิฉัน v2 + Decision Board |
-| 4 | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard) |
-| 5 | Life Legacy A — Asset Inventory, Vault, Final Wishes, Trusted Contacts, Checklist, AI Legacy Assistant |
-| 6 | Life Legacy B — Death Verification, Post-Life Action Plan, Memorial, Digital Wreath, AI Funeral Planner |
+| Phase | ขอบเขต                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | **Data integrity & deletion path** (ดูหมายเหตุใต้ตาราง — เร่งด่วนสุด) · Payment rails (PromptPay QR + ผ่อน) · LINE Messaging API · **Recurring reminder engine** (ดูหมายเหตุใต้ตาราง) · Admin Dashboard โครงหลัก · AI provider สลับได้จาก Admin UI (เพิ่ม `platform_settings.ai_provider`, `resolveProvider()` อ่านลำดับ `platform_settings.ai_provider` → `AI_PROVIDER` → default; API key ยังอยู่ใน env เท่านั้น ห้ามเก็บลง DB) |
+| 2     | Task Marketplace v2 เต็มสเปก (Match Score, Offer, Escrow, Safety, Provider Dashboard, AI Price Guidance)                                                                                                                                                                                                                                                                                                                          |
+| 3     | สิทธิฉัน v2 + Decision Board                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 4     | ของดีใกล้บ้าน (ต้องเพิ่ม PostGIS + Merchant Dashboard)                                                                                                                                                                                                                                                                                                                                                                            |
+| 5     | Life Legacy A — Asset Inventory, Vault, Final Wishes, Trusted Contacts, Checklist, AI Legacy Assistant                                                                                                                                                                                                                                                                                                                            |
+| 6     | Life Legacy B — Death Verification, Post-Life Action Plan, Memorial, Digital Wreath, AI Funeral Planner                                                                                                                                                                                                                                                                                                                           |
 
 ### หมายเหตุ: Data integrity & deletion path (Phase 1 — เร่งด่วนที่สุดในเฟส 1)
 
@@ -352,6 +361,7 @@ Netlify อ่าน `netlify.toml` จาก branch ที่กำลัง de
 เป็นของเดิมจาก Lovable ไม่ใช่ regression จากการย้าย แต่แปลว่า **ระบบยังลบข้อมูลผู้ใช้ตาม PDPA ไม่ได้จริง** — ผู้ใช้ขอให้ลบบัญชี เราลบได้แค่ auth row ส่วนเอกสาร ค่าใช้จ่าย และไฟล์แนบยังอยู่ในระบบทั้งหมด
 
 **ต้องทำใน Phase 1 ไม่ใช่ช้ากว่านั้น** เพราะยิ่งมีข้อมูลจริงมากขึ้น การเติม FK ย้อนหลังยิ่งเสี่ยง (ต้องล้าง orphan ที่สะสมไว้ก่อนถึงจะ `ADD CONSTRAINT` ผ่าน และถ้ามีผู้ใช้จริงแล้วต้องทำใน migration ที่ล็อกตาราง) ขอบเขตงาน:
+
 1. ล้าง orphan ที่มีอยู่
 2. เพิ่ม FK `REFERENCES auth.users(id) ON DELETE CASCADE` ทุกตารางที่มี `user_id`
 3. เขียนเส้นทางลบไฟล์ใน storage ด้วย (FK ของ Postgres ไม่ตามไปลบ object ใน storage ให้)
@@ -364,6 +374,7 @@ Netlify อ่าน `netlify.toml` จาก branch ที่กำลัง de
 **เป็นช่องโหว่ที่มีอยู่แล้วในแอปเดิมบน Lovable ไม่ใช่ regression จากการย้าย** จึงไม่ต้องแก้ใน Phase 0 (การทำให้มันทำงานคือการเพิ่มของใหม่ ขัดกฎบรรทัด 6)
 
 ต้องทำ**พร้อมกับ LINE Messaging API** เพราะต้องมีครบทั้ง 2 ชิ้นถึงจะมีประโยชน์:
+
 1. **scheduler** สำหรับเลื่อนงวด/ยิงเตือนตามเวลา
 2. **ตัวส่งการแจ้งเตือน** — ปัจจุบัน codebase **ไม่มีตัวส่งเลยสักตัว** (ไม่มี webpush, nodemailer, resend, twilio, LINE notify, service worker) reminder เป็นแค่ record ที่รอผู้ใช้เปิดมาดูเอง
 

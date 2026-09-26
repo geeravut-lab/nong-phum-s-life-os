@@ -55,7 +55,6 @@ function FamilyPage() {
   const [assignee, setAssignee] = useState("");
   const [checkNote, setCheckNote] = useState("");
 
-
   const {
     data: membership,
     isLoading,
@@ -113,7 +112,11 @@ function FamilyPage() {
     queryKey: ["family-shared", familyId],
     queryFn: async () => {
       const [docs, tasks, exp] = await Promise.all([
-        supabase.from("documents").select("id, title, due_date").eq("is_shared", true).eq("kind", "analyzed"),
+        supabase
+          .from("documents")
+          .select("id, title, due_date")
+          .eq("is_shared", true)
+          .eq("kind", "analyzed"),
         supabase.from("reminders").select("id, title, due_at").eq("is_shared", true),
         supabase.from("expenses").select("id, title, amount, spent_on").eq("is_shared", true),
       ]);
@@ -166,7 +169,6 @@ function FamilyPage() {
     await supabase.from("family_members").delete().eq("id", membership.id);
     qc.invalidateQueries();
   };
-
 
   const eventsQ = useQuery({
     enabled: !!familyId,
@@ -406,7 +408,10 @@ function FamilyPage() {
             ) : (
               <ul className="space-y-2 text-sm">
                 {(eventsQ.data ?? []).map((ev) => (
-                  <li key={ev.id} className="flex justify-between gap-2 rounded-lg border border-border p-2">
+                  <li
+                    key={ev.id}
+                    className="flex justify-between gap-2 rounded-lg border border-border p-2"
+                  >
                     <span className="font-medium">{ev.title}</span>
                     <span className="text-xs text-muted-foreground">
                       {formatDay(new Date(ev.starts_at), lang)}
@@ -437,7 +442,9 @@ function FamilyPage() {
                 <Button
                   key={st}
                   size="sm"
-                  variant={st === "ok" ? "default" : st === "emergency" ? "destructive" : "secondary"}
+                  variant={
+                    st === "ok" ? "default" : st === "emergency" ? "destructive" : "secondary"
+                  }
                   disabled={busy}
                   onClick={async () => {
                     if (!familyId) return;
@@ -467,11 +474,10 @@ function FamilyPage() {
             <p className="mb-1 text-xs font-medium text-muted-foreground">{t.r4CheckinRecent}</p>
             <ul className="space-y-1 text-xs">
               {(checkinsQ.data ?? []).slice(0, 8).map((c) => {
-                const who =
-                  labelFor(
-                    c.user_id,
-                    members?.find((m) => m.user_id === c.user_id)?.display_name,
-                  );
+                const who = labelFor(
+                  c.user_id,
+                  members?.find((m) => m.user_id === c.user_id)?.display_name,
+                );
                 return (
                   <li key={c.id} className="flex justify-between gap-2">
                     <span>
@@ -568,9 +574,7 @@ function FamilyPage() {
                 };
                 return (
                   <li key={m.id} className="rounded-lg border border-border p-2 text-sm">
-                    <p className="mb-2 font-medium">
-                      {labelFor(m.user_id, m.display_name)}
-                    </p>
+                    <p className="mb-2 font-medium">{labelFor(m.user_id, m.display_name)}</p>
                     <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-3">
                       {(
                         [
@@ -582,11 +586,7 @@ function FamilyPage() {
                         ] as const
                       ).map(([key, label, val]) => (
                         <label key={key} className="flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            defaultChecked={val}
-                            id={`${m.user_id}-${key}`}
-                          />
+                          <input type="checkbox" defaultChecked={val} id={`${m.user_id}-${key}`} />
                           {label}
                         </label>
                       ))}
@@ -599,11 +599,8 @@ function FamilyPage() {
                       onClick={async () => {
                         if (!familyId) return;
                         const get = (k: string) =>
-                          (
-                            document.getElementById(
-                              `${m.user_id}-${k}`,
-                            ) as HTMLInputElement | null
-                          )?.checked ?? true;
+                          (document.getElementById(`${m.user_id}-${k}`) as HTMLInputElement | null)
+                            ?.checked ?? true;
                         setBusy(true);
                         try {
                           await runUpsertPerm({
@@ -633,7 +630,6 @@ function FamilyPage() {
               })}
             </ul>
           </section>
-
         </div>
       )}
     </AppShell>

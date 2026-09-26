@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-type Db = SupabaseClient<any, "public", any>;
+type Db = SupabaseClient<Database>;
 
 async function loadSettings() {
   const { data } = await supabaseAdmin.from("platform_settings").select("*").maybeSingle();

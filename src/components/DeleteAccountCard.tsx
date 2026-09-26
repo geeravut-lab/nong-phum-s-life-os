@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { DELETE_CONFIRMATION_PHRASES, deleteMyAccount, getDeletionPreview } from "@/lib/account.functions";
+import {
+  DELETE_CONFIRMATION_PHRASES,
+  deleteMyAccount,
+  getDeletionPreview,
+} from "@/lib/account.functions";
 import { useI18n } from "@/lib/i18n";
 
 // The "danger zone" at the bottom of Settings. Opening the dialog fetches a
@@ -92,7 +96,9 @@ export function DeleteAccountCard() {
                       <li>{t.deleteItemReminders(p.counts.reminders)}</li>
                       <li>{t.deleteItemMoney(money)}</li>
                       <li>{t.deleteItemChat(p.counts.chat_messages)}</li>
-                      {(p.counts.helper_profiles > 0 || p.counts.jobs > 0) && <li>{t.deleteItemHelpMe}</li>}
+                      {(p.counts.helper_profiles > 0 || p.counts.jobs > 0) && (
+                        <li>{t.deleteItemHelpMe}</li>
+                      )}
                       {p.counts.benefit_profiles > 0 && <li>{t.deleteItemBenefits}</li>}
                       {p.isSsoUser && <li>{t.deleteItemSso}</li>}
                       {p.isLineLinked && <li>{t.deleteItemLine}</li>}
@@ -113,7 +119,8 @@ export function DeleteAccountCard() {
                 )}
                 <div className="space-y-1.5 pt-1">
                   <Label htmlFor="delete-confirm">
-                    {t.deleteTypeToConfirm} <code className="rounded bg-muted px-1.5 py-0.5 font-semibold">{phrase}</code>
+                    {t.deleteTypeToConfirm}{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-semibold">{phrase}</code>
                   </Label>
                   <Input
                     id="delete-confirm"

@@ -175,20 +175,14 @@ function AdminPage() {
     <AppShell>
       <header className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">{t.adminTitle}</h1>
-        {t.adminSub ? (
-          <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p>
-        ) : null}
+        {t.adminSub ? <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p> : null}
       </header>
-
       {/* Ops queues */}
-
       <PremiumPayHubCard />
       <SupportHubCard />
       <MarketplaceHubCard />
       <SafetyHubCard />
       <PaymentsHubCard />
-
-
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -229,7 +223,6 @@ function AdminPage() {
           </div>
         </dl>
       </section>
-
       {/* ---- Providers ---- */}
       <section className="mb-5 grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-soft sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -291,7 +284,6 @@ function AdminPage() {
           </Select>
         </div>
       </section>
-
       {/* ---- Models per task ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.adminModelsTitle}</h2>
@@ -411,13 +403,12 @@ function AdminPage() {
           <span className="text-xs text-muted-foreground">{t.adminApplyNote}</span>
         </div>
       </section>
-
       <LineQuotaCard />
-
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
         <AdminBillingPanel />
-      </section>      {/* ---- Events ---- */}
+      </section>{" "}
+      {/* ---- Events ---- */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.adminEventsTitle}</h2>
         <p className="mb-3 mt-1 text-xs text-muted-foreground">{t.adminEventsSub}</p>
@@ -473,13 +464,20 @@ function LineQuotaCard() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const save = useServerFn(updateNotificationSettings);
-  const cfg = useQuery({ queryKey: ["notification-config"], queryFn: () => getNotificationConfig() });
+  const cfg = useQuery({
+    queryKey: ["notification-config"],
+    queryFn: () => getNotificationConfig(),
+  });
   const [form, setForm] = useState<{ cap: string; reserve: string; hour: string } | null>(null);
 
   useEffect(() => {
     if (cfg.data && form === null) {
       const st = cfg.data.settings;
-      setForm({ cap: String(st.line_monthly_cap), reserve: String(st.line_digest_reserve), hour: String(st.line_digest_hour) });
+      setForm({
+        cap: String(st.line_monthly_cap),
+        reserve: String(st.line_digest_reserve),
+        hour: String(st.line_digest_hour),
+      });
     }
   }, [cfg.data, form]);
 
@@ -505,8 +503,11 @@ function LineQuotaCard() {
   const st = d?.settings;
   const halted = !!st?.line_halted_until && new Date(st.line_halted_until) > new Date();
   const dirty =
-    !!d && !!form &&
-    (Number(form.cap) !== st!.line_monthly_cap || Number(form.reserve) !== st!.line_digest_reserve || Number(form.hour) !== st!.line_digest_hour);
+    !!d &&
+    !!form &&
+    (Number(form.cap) !== st!.line_monthly_cap ||
+      Number(form.reserve) !== st!.line_digest_reserve ||
+      Number(form.hour) !== st!.line_digest_hour);
   const pct = d ? Math.min(100, Math.round((d.used / Math.max(1, st!.line_monthly_cap)) * 100)) : 0;
   const stopAt = form ? Math.max(0, Number(form.cap) - Number(form.reserve)) : 0;
 
@@ -525,9 +526,19 @@ function LineQuotaCard() {
           )}
           {halted && (
             <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              <p className="font-medium">{t.adminLineHalted(formatDay(new Date(st!.line_halted_until!), lang, true))}</p>
-              {st!.line_halt_reason && <p className="mt-1 break-all font-mono text-xs">{st!.line_halt_reason}</p>}
-              <Button size="sm" variant="outline" className="mt-2" disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
+              <p className="font-medium">
+                {t.adminLineHalted(formatDay(new Date(st!.line_halted_until!), lang, true))}
+              </p>
+              {st!.line_halt_reason && (
+                <p className="mt-1 break-all font-mono text-xs">{st!.line_halt_reason}</p>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                disabled={mutation.isPending}
+                onClick={() => mutation.mutate(true)}
+              >
                 {t.adminLineResume}
               </Button>
             </div>
@@ -546,7 +557,10 @@ function LineQuotaCard() {
               />
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              {t.adminLineUsedHint(d.sentThisMonth, d.line?.totalUsage != null ? String(d.line.totalUsage) : "—")}
+              {t.adminLineUsedHint(
+                d.sentThisMonth,
+                d.line?.totalUsage != null ? String(d.line.totalUsage) : "—",
+              )}
               {d.line?.limit != null && ` · LINE limit ${d.line.limitType ?? ""} ${d.line.limit}`}
               {d.line?.error && ` · ${d.line.error}`}
             </p>
@@ -554,15 +568,34 @@ function LineQuotaCard() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="line-cap">{t.adminLineCap}</Label>
-              <Input id="line-cap" type="number" min={0} value={form.cap} onChange={(e) => setForm({ ...form, cap: e.target.value })} />
+              <Input
+                id="line-cap"
+                type="number"
+                min={0}
+                value={form.cap}
+                onChange={(e) => setForm({ ...form, cap: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="line-reserve">{t.adminLineReserve}</Label>
-              <Input id="line-reserve" type="number" min={0} value={form.reserve} onChange={(e) => setForm({ ...form, reserve: e.target.value })} />
+              <Input
+                id="line-reserve"
+                type="number"
+                min={0}
+                value={form.reserve}
+                onChange={(e) => setForm({ ...form, reserve: e.target.value })}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="line-hour">{t.adminLineDigestHour}</Label>
-              <Input id="line-hour" type="number" min={0} max={23} value={form.hour} onChange={(e) => setForm({ ...form, hour: e.target.value })} />
+              <Input
+                id="line-hour"
+                type="number"
+                min={0}
+                max={23}
+                value={form.hour}
+                onChange={(e) => setForm({ ...form, hour: e.target.value })}
+              />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">{t.adminLineReserveHint(stopAt)}</p>
@@ -576,7 +609,8 @@ function LineQuotaCard() {
           </div>
           <p className="text-xs text-muted-foreground">
             {t.adminLineLinked(d.linkedUsers, d.friendUsers)}
-            {d.lastTick && ` · ${t.adminLineLastTick(formatDay(new Date(d.lastTick.tick), lang, true))}`}
+            {d.lastTick &&
+              ` · ${t.adminLineLastTick(formatDay(new Date(d.lastTick.tick), lang, true))}`}
             {` · ${t.adminLineOpenUrl} ${d.openUrl}`}
           </p>
         </div>
@@ -593,7 +627,10 @@ function SupportHubCard() {
   const pending = useQuery({
     queryKey: ["donations-pending-count"],
     queryFn: async () => {
-      const { count, error } = await supabase.from("donations").select("id", { count: "exact", head: true }).eq("status", "pending");
+      const { count, error } = await supabase
+        .from("donations")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
       if (error) throw error;
       return count ?? 0;
     },
@@ -699,9 +736,6 @@ function SafetyHubCard() {
     </Link>
   );
 }
-
-
-
 
 function PremiumPayHubCard() {
   const { t } = useI18n();

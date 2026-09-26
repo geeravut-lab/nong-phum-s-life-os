@@ -98,7 +98,10 @@ function AgendaPage() {
     },
   });
 
-  const items = agendaQ.data ?? [];
+  // Memoised so the `?? []` fallback does not mint a fresh array on every
+  // render, which would invalidate the byDay memo below while the query
+  // has no data yet.
+  const items = useMemo(() => agendaQ.data ?? [], [agendaQ.data]);
 
   const byDay = useMemo(() => {
     const m = new Map<string, AgendaItem[]>();
@@ -130,9 +133,7 @@ function AgendaPage() {
     setEdit(it);
     setEditTitle(it.title);
     const d = new Date(it.startsAt);
-    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     setEditWhen(local);
     setEditNotes(it.detail || "");
     setAiText("");
@@ -141,11 +142,7 @@ function AgendaPage() {
   const monthCells = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
     const startPad = (first.getDay() + 6) % 7;
-    const daysInMonth = new Date(
-      cursor.getFullYear(),
-      cursor.getMonth() + 1,
-      0,
-    ).getDate();
+    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
     const cells: Array<{ date: Date | null; key: string }> = [];
     for (let i = 0; i < startPad; i++) cells.push({ date: null, key: `e${i}` });
     for (let d = 1; d <= daysInMonth; d++) {
@@ -156,18 +153,14 @@ function AgendaPage() {
   }, [cursor]);
 
   const selectedDayItems =
-    view === "month" || view === "day"
-      ? byDay.get(ymd(cursor)) ?? []
-      : items;
+    view === "month" || view === "day" ? (byDay.get(ymd(cursor)) ?? []) : items;
 
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              {t.agendaTitle ?? "ปฏิทินรวม"}
-            </h1>
+            <h1 className="text-xl font-semibold tracking-tight">{t.agendaTitle ?? "ปฏิทินรวม"}</h1>
             <p className="text-sm text-muted-foreground">
               {t.agendaSub ?? "งาน · ครอบครัว · เอกสาร · ช่วยฉันที"}
             </p>
@@ -281,10 +274,7 @@ function AgendaPage() {
                   {count > 0 && (
                     <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5">
                       {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="size-1 rounded-full bg-primary"
-                        />
+                        <span key={i} className="size-1 rounded-full bg-primary" />
                       ))}
                     </span>
                   )}
@@ -295,12 +285,7 @@ function AgendaPage() {
         )}
 
         <ul className="space-y-2">
-          {(view === "list"
-            ? items
-            : view === "week"
-              ? items
-              : selectedDayItems
-          ).map((it) => (
+          {(view === "list" ? items : view === "week" ? items : selectedDayItems).map((it) => (
             <li
               key={`${it.source}-${it.id}`}
               className="rounded-xl border border-border bg-card p-3 text-sm shadow-soft"
@@ -320,9 +305,7 @@ function AgendaPage() {
                     })}
                   </p>
                   {it.detail ? (
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                      {it.detail}
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{it.detail}</p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 flex-col gap-1">
@@ -331,10 +314,7 @@ function AgendaPage() {
                       <Pencil className="size-3.5" />
                     </Button>
                   )}
-                  <Link
-                    to={it.href}
-                    className="text-center text-[10px] text-primary underline"
-                  >
+                  <Link to={it.href} className="text-center text-[10px] text-primary underline">
                     เปิด
                   </Link>
                 </div>
@@ -416,9 +396,7 @@ function AgendaPage() {
                           source: edit.source as "task" | "family_event" | "helpme",
                           id: edit.id,
                           title: editTitle.trim(),
-                          startsAt: editWhen
-                            ? new Date(editWhen).toISOString()
-                            : undefined,
+                          startsAt: editWhen ? new Date(editWhen).toISOString() : undefined,
                           notes: editNotes,
                         },
                       });

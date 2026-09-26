@@ -5,10 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  adminConfirmPremiumPayment,
-  adminRejectPremiumPayment,
-} from "@/lib/billing.functions";
+import { adminConfirmPremiumPayment, adminRejectPremiumPayment } from "@/lib/billing.functions";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDay, formatMoney } from "@/lib/format";
@@ -79,9 +76,7 @@ function AdminPremiumPage() {
     enabled: (list.data ?? []).length > 0 || (history.data ?? []).length > 0,
     queryFn: async () => {
       const ids = [
-        ...new Set(
-          [...(list.data ?? []), ...(history.data ?? [])].map((r) => r.user_id),
-        ),
+        ...new Set([...(list.data ?? []), ...(history.data ?? [])].map((r) => r.user_id)),
       ];
       const { data } = await supabase.from("profiles").select("id, display_name").in("id", ids);
       const map: Record<string, string> = {};
@@ -135,7 +130,8 @@ function AdminPremiumPage() {
 
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-100">
-          ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด &quot;ยืนยันรับเงิน&quot; จะเปิดสิทธิ์สมาชิก (ยกเว้น PAYG)
+          ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด &quot;ยืนยันรับเงิน&quot;
+          จะเปิดสิทธิ์สมาชิก (ยกเว้น PAYG)
         </div>
         <h2 className="text-sm font-semibold">
           {t.donationPending} ({pending.length})
@@ -214,9 +210,7 @@ function AdminPremiumPage() {
                 <li key={r.id} className="space-y-1 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0 space-y-0.5">
-                      <p className="font-medium">
-                        {names[r.user_id] ?? r.user_id.slice(0, 8)}
-                      </p>
+                      <p className="font-medium">{names[r.user_id] ?? r.user_id.slice(0, 8)}</p>
                       <p className="text-xs text-muted-foreground">
                         {t.billHistWhen ?? "วันที่-เวลา"}:{" "}
                         {formatDay(new Date(r.created_at), lang, true)}

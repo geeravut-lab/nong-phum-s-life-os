@@ -33,11 +33,7 @@ import {
   listDeathNotifyMessages,
   updateMemorialExtras,
 } from "@/lib/legacy-notify.functions";
-import {
-  createFuneralPayment,
-  markFuneralPaid,
-  planFuneral,
-} from "@/lib/funeral.functions";
+import { createFuneralPayment, markFuneralPaid, planFuneral } from "@/lib/funeral.functions";
 
 export const Route = createFileRoute("/_authenticated/legacy_/after")({
   head: () => ({ meta: routeMeta("legacy") }),
@@ -116,14 +112,15 @@ function LegacyAfterPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("memorials")
-        .select("id,title,share_token,is_public,story,video_url,schedule_text,death_case_id,subject_user_id,created_at")
+        .select(
+          "id,title,share_token,is_public,story,video_url,schedule_text,death_case_id,subject_user_id,created_at",
+        )
         .order("created_at", { ascending: false })
         .limit(20);
       if (error) throw error;
       return data ?? [];
     },
   });
-
 
   // Auto-select first confirmed case for action plan
   useEffect(() => {
@@ -192,9 +189,7 @@ function LegacyAfterPage() {
           note: confirmNote,
         },
       });
-      toast.success(
-        res?.status === "confirmed" ? t.p6CaseConfirmed : t.p6ConfirmRecorded,
-      );
+      toast.success(res?.status === "confirmed" ? t.p6CaseConfirmed : t.p6ConfirmRecorded);
       void qc.invalidateQueries({ queryKey: ["death-cases"] });
       void qc.invalidateQueries({ queryKey: ["my-memorials"] });
     } catch (e) {
@@ -312,22 +307,26 @@ function LegacyAfterPage() {
           <div className="border-t border-border pt-3">
             <p className="mb-2 text-xs font-medium">{t.p6MyDuties}</p>
             <ul className="space-y-2">
-              {(dutiesQ.data?.cases ?? []).map((c: {
-                id: string;
-                status: string;
-                confirmation_count: number;
-                required_confirmations: number;
-                label: string;
-                report_note: string;
-              }) => (
-                <li key={c.id} className="rounded-lg border border-border p-2 text-xs">
-                  <span className="font-medium">{c.label || c.id.slice(0, 8)}</span>
-                  <Badge className="ml-2" variant="secondary">
-                    {c.status} ({c.confirmation_count}/{c.required_confirmations})
-                  </Badge>
-                  {c.report_note ? <p className="mt-1 text-muted-foreground">{c.report_note}</p> : null}
-                </li>
-              ))}
+              {(dutiesQ.data?.cases ?? []).map(
+                (c: {
+                  id: string;
+                  status: string;
+                  confirmation_count: number;
+                  required_confirmations: number;
+                  label: string;
+                  report_note: string;
+                }) => (
+                  <li key={c.id} className="rounded-lg border border-border p-2 text-xs">
+                    <span className="font-medium">{c.label || c.id.slice(0, 8)}</span>
+                    <Badge className="ml-2" variant="secondary">
+                      {c.status} ({c.confirmation_count}/{c.required_confirmations})
+                    </Badge>
+                    {c.report_note ? (
+                      <p className="mt-1 text-muted-foreground">{c.report_note}</p>
+                    ) : null}
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         )}
@@ -471,8 +470,6 @@ function LegacyAfterPage() {
         )}
       </section>
 
-      
-
       {/* R2: Personalized notify messages */}
       <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.r2NotifyTitle}</h2>
@@ -551,30 +548,26 @@ function LegacyAfterPage() {
       <section className="mt-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.plaTitle}</h2>
         <p className="text-xs text-muted-foreground">{t.plaSub}</p>
-        {!selectedCaseId && (
-          <p className="text-xs text-muted-foreground">{t.plaEmpty}</p>
-        )}
+        {!selectedCaseId && <p className="text-xs text-muted-foreground">{t.plaEmpty}</p>}
         {selectedCaseId && plaQ.isLoading && (
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         )}
         {selectedCaseId && plaQ.data && (
           <>
             {(["24h", "3d", "later"] as const).map((phase) => {
-              const items = (plaQ.data.actions as Array<{
-                id: string;
-                phase: string;
-                title: string;
-                description: string;
-                status: string;
-                note: string;
-              }>).filter((a) => a.phase === phase);
+              const items = (
+                plaQ.data.actions as Array<{
+                  id: string;
+                  phase: string;
+                  title: string;
+                  description: string;
+                  status: string;
+                  note: string;
+                }>
+              ).filter((a) => a.phase === phase);
               if (!items.length) return null;
               const label =
-                phase === "24h"
-                  ? t.plaPhase24h
-                  : phase === "3d"
-                    ? t.plaPhase3d
-                    : t.plaPhaseLater;
+                phase === "24h" ? t.plaPhase24h : phase === "3d" ? t.plaPhase3d : t.plaPhaseLater;
               const done = items.filter((a) => a.status === "done").length;
               return (
                 <div key={phase} className="space-y-2">
@@ -591,7 +584,11 @@ function LegacyAfterPage() {
                         className="flex flex-col gap-2 rounded-xl border border-border p-3 text-sm sm:flex-row sm:items-start sm:justify-between"
                       >
                         <div>
-                          <p className={a.status === "done" ? "line-through opacity-70" : "font-medium"}>
+                          <p
+                            className={
+                              a.status === "done" ? "line-through opacity-70" : "font-medium"
+                            }
+                          >
                             {a.title}
                           </p>
                           <p className="text-xs text-muted-foreground">{a.description}</p>
@@ -789,9 +786,7 @@ function LegacyAfterPage() {
                   size="sm"
                   className="mt-2"
                   disabled={busy}
-                  onClick={() =>
-                    onSelectPackage(pkg.id as "economy" | "standard" | "premium")
-                  }
+                  onClick={() => onSelectPackage(pkg.id as "economy" | "standard" | "premium")}
                 >
                   {t.p6SelectPackage}
                 </Button>
@@ -804,9 +799,7 @@ function LegacyAfterPage() {
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
             <p className="font-medium">
               {t.p6PayAmount}: ฿{payInfo.amount.toLocaleString()}
-              {payInfo.installments > 1
-                ? ` (${t.p6PerInstallment} × ${payInfo.installments})`
-                : ""}
+              {payInfo.installments > 1 ? ` (${t.p6PerInstallment} × ${payInfo.installments})` : ""}
             </p>
             {payInfo.qrUrl ? (
               <img

@@ -147,7 +147,8 @@
 }
 
 @utility bg-hero-gradient {
-  background-image: radial-gradient(
+  background-image:
+    radial-gradient(
       120% 90% at 15% 0%,
       color-mix(in oklab, var(--color-secondary) 70%, transparent) 0%,
       transparent 60%

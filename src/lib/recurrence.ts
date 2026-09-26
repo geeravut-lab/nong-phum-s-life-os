@@ -10,7 +10,9 @@ import { APP_TIME_ZONE, APP_UTC_OFFSET } from "./time";
 
 export type Recurrence = "none" | "monthly" | "yearly";
 
-export function isRepeating(recurrence: string | null | undefined): recurrence is "monthly" | "yearly" {
+export function isRepeating(
+  recurrence: string | null | undefined,
+): recurrence is "monthly" | "yearly" {
   return recurrence === "monthly" || recurrence === "yearly";
 }
 
@@ -30,12 +32,21 @@ const parts = new Intl.DateTimeFormat("en-CA", {
 function toWallClock(date: Date): WallClock {
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     Number(parts.formatToParts(date).find((p) => p.type === type)?.value ?? 0);
-  return { y: get("year"), m: get("month"), d: get("day"), hh: get("hour"), mm: get("minute"), ss: get("second") };
+  return {
+    y: get("year"),
+    m: get("month"),
+    d: get("day"),
+    hh: get("hour"),
+    mm: get("minute"),
+    ss: get("second"),
+  };
 }
 
 function fromWallClock(w: WallClock): Date {
   const p = (n: number, len = 2) => String(n).padStart(len, "0");
-  return new Date(`${p(w.y, 4)}-${p(w.m)}-${p(w.d)}T${p(w.hh)}:${p(w.mm)}:${p(w.ss)}${APP_UTC_OFFSET}`);
+  return new Date(
+    `${p(w.y, 4)}-${p(w.m)}-${p(w.d)}T${p(w.hh)}:${p(w.mm)}:${p(w.ss)}${APP_UTC_OFFSET}`,
+  );
 }
 
 function daysInMonth(y: number, m: number): number {
@@ -85,7 +96,11 @@ export function nextOccurrence(dueAt: Date, recurrence: "monthly" | "yearly", af
  * when none has passed yet. Used when a missed recurring reminder is rolled
  * forward: it lands on the occurrence that just came due, not on a future one.
  */
-export function lastOccurrenceAtOrBefore(dueAt: Date, recurrence: "monthly" | "yearly", now: Date): Date {
+export function lastOccurrenceAtOrBefore(
+  dueAt: Date,
+  recurrence: "monthly" | "yearly",
+  now: Date,
+): Date {
   let last = dueAt;
   for (let k = 1; k < 1200; k++) {
     const cand = addPeriods(dueAt, recurrence, k);

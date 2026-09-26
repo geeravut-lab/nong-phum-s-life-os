@@ -77,13 +77,18 @@ function HelperDashboardPage() {
   const active = (jobs.data ?? []).filter((j) =>
     ["matched", "in_progress"].includes(j.status),
   ).length;
-  const done = (jobs.data ?? []).filter((j) => j.status === "done" || j.status === "completed").length;
-  const pendingOffers = (offers.data ?? []).filter((o) => o.status === "pending" || o.status === "sent").length;
+  const done = (jobs.data ?? []).filter(
+    (j) => j.status === "done" || j.status === "completed",
+  ).length;
+  const pendingOffers = (offers.data ?? []).filter(
+    (o) => o.status === "pending" || o.status === "sent",
+  ).length;
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
-  const monthJobs = (jobs.data ?? []).filter((j) => j.booked_at && new Date(j.booked_at) >= monthStart).length;
-
+  const monthJobs = (jobs.data ?? []).filter(
+    (j) => j.booked_at && new Date(j.booked_at) >= monthStart,
+  ).length;
 
   return (
     <AppShell>
@@ -112,10 +117,11 @@ function HelperDashboardPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-3 text-center shadow-soft">
           <p className="text-2xl font-semibold">{formatMoney(earnings)}</p>
-          <p className="text-[10px] text-muted-foreground">{t.r6StatEarn} ({monthJobs} {t.r6StatMonthJobs})</p>
+          <p className="text-[10px] text-muted-foreground">
+            {t.r6StatEarn} ({monthJobs} {t.r6StatMonthJobs})
+          </p>
         </div>
       </section>
-
 
       {!profile.data ? (
         <p className="text-sm text-muted-foreground">{t.providerDashNoProfile}</p>
@@ -136,13 +142,18 @@ function HelperDashboardPage() {
               <p className="text-sm text-muted-foreground">{t.noJobs}</p>
             )}
             {(jobs.data ?? []).map((job) => (
-              <article key={job.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <article
+                key={job.id}
+                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="font-medium">{job.title}</h3>
                     <p className="text-xs text-muted-foreground">
                       {job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : ""}
-                      {job.agreed_price != null ? ` · ฿${formatMoney(Number(job.agreed_price))}` : ""}
+                      {job.agreed_price != null
+                        ? ` · ฿${formatMoney(Number(job.agreed_price))}`
+                        : ""}
                     </p>
                   </div>
                   <Badge>{job.status}</Badge>
@@ -158,7 +169,9 @@ function HelperDashboardPage() {
             <h2 className="font-semibold">{t.providerDashOffers}</h2>
             {(offers.data ?? []).map((o) => (
               <article key={o.id} className="rounded-xl border border-border p-3 text-sm">
-                <p className="font-medium">{(o.jobs as { title?: string } | null)?.title ?? o.job_id}</p>
+                <p className="font-medium">
+                  {(o.jobs as { title?: string } | null)?.title ?? o.job_id}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {o.price != null ? `฿${formatMoney(Number(o.price))}` : ""} · {o.status}
                   {o.round > 1 ? ` · round ${o.round}` : ""}

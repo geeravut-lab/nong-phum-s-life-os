@@ -13,7 +13,9 @@ export default async () => {
     return;
   }
   const level = result.error ? "error" : "info";
-  console[level](`[tick] ${result.tick} ${JSON.stringify(result.summary)}${result.error ? ` error=${result.error}` : ""}`);
+  console[level](
+    `[tick] ${result.tick} ${JSON.stringify(result.summary)}${result.error ? ` error=${result.error}` : ""}`,
+  );
 };
 
 // Cron is evaluated in UTC (docs.netlify.com/build/functions/scheduled-functions, 2026-09).

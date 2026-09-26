@@ -28,9 +28,10 @@ const th = {
   signOut: "ออกจากระบบ",
   installApp: "ติดตั้งเป็นแอป",
   installAppHint: "เพิ่มไอคอนบนหน้าจอหลัก เพื่อเปิดใช้ได้เหมือนแอป",
-  installAppIos: "บน iPhone/iPad: กด Share แล้วเลือก \"เพิ่มไปยังหน้าจอโฮม\"",
+  installAppIos: 'บน iPhone/iPad: กด Share แล้วเลือก "เพิ่มไปยังหน้าจอโฮม"',
   installAppDone: "ติดตั้งแล้ว",
-  installAppUnavailable: "เบราว์เซอร์นี้ยังไม่รองรับการติดตั้งอัตโนมัติ — ใช้เมนูของเบราว์เซอร์เพื่อ \"ติดตั้งแอป\" หรือ \"Add to Home Screen\"",
+  installAppUnavailable:
+    'เบราว์เซอร์นี้ยังไม่รองรับการติดตั้งอัตโนมัติ — ใช้เมนูของเบราว์เซอร์เพื่อ "ติดตั้งแอป" หรือ "Add to Home Screen"',
   // page <head> — one title + description per route, used by routeMeta()
   meta_root_title: "น้องภูมิ — ผู้ช่วย Life OS ส่วนตัว",
   meta_root_desc: "น้องภูมิ ผู้ช่วยดูแลเอกสาร เตือนความจำ รายรับ-รายจ่าย และครอบครัวของคุณ",
@@ -159,10 +160,11 @@ const th = {
   adminSupportTitle: "การสนับสนุน",
   adminSupportSub: "ตรวจสอบยอดเข้า รายงานรายได้ และตั้งค่าช่องทางพร้อมเพย์",
   adminSupportCard: "การสนับสนุน (บริจาค)",
-  adminSupportPendingCount: (n: number) => (n === 0 ? "ไม่มีรายการค้างตรวจสอบ" : `ค้างตรวจสอบ ${n} รายการ`),
+  adminSupportPendingCount: (n: number) =>
+    n === 0 ? "ไม่มีรายการค้างตรวจสอบ" : `ค้างตรวจสอบ ${n} รายการ`,
   adminDonationsReview: "ตรวจสอบการสนับสนุน",
   adminDonationsWarning:
-    "ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด \"ยืนยันรับเงิน\" ไม่ได้เปิดสิทธิ์อะไรให้ผู้ใช้ มีผลแค่กับตัวเลขในรายงาน",
+    'ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด "ยืนยันรับเงิน" ไม่ได้เปิดสิทธิ์อะไรให้ผู้ใช้ มีผลแค่กับตัวเลขในรายงาน',
   adminDonationsNone: "ไม่มีรายการรอตรวจสอบ",
   adminDonationDonor: "ผู้สนับสนุน",
   adminDonationTo: "เข้าพร้อมเพย์",
@@ -171,11 +173,13 @@ const th = {
   donationNotFound: "ไม่พบรายการ",
   donationConfirmDialog: (amount: string) => `ยืนยันว่าตรวจสอบยอด ฿${amount} เข้าบัญชีแล้ว?`,
   donationRejectDialog: "ทำเครื่องหมายว่าไม่พบรายการนี้ในบัญชี?",
-  adminDonationsNoRights: "การยืนยันมีผลกับรายงานเท่านั้น ไม่เปลี่ยนสิทธิ์ของผู้ใช้ และบันทึกว่าใครเป็นคนกด",
+  adminDonationsNoRights:
+    "การยืนยันมีผลกับรายงานเท่านั้น ไม่เปลี่ยนสิทธิ์ของผู้ใช้ และบันทึกว่าใครเป็นคนกด",
   donationConfirmedToast: "บันทึกว่ารับเงินแล้ว",
   donationRejectedToast: "ทำเครื่องหมายว่าไม่พบรายการแล้ว",
   adminDonationsReport: "รายงานยอดเงินเข้า",
-  adminDonationsReportNote: "นับเฉพาะรายการที่ยืนยันรับเงินแล้ว (ไม่รวมรอตรวจสอบ) — โหลดครั้งเดียว 500 รายการล่าสุด",
+  adminDonationsReportNote:
+    "นับเฉพาะรายการที่ยืนยันรับเงินแล้ว (ไม่รวมรอตรวจสอบ) — โหลดครั้งเดียว 500 รายการล่าสุด",
   period7: "7 วัน",
   period30: "30 วัน",
   period90: "90 วัน",
@@ -196,18 +200,22 @@ const th = {
   adminDonationsEnabled: "เปิดช่องทางสนับสนุน",
   adminDonationsEnabledHint: "ต้องมีเลขพร้อมเพย์ด้วยถึงจะแสดงฟอร์มให้ผู้ใช้",
   adminPurposeLabel: "เงินสนับสนุนใช้สำหรับ (บรรทัดละหัวข้อ)",
-  adminPurposeHint: "ข้อความนี้มีผลต่อการตัดสินใจสนับสนุนมากที่สุด — เขียนสิ่งที่ทำได้จริง ไม่ใช่การตลาด",
+  adminPurposeHint:
+    "ข้อความนี้มีผลต่อการตัดสินใจสนับสนุนมากที่สุด — เขียนสิ่งที่ทำได้จริง ไม่ใช่การตลาด",
   // admin — LINE notifications
   adminLineTitle: "การแจ้งเตือนทาง LINE",
   adminLineSub: "โควตา 300 ข้อความ/เดือนของ OA — ถ้าหมดทุกอย่างจะเงียบพร้อมกัน ตัวเลขนี้คือกันตาย",
   adminLineNotConfigured: "ยังไม่ได้ตั้ง LINE_CHANNEL_ACCESS_TOKEN — ยังไม่มีการส่ง",
   adminLineUsed: "ใช้ไปเดือนนี้",
-  adminLineUsedHint: (own: number, line: string) => `นับจากบันทึกของเรา ${own} · LINE รายงาน ${line} · ใช้ค่าที่มากกว่า`,
+  adminLineUsedHint: (own: number, line: string) =>
+    `นับจากบันทึกของเรา ${own} · LINE รายงาน ${line} · ใช้ค่าที่มากกว่า`,
   adminLineCap: "เพดานต่อเดือน",
   adminLineReserve: "กันไว้ให้เรื่องสำคัญมาก",
-  adminLineReserveHint: (stopAt: number) => `สรุปรายวันจะหยุดส่งเมื่อถึง ${stopAt} ข้อความ เรื่องสำคัญมากส่งต่อจนถึงเพดาน`,
+  adminLineReserveHint: (stopAt: number) =>
+    `สรุปรายวันจะหยุดส่งเมื่อถึง ${stopAt} ข้อความ เรื่องสำคัญมากส่งต่อจนถึงเพดาน`,
   adminLineDigestHour: "เวลาส่งสรุปรายวัน (นาฬิกาไทย)",
-  adminLineLinked: (n: number, friends: number) => `ผูก LINE แล้ว ${n} คน · เป็นเพื่อน OA ${friends} คน`,
+  adminLineLinked: (n: number, friends: number) =>
+    `ผูก LINE แล้ว ${n} คน · เป็นเพื่อน OA ${friends} คน`,
   adminLineHalted: (until: string) => `หยุดส่งทั้งระบบจนถึง ${until} — token ของ channel ถูกปฏิเสธ`,
   adminLineResume: "ยกเลิกการหยุดส่ง",
   adminLineLastTick: (at: string) => `tick ล่าสุด ${at}`,
@@ -371,8 +379,7 @@ const th = {
   payAdminTitle: "Escrow / โอนเงิน Help Me",
   payAdminSub: "ยืนยันยอดเข้า คิว Hold และโอนให้ผู้ช่วย",
   payAdminCard: "Help Me — ชำระเงิน",
-  payAdminCardSub: (pending: number, payout: number) =>
-    `รอตรวจ ${pending} · คิวโอน ${payout}`,
+  payAdminCardSub: (pending: number, payout: number) => `รอตรวจ ${pending} · คิวโอน ${payout}`,
   payQueuePending: "รอตรวจ",
   payQueueHeld: "Hold",
   payQueuePayout: "คิวโอน",
@@ -449,9 +456,11 @@ const th = {
   deleteItemChat: (n: number) => `ข้อความแชท ${n} ข้อความ`,
   deleteItemHelpMe: "โปรไฟล์ผู้ช่วยและงานที่เคยประกาศ",
   deleteItemBenefits: "ข้อมูลสิทธิของคุณ",
-  deleteItemSso: "การเชื่อมกับบัญชี Aivora (ถ้าเข้าจาก Launcher อีกครั้งจะได้บัญชีใหม่ที่ว่างเปล่า)",
+  deleteItemSso:
+    "การเชื่อมกับบัญชี Aivora (ถ้าเข้าจาก Launcher อีกครั้งจะได้บัญชีใหม่ที่ว่างเปล่า)",
   deleteItemLine: "การเชื่อมต่อกับ LINE",
-  deleteItemDonations: "รายการสนับสนุนจะถูกเก็บไว้เป็นบัญชีรายได้โดยไม่ระบุตัวตน (ลบชื่อและอีเมลออก)",
+  deleteItemDonations:
+    "รายการสนับสนุนจะถูกเก็บไว้เป็นบัญชีรายได้โดยไม่ระบุตัวตน (ลบชื่อและอีเมลออก)",
   // LINE account linking (Settings card + /line/callback)
   lineTitle: "แจ้งเตือนทาง LINE",
   lineIntro: "เชื่อมต่อบัญชี LINE เพื่อให้น้องภูมิส่งการแจ้งเตือนถึงพี่ทาง LINE ได้",
@@ -710,14 +719,15 @@ const th = {
   localReviewSaved: "บันทึกรีวิวแล้ว",
   localPromoted: "แนะนำ",
 
-
   navLegacy: "ฝากไว้",
   meta_legacy_title: "Life Legacy | น้องภูมิ",
   meta_legacy_desc: "แผนชีวิตข้างหน้าและสิ่งที่อยากฝากไว้เพื่อคนที่คุณรัก",
   legacyTitle: "Life Legacy — ฝากไว้",
   legacySub: "จัดการสิ่งที่คุณอยากฝากไว้ — ตอนที่ยังวางแผนได้เอง",
-  legacyLegalNote: "หมายเหตุ: ข้อมูลในนี้ไม่ใช่พินัยกรรมตามกฎหมายไทย ใช้สำหรับเก็บสำเนา อ้างอิงที่อยู่ฉบับจริง และความต้องการของคุณเท่านั้น",
-  legacyConsentText: "ข้อมูลส่วนนี้ละเอียดอ่อน ข้าพเจ้ายินยอมให้ระบบเก็บข้อมูลแผนฝากไว้ภายใต้บัญชีของข้าพเจ้า และสามารถลบได้ทุกเมื่อ",
+  legacyLegalNote:
+    "หมายเหตุ: ข้อมูลในนี้ไม่ใช่พินัยกรรมตามกฎหมายไทย ใช้สำหรับเก็บสำเนา อ้างอิงที่อยู่ฉบับจริง และความต้องการของคุณเท่านั้น",
+  legacyConsentText:
+    "ข้อมูลส่วนนี้ละเอียดอ่อน ข้าพเจ้ายินยอมให้ระบบเก็บข้อมูลแผนฝากไว้ภายใต้บัญชีของข้าพเจ้า และสามารถลบได้ทุกเมื่อ",
   legacyConsentBtn: "ยอมรับและเริ่มต้น",
   legacyConsentSaved: "บันทึกความยินยอมแล้ว",
   legacyHub: "ภาพรวม",
@@ -957,8 +967,10 @@ const th = {
   r6EvidenceNotes: "หลักฐาน / แหล่งอ้างอิง",
   r6ShareFamily: "แชร์กับครอบครัว",
 
-  billFamilyHint: "แพ็ก Family: ใช้ AI ร่วมกันในครอบครัว (สมาชิกในกลุ่มครอบครัว) โควต้าไม่จำกัดแบบ Premium — เหมาะบ้านที่มีหลายคนใช้ Life OS",
-  billPaygUserExplain: "Pay-as-you-go: เมื่อใช้ AI เกินโควต้าฟรี ระบบจะคิดตามครั้งที่ใช้ แล้วแจ้งให้ชำระ (PromptPay) ภายในระยะเวลาที่กำหนด หากเลยกำหนด ระบบจะระงับการเรียก AI จนกว่าจะชำระ — สมาชิก Premium ไม่ถูกคิด PAYG",
+  billFamilyHint:
+    "แพ็ก Family: ใช้ AI ร่วมกันในครอบครัว (สมาชิกในกลุ่มครอบครัว) โควต้าไม่จำกัดแบบ Premium — เหมาะบ้านที่มีหลายคนใช้ Life OS",
+  billPaygUserExplain:
+    "Pay-as-you-go: เมื่อใช้ AI เกินโควต้าฟรี ระบบจะคิดตามครั้งที่ใช้ แล้วแจ้งให้ชำระ (PromptPay) ภายในระยะเวลาที่กำหนด หากเลยกำหนด ระบบจะระงับการเรียก AI จนกว่าจะชำระ — สมาชิก Premium ไม่ถูกคิด PAYG",
   r6ViewDetail: "ดูรายละเอียด",
   r6CollapseDetail: "ยุบรายละเอียด",
   localRadiusKm: "รัศมี (กม.)",
@@ -993,7 +1005,8 @@ const th = {
   familyMaxMembers: "จำนวนสมาชิกครอบครัวสูงสุด",
   p6Title: "Life Legacy — หลังเหตุการณ์",
   p6Sub: "ยืนยันการเสียชีวิต (หลายคน), Memorial, พวงหรีด, วางแผนงานศพ",
-  p6LegalNote: "การยืนยันการเสียชีวิตเป็นกฎตายตัวในระบบ ไม่ใช้ AI ตัดสิน และยังไม่ใช่หลักฐานทางกฎหมายแทนใบมรณบัตร",
+  p6LegalNote:
+    "การยืนยันการเสียชีวิตเป็นกฎตายตัวในระบบ ไม่ใช้ AI ตัดสิน และยังไม่ใช่หลักฐานทางกฎหมายแทนใบมรณบัตร",
   p6DeathTitle: "ยืนยันการเสียชีวิต",
   p6DeathHint: "ต้องมีผู้ยืนยันครบตามจำนวนที่กำหนด (ค่าเริ่มต้น 2 คน) ก่อนสถานะเป็น confirmed",
   p6SubjectUserId: "User ID ของผู้เสียชีวิต",
@@ -1077,9 +1090,10 @@ const en = {
   signOut: "Sign out",
   installApp: "Install as app",
   installAppHint: "Add an icon to your home screen and open it like a native app",
-  installAppIos: "On iPhone/iPad: tap Share, then \"Add to Home Screen\"",
+  installAppIos: 'On iPhone/iPad: tap Share, then "Add to Home Screen"',
   installAppDone: "Already installed",
-  installAppUnavailable: "This browser cannot auto-install. Use the browser menu: Install app or Add to Home Screen.",
+  installAppUnavailable:
+    "This browser cannot auto-install. Use the browser menu: Install app or Add to Home Screen.",
   // page <head> — one title + description per route, used by routeMeta()
   meta_root_title: "Nong Phum — your personal Life OS assistant",
   meta_root_desc: "Nong Phum looks after your documents, reminders, money and family in one place.",
@@ -1184,7 +1198,8 @@ const en = {
   navSupport: "Support",
   supportTitle: "Support Nong Phum",
   supportSub: "Support the platform as you can",
-  supportIntro: "This app is free to use. If it helps you, chip in for the running costs — any amount.",
+  supportIntro:
+    "This app is free to use. If it helps you, chip in for the running costs — any amount.",
   supportPurposeLabel: "Your support pays for",
   supportNotEnabled: "The support channel is not open yet",
   supportAdminHint: "set the PromptPay id in the admin page first",
@@ -1211,10 +1226,11 @@ const en = {
   adminSupportTitle: "Support (donations)",
   adminSupportSub: "Review incoming transfers, revenue report and PromptPay settings",
   adminSupportCard: "Support (donations)",
-  adminSupportPendingCount: (n: number) => (n === 0 ? "Nothing pending review" : `${n} pending review`),
+  adminSupportPendingCount: (n: number) =>
+    n === 0 ? "Nothing pending review" : `${n} pending review`,
   adminDonationsReview: "Review donations",
   adminDonationsWarning:
-    "Check the bank statement before confirming, every time. \"Confirm receipt\" grants the user nothing — it only changes the report.",
+    'Check the bank statement before confirming, every time. "Confirm receipt" grants the user nothing — it only changes the report.',
   adminDonationsNone: "Nothing pending review",
   adminDonationDonor: "Donor",
   adminDonationTo: "To PromptPay",
@@ -1223,7 +1239,8 @@ const en = {
   donationNotFound: "Not found",
   donationConfirmDialog: (amount: string) => `Confirm that ฿${amount} has arrived in the account?`,
   donationRejectDialog: "Mark this donation as not found in the account?",
-  adminDonationsNoRights: "This only affects the report — no user permission changes — and records who pressed it.",
+  adminDonationsNoRights:
+    "This only affects the report — no user permission changes — and records who pressed it.",
   donationConfirmedToast: "Recorded as received",
   donationRejectedToast: "Marked as not found",
   adminDonationsReport: "Revenue report",
@@ -1248,18 +1265,24 @@ const en = {
   adminDonationsEnabled: "Open the support channel",
   adminDonationsEnabledHint: "A PromptPay id is also required before users see the form",
   adminPurposeLabel: "Your support pays for (one item per line)",
-  adminPurposeHint: "This text drives the decision to donate more than anything else — write what you will actually do, not marketing",
+  adminPurposeHint:
+    "This text drives the decision to donate more than anything else — write what you will actually do, not marketing",
   adminLineTitle: "LINE notifications",
-  adminLineSub: "The OA allows 300 messages a month — when it runs out everything goes quiet at once. This is the guard.",
+  adminLineSub:
+    "The OA allows 300 messages a month — when it runs out everything goes quiet at once. This is the guard.",
   adminLineNotConfigured: "LINE_CHANNEL_ACCESS_TOKEN is not set — nothing is being sent",
   adminLineUsed: "Used this month",
-  adminLineUsedHint: (own: number, line: string) => `Our log counts ${own} · LINE reports ${line} · the larger one applies`,
+  adminLineUsedHint: (own: number, line: string) =>
+    `Our log counts ${own} · LINE reports ${line} · the larger one applies`,
   adminLineCap: "Monthly cap",
   adminLineReserve: "Reserved for urgent",
-  adminLineReserveHint: (stopAt: number) => `Daily digests stop at ${stopAt} messages; urgent ones continue up to the cap`,
+  adminLineReserveHint: (stopAt: number) =>
+    `Daily digests stop at ${stopAt} messages; urgent ones continue up to the cap`,
   adminLineDigestHour: "Daily digest hour (Bangkok)",
-  adminLineLinked: (n: number, friends: number) => `${n} users linked · ${friends} are friends of the OA`,
-  adminLineHalted: (until: string) => `All sending halted until ${until} — the channel token was rejected`,
+  adminLineLinked: (n: number, friends: number) =>
+    `${n} users linked · ${friends} are friends of the OA`,
+  adminLineHalted: (until: string) =>
+    `All sending halted until ${until} — the channel token was rejected`,
   adminLineResume: "Resume sending",
   adminLineLastTick: (at: string) => `last tick ${at}`,
   adminLineOpenUrl: "Card button opens",
@@ -1491,9 +1514,11 @@ const en = {
   deleteItemChat: (n: number) => `${n} chat message${n === 1 ? "" : "s"}`,
   deleteItemHelpMe: "your helper profile and any jobs you posted",
   deleteItemBenefits: "your benefits profile",
-  deleteItemSso: "the link to your Aivora account (signing in again from the launcher creates a fresh, empty account)",
+  deleteItemSso:
+    "the link to your Aivora account (signing in again from the launcher creates a fresh, empty account)",
   deleteItemLine: "the link to your LINE account",
-  deleteItemDonations: "your donation records stay in the income ledger, anonymised (name and email removed)",
+  deleteItemDonations:
+    "your donation records stay in the income ledger, anonymised (name and email removed)",
   lineTitle: "LINE notifications",
   lineIntro: "Connect your LINE account so Nong Phum can send you reminders on LINE.",
   lineNotConfigured: "Not available on this installation yet",
@@ -1509,21 +1534,25 @@ const en = {
   lineRecheckFailed: "Could not check with LINE right now. Try again.",
   lineUnlink: "Disconnect",
   lineUnlinkConfirmTitle: "Disconnect LINE?",
-  lineUnlinkConfirmText: "Nong Phum will stop sending reminders on LINE. You can reconnect at any time.",
+  lineUnlinkConfirmText:
+    "Nong Phum will stop sending reminders on LINE. You can reconnect at any time.",
   lineUnlinked: "LINE disconnected",
   lineCallbackWorking: "Connecting to LINE…",
   lineCallbackDone: "LINE connected",
   lineCallbackFailed: "Could not connect LINE",
   lineGoSettings: "Go to settings",
-  lineErrDenied: "You cancelled the LINE authorisation. Start again from Settings if you want to connect.",
+  lineErrDenied:
+    "You cancelled the LINE authorisation. Start again from Settings if you want to connect.",
   lineErrState: "This link has expired or was already used. Start again from Settings.",
-  lineErrOtherAccount: "This link was started from a different account. Start again from the account you are signed in to.",
+  lineErrOtherAccount:
+    "This link was started from a different account. Start again from the account you are signed in to.",
   lineErrNoSession: "You are not signed in. Sign in first, then connect LINE again.",
   lineErrInUse: "This LINE account is already connected to another Nong Phum account.",
   lineErrGeneric: "Something went wrong while connecting. Please try again.",
   deleteFamilyWarning: (name: string, others: number) =>
     `You own the family “${name}”. Deleting your account dissolves it: its ${others} other member${others === 1 ? "" : "s"} will lose everything shared in it and will not be told why.`,
-  deleteFamilyLeave: (n: number) => `You will leave ${n} famil${n === 1 ? "y" : "ies"} you belong to.`,
+  deleteFamilyLeave: (n: number) =>
+    `You will leave ${n} famil${n === 1 ? "y" : "ies"} you belong to.`,
   deleteTypeToConfirm: "To confirm, type",
   deleteConfirmBtn: "Delete permanently",
   deleting: "Deleting…",
@@ -1756,8 +1785,10 @@ const en = {
   meta_legacy_desc: "Plans and messages you want to leave for people you love",
   legacyTitle: "Life Legacy",
   legacySub: "What you want to leave behind — while you can still plan it",
-  legacyLegalNote: "Note: This is not a formal Thai will. Use it for references and inventory only.",
-  legacyConsentText: "This section is sensitive. I consent to storing my legacy plan under my account.",
+  legacyLegalNote:
+    "Note: This is not a formal Thai will. Use it for references and inventory only.",
+  legacyConsentText:
+    "This section is sensitive. I consent to storing my legacy plan under my account.",
   legacyConsentBtn: "Accept and start",
   legacyConsentSaved: "Consent saved",
   legacyHub: "Overview",
@@ -1982,11 +2013,11 @@ const en = {
   billPaygPay: "Pay PAYG",
   billPaygNoOverage: "No PAYG balance due",
   billMyPaymentsTitle: "My Premium / Family / PAYG payments",
-    billYourPlan: "Current plan",
+  billYourPlan: "Current plan",
   billFree: "Free",
   billUntil: "Until",
   billCurrentPlan: "Active plan",
-    billMarkPaid: "I have transferred",
+  billMarkPaid: "I have transferred",
   billExplain: "How pricing works",
   billYouArePremium: "You are on Premium",
   billAdminTitle: "Billing / quota settings",
@@ -1997,8 +2028,10 @@ const en = {
   r6EvidenceNotes: "Evidence / sources",
   r6ShareFamily: "Share with family",
 
-  billFamilyHint: "Family plan: shared AI access for your family group — unlimited like Premium, for households with multiple Life OS users",
-  billPaygUserExplain: "Pay-as-you-go: over free AI quota is billed per use; pay via PromptPay within the grace period or AI pauses until paid. Premium members are never charged PAYG.",
+  billFamilyHint:
+    "Family plan: shared AI access for your family group — unlimited like Premium, for households with multiple Life OS users",
+  billPaygUserExplain:
+    "Pay-as-you-go: over free AI quota is billed per use; pay via PromptPay within the grace period or AI pauses until paid. Premium members are never charged PAYG.",
   r6ViewDetail: "View details",
   r6CollapseDetail: "Collapse",
   localRadiusKm: "Radius (km)",
@@ -2033,9 +2066,11 @@ const en = {
   familyMaxMembers: "Max family members",
   p6Title: "Life Legacy — After",
   p6Sub: "Death verification (multi-person), Memorial, wreaths, funeral planning",
-  p6LegalNote: "Death verification is deterministic system rules — not AI — and is not a legal death certificate.",
+  p6LegalNote:
+    "Death verification is deterministic system rules — not AI — and is not a legal death certificate.",
   p6DeathTitle: "Death verification",
-  p6DeathHint: "Requires the configured number of confirmations (default 2) before status becomes confirmed.",
+  p6DeathHint:
+    "Requires the configured number of confirmations (default 2) before status becomes confirmed.",
   p6SubjectUserId: "Subject user ID",
   p6ReportNote: "Report details",
   p6ReportBtn: "Open case",

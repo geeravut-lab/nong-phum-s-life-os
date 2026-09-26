@@ -38,7 +38,6 @@ function SettingsPage() {
   const runLoc = useServerFn(updatePrivacyPrefs);
   const runTrial = useServerFn(startPlanTrial);
 
-
   const { data: profile } = useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
@@ -68,7 +67,6 @@ function SettingsPage() {
         logs: Array<{ id: string; action: string; detail: string; created_at: string }>;
       },
   });
-
 
   useEffect(() => {
     const stored = window.localStorage.getItem("phum-theme");
@@ -164,111 +162,113 @@ function SettingsPage() {
           {t.signOut}
         </Button>
 
-        
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.r5PrivacyCenter}</h2>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm">{t.r5LocationShare}</p>
-            <p className="text-xs text-muted-foreground">{t.r5LocationShareHint}</p>
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-semibold">{t.r5PrivacyCenter}</h2>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm">{t.r5LocationShare}</p>
+              <p className="text-xs text-muted-foreground">{t.r5LocationShareHint}</p>
+            </div>
+            <Switch
+              checked={Boolean(planQ.data?.shareLocationHelpme)}
+              disabled={busy}
+              onCheckedChange={async (v) => {
+                setBusy(true);
+                try {
+                  await runLoc({ data: { shareLocationHelpme: v } });
+                  void qc.invalidateQueries({ queryKey: ["my-plan"] });
+                  void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
+                  toast.success(t.saved);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : t.error);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
           </div>
-          <Switch
-            checked={Boolean(planQ.data?.shareLocationHelpme)}
-            disabled={busy}
-            onCheckedChange={async (v) => {
-              setBusy(true);
-              try {
-                await runLoc({ data: { shareLocationHelpme: v } });
-                void qc.invalidateQueries({ queryKey: ["my-plan"] });
-                void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
-                toast.success(t.saved);
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : t.error);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          />
-        </div>
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">{t.r5AuditLog}</p>
-          <ul className="max-h-40 space-y-1 overflow-auto text-xs">
-            {(auditQ.data?.logs ?? []).length === 0 ? (
-              <li className="text-muted-foreground">{t.r5AuditEmpty}</li>
-            ) : (
-              (auditQ.data?.logs ?? []).map((l) => (
-                <li key={l.id} className="flex justify-between gap-2 border-b border-border/50 py-1">
-                  <span>
-                    {l.action}
-                    {l.detail ? ` — ${l.detail}` : ""}
-                  </span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {formatDay(new Date(l.created_at), lang)}
-                  </span>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-      </section>
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">{t.r5AuditLog}</p>
+            <ul className="max-h-40 space-y-1 overflow-auto text-xs">
+              {(auditQ.data?.logs ?? []).length === 0 ? (
+                <li className="text-muted-foreground">{t.r5AuditEmpty}</li>
+              ) : (
+                (auditQ.data?.logs ?? []).map((l) => (
+                  <li
+                    key={l.id}
+                    className="flex justify-between gap-2 border-b border-border/50 py-1"
+                  >
+                    <span>
+                      {l.action}
+                      {l.detail ? ` — ${l.detail}` : ""}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                      {formatDay(new Date(l.created_at), lang)}
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </section>
 
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.r5PlanTitle}</h2>
-        <p className="mt-1 text-xs text-muted-foreground">{t.r5PlanSkeletonNote}</p>
-        <p className="mt-2 text-sm">
-          {planQ.data?.planTier === "premium"
-            ? t.r5PlanPremium
-            : planQ.data?.planTier === "family"
-              ? t.r5PlanFamily
-              : t.r5PlanFree}
-          {planQ.data?.planExpiresAt
-            ? ` · ${t.r5PlanExpires} ${formatDay(new Date(planQ.data.planExpiresAt), lang)}`
-            : ""}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            disabled={busy || planQ.data?.planTier === "premium"}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await runTrial({ data: { planTier: "premium" } });
-                toast.success(t.saved);
-                void qc.invalidateQueries({ queryKey: ["my-plan"] });
-                void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : t.error);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {t.r5PlanTrial} ({t.r5PlanPremium})
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={busy || planQ.data?.planTier === "family"}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await runTrial({ data: { planTier: "family" } });
-                toast.success(t.saved);
-                void qc.invalidateQueries({ queryKey: ["my-plan"] });
-                void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : t.error);
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {t.r5PlanTrial} ({t.r5PlanFamily})
-          </Button>
-        </div>
-      </section>
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-semibold">{t.r5PlanTitle}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">{t.r5PlanSkeletonNote}</p>
+          <p className="mt-2 text-sm">
+            {planQ.data?.planTier === "premium"
+              ? t.r5PlanPremium
+              : planQ.data?.planTier === "family"
+                ? t.r5PlanFamily
+                : t.r5PlanFree}
+            {planQ.data?.planExpiresAt
+              ? ` · ${t.r5PlanExpires} ${formatDay(new Date(planQ.data.planExpiresAt), lang)}`
+              : ""}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={busy || planQ.data?.planTier === "premium"}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await runTrial({ data: { planTier: "premium" } });
+                  toast.success(t.saved);
+                  void qc.invalidateQueries({ queryKey: ["my-plan"] });
+                  void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : t.error);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t.r5PlanTrial} ({t.r5PlanPremium})
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy || planQ.data?.planTier === "family"}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await runTrial({ data: { planTier: "family" } });
+                  toast.success(t.saved);
+                  void qc.invalidateQueries({ queryKey: ["my-plan"] });
+                  void qc.invalidateQueries({ queryKey: ["privacy-audit"] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : t.error);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t.r5PlanTrial} ({t.r5PlanFamily})
+            </Button>
+          </div>
+        </section>
 
-      <DeleteAccountCard />
+        <DeleteAccountCard />
       </div>
     </AppShell>
   );
