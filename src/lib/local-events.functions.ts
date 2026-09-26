@@ -75,18 +75,24 @@ export const listUpcomingLocalEvents = createServerFn({ method: "POST" })
     const now = new Date();
     const until = new Date(now.getTime() + (data.withinDays ?? 14) * 86400000);
 
-    let qb = supabaseAdmin
-      .from("local_events")
-      .select("*")
-      // An event that started earlier but has not finished is still on.
-      .or(
-        `ends_at.gte.${now.toISOString()},and(ends_at.is.null,starts_at.gte.${now.toISOString()})`,
-      )
-      .lte("starts_at", until.toISOString())
-      .order("starts_at", { ascending: true })
-      .limit(60);
+    let qb = supabaseAdmin.from("local_events").select("*").limit(60);
 
-    qb = data.mineOnly ? qb.eq("owner_user_id", uid) : qb.eq("is_active", true);
+    if (data.mineOnly) {
+      // The owner's own management list: everything they have, newest first,
+      // including events that already happened. Hiding past events from their
+      // own list would leave them unable to edit or delete what they created.
+      qb = qb.eq("owner_user_id", uid).order("starts_at", { ascending: false });
+    } else {
+      // The public list: on now or coming up, soonest first. An event that
+      // started earlier but has not finished yet still counts as on.
+      qb = qb
+        .eq("is_active", true)
+        .or(
+          `ends_at.gte.${now.toISOString()},and(ends_at.is.null,starts_at.gte.${now.toISOString()})`,
+        )
+        .lte("starts_at", until.toISOString())
+        .order("starts_at", { ascending: true });
+    }
     if (data.kidFriendly) qb = qb.eq("kid_friendly", true);
 
     const { data: rows, error } = await qb;
@@ -131,13 +137,26 @@ export const upsertLocalEvent = createServerFn({ method: "POST" })
     const uid = context.userId;
 
     // Attaching to a place is only allowed for a place the caller owns.
+    // When attached, the event inherits the place's pin and address unless it
+    // states its own: without coordinates an event routes by its title, and a
+    // title like "แข่งกิน" is an event name that Google Maps cannot find.
+    let inherited: { lat: number | null; lng: number | null; address: string | null } = {
+      lat: null,
+      lng: null,
+      address: null,
+    };
     if (data.placeId) {
       const { data: place } = await supabaseAdmin
         .from("local_places")
-        .select("id, owner_user_id")
+        .select("id, owner_user_id, lat, lng, address, area")
         .eq("id", data.placeId)
         .maybeSingle();
       if (!place || place.owner_user_id !== uid) throw new Error("Forbidden");
+      inherited = {
+        lat: (place.lat as number | null) ?? null,
+        lng: (place.lng as number | null) ?? null,
+        address: ((place.address as string | null) || (place.area as string | null)) ?? null,
+      };
     }
 
     const fields = {
@@ -146,7 +165,9 @@ export const upsertLocalEvent = createServerFn({ method: "POST" })
       description: data.description?.trim() ?? "",
       category: data.category?.trim() || "event",
       area: data.area?.trim() || null,
-      address: data.address?.trim() || null,
+      address: data.address?.trim() || inherited.address,
+      lat: inherited.lat,
+      lng: inherited.lng,
       maps_url: data.mapsUrl?.trim() || null,
       starts_at: data.startsAt,
       ends_at: data.endsAt || null,

@@ -116,6 +116,7 @@ function MerchantDashboardPage() {
   const [evtMax, setEvtMax] = useState("");
   const [evtKids, setEvtKids] = useState(false);
   const [evtPlace, setEvtPlace] = useState("");
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   const myEvents = useQuery({
     enabled: !!user,
@@ -128,12 +129,35 @@ function MerchantDashboardPage() {
     },
   });
 
+  const resetEventForm = () => {
+    setEditingEventId(null);
+    setEvtName("");
+    setEvtWhen("");
+    setEvtMin("");
+    setEvtMax("");
+    setEvtKids(false);
+    setEvtPlace("");
+  };
+
+  const startEditEvent = (e: LocalEventRow) => {
+    setEditingEventId(e.id);
+    setEvtName(e.title);
+    // datetime-local wants local wall-clock, not UTC.
+    const d = new Date(e.startsAt);
+    setEvtWhen(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setEvtMin(e.priceMin != null ? String(e.priceMin) : "");
+    setEvtMax(e.priceMax != null ? String(e.priceMax) : "");
+    setEvtKids(e.kidFriendly);
+    setEvtPlace(e.placeId ?? "");
+  };
+
   const addEvent = async () => {
     if (!evtName.trim() || !evtWhen) return;
     setBusy(true);
     try {
       await runUpsertEvent({
         data: {
+          ...(editingEventId ? { id: editingEventId } : {}),
           title: evtName.trim(),
           startsAt: new Date(evtWhen).toISOString(),
           ...(evtPlace ? { placeId: evtPlace } : {}),
@@ -142,8 +166,7 @@ function MerchantDashboardPage() {
           kidFriendly: evtKids,
         },
       });
-      setEvtName("");
-      setEvtWhen("");
+      resetEventForm();
       toast.success(t.saved);
       void qc.invalidateQueries({ queryKey: ["my-local-events", user?.id] });
       void qc.invalidateQueries({ queryKey: ["local-events"] });
@@ -544,14 +567,24 @@ function MerchantDashboardPage() {
                     {new Date(e.startsAt).toLocaleString()}
                   </span>
                 </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void removeEvent(e.id)}
-                >
-                  {t.delete}
-                </Button>
+                <span className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => startEditEvent(e)}
+                  >
+                    {t.edit}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void removeEvent(e.id)}
+                  >
+                    {t.delete}
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>
@@ -606,13 +639,20 @@ function MerchantDashboardPage() {
             />
             {t.evtKidFriendly}
           </label>
-          <Button
-            size="sm"
-            disabled={busy || !evtName.trim() || !evtWhen}
-            onClick={() => void addEvent()}
-          >
-            {t.evtAdd}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={busy || !evtName.trim() || !evtWhen}
+              onClick={() => void addEvent()}
+            >
+              {editingEventId ? t.save : t.evtAdd}
+            </Button>
+            {editingEventId ? (
+              <Button size="sm" variant="ghost" onClick={resetEventForm}>
+                {t.cancel}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </section>
 

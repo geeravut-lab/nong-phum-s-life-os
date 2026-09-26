@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { searchGooglePlaces } from "@/lib/local-places.functions";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ExternalLink,
   MapPin,
@@ -191,6 +191,46 @@ function LocalPage() {
       setGoogleMsg(e instanceof Error ? e.message : String(e));
     }
   };
+
+  /**
+   * Use the location the browser already has permission for, without making
+   * the user press a button first.
+   *
+   * Only when permission is already "granted": calling getCurrentPosition on a
+   * cold visit would throw the browser's permission prompt at someone who has
+   * not asked for anything yet. The button stays for that first grant, and for
+   * anyone who denied and changed their mind.
+   */
+  useEffect(() => {
+    if (!navigator.geolocation || coords) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const perm = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+        if (perm?.state !== "granted" || cancelled) return;
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (cancelled) return;
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setCoords({ lat, lng });
+            void loadGooglePlaces({ lat, lng });
+          },
+          () => {
+            /* already-granted permission can still fail (no fix, timeout) */
+          },
+          { enableHighAccuracy: false, timeout: 10000 },
+        );
+      } catch {
+        // Permissions API is unavailable in some browsers; the button covers it.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once: re-requesting on every coords change would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
@@ -467,51 +507,6 @@ function LocalPage() {
         )}
       </section>
 
-      {(googlePlaces.length > 0 || googleMsg) && (
-        <section className="mb-5 space-y-2">
-          <h2 className="text-sm font-semibold">Google Places</h2>
-          {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
-          <ul className="space-y-2">
-            {googlePlaces.map((g) => (
-              <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
-                <div className="flex justify-between gap-2">
-                  <span className="font-medium">{g.name}</span>
-                  {g.rating != null ? <Badge variant="secondary">{g.rating}</Badge> : null}
-                </div>
-                <p className="text-xs text-muted-foreground">{g.address}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {g.mapsUrl ? (
-                    <a
-                      className="text-xs text-primary underline"
-                      href={g.mapsUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {t.localOpenMap}
-                    </a>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={inPlan(g.id)}
-                    onClick={() =>
-                      addToPlan({
-                        id: g.id,
-                        title: g.name,
-                        lat: g.lat,
-                        lng: g.lng,
-                        address: g.address,
-                      })
-                    }
-                  >
-                    {inPlan(g.id) ? t.evtInPlan : t.evtAddToPlan}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {(dealsQ.data ?? []).length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
@@ -539,6 +534,52 @@ function LocalPage() {
 
       <section className="space-y-3">
         <h2 className="font-semibold">{t.localPlacesTitle}</h2>
+
+        {(googlePlaces.length > 0 || googleMsg) && (
+          <section className="mb-5 space-y-2">
+            <h2 className="text-sm font-semibold">Google Places</h2>
+            {googleMsg ? <p className="text-xs text-muted-foreground">{googleMsg}</p> : null}
+            <ul className="space-y-2">
+              {googlePlaces.map((g) => (
+                <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <span className="font-medium">{g.name}</span>
+                    {g.rating != null ? <Badge variant="secondary">{g.rating}</Badge> : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{g.address}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {g.mapsUrl ? (
+                      <a
+                        className="text-xs text-primary underline"
+                        href={g.mapsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t.localOpenMap}
+                      </a>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={inPlan(g.id)}
+                      onClick={() =>
+                        addToPlan({
+                          id: g.id,
+                          title: g.name,
+                          lat: g.lat,
+                          lng: g.lng,
+                          address: g.address,
+                        })
+                      }
+                    >
+                      {inPlan(g.id) ? t.evtInPlan : t.evtAddToPlan}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {placesQ.isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : ranked.length === 0 ? (

@@ -236,6 +236,12 @@ function TasksPage() {
         </p>
       )}
 
+      {/* One line explaining the toggle, shown only when the user is in a
+          family - otherwise no switch is rendered and the hint is noise. */}
+      {family && tasks?.length ? (
+        <p className="mb-2 text-xs text-muted-foreground">{t.sharedHint}</p>
+      ) : null}
+
       {tasks?.length ? (
         <ul className="space-y-2">
           {tasks.map((r) => (
@@ -278,6 +284,10 @@ function TasksPage() {
                   // an unlabelled toggle next to the done button and could not
                   // tell what it did. The text makes the purpose visible.
                   <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {/* Always visible: hiding the label on small screens put
+                        phone users back where they started, looking at an
+                        unlabelled toggle. The short word fits the narrow row. */}
+                    <span className="sm:hidden">{t.sharedShort}</span>
                     <span className="hidden sm:inline">{t.shared}</span>
                     <Switch
                       checked={r.is_shared}

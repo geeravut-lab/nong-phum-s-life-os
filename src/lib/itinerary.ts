@@ -103,16 +103,25 @@ export function routeDistanceKm(
  */
 export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number } | null): string {
   const MAX_WAYPOINTS = 9;
+  // Coordinates route exactly; an address is a decent lookup. A title is the
+  // last resort and often useless to Maps ("แข่งกิน" is an event name, not a
+  // place), so it is only used when there is nothing else.
   const key = (s: Stop) =>
-    s.lat != null && s.lng != null ? `${s.lat},${s.lng}` : (s.address ?? s.title);
+    s.lat != null && s.lng != null ? `${s.lat},${s.lng}` : s.address?.trim() || s.title;
 
   const points = ordered.map(key).filter(Boolean);
-  const origin = from ? `${from.lat},${from.lng}` : points.shift();
-  const destination = points.pop();
+  if (points.length === 0) return "https://www.google.com/maps";
+
+  // The last stop is always the destination. Only when the user's location is
+  // unknown AND there is more than one stop does the first stop become the
+  // origin instead. Taking the origin first used to leave a single-stop plan
+  // with an origin and no destination, which opened Maps on a blank route.
+  const destination = points.pop()!;
+  const origin = from ? `${from.lat},${from.lng}` : points.length > 0 ? points.shift() : undefined;
 
   const params = new URLSearchParams({ api: "1" });
   if (origin) params.set("origin", origin);
-  if (destination) params.set("destination", destination);
+  params.set("destination", destination);
   if (points.length > 0) {
     params.set("waypoints", points.slice(0, MAX_WAYPOINTS).join("|"));
   }
