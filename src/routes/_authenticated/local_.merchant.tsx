@@ -70,6 +70,8 @@ function MerchantDashboardPage() {
     price_level: "2",
     phone: "",
   });
+  const [dealStart, setDealStart] = useState("");
+  const [dealEnd, setDealEnd] = useState("");
   const [dealForm, setDealForm] = useState({
     placeId: "",
     title: "",
@@ -124,7 +126,7 @@ function MerchantDashboardPage() {
   const [hours, setHours] = useState<Record<string, { on: boolean; open: string; close: string }>>(
     () =>
       Object.fromEntries(
-        DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "18:00" }]),
+        DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "22:00" }]),
       ) as Record<string, { on: boolean; open: string; close: string }>,
   );
 
@@ -170,6 +172,12 @@ function MerchantDashboardPage() {
 
   const addEvent = async () => {
     if (!evtName.trim() || !evtWhen) return;
+    // An event has to happen somewhere: without a place it has no address and
+    // no pin, and the route built from it sends people nowhere.
+    if (!evtPlace) {
+      toast.error(t.evtPlaceRequired);
+      return;
+    }
     setBusy(true);
     try {
       await runUpsertEvent({
@@ -178,7 +186,7 @@ function MerchantDashboardPage() {
           title: evtName.trim(),
           startsAt: new Date(evtWhen).toISOString(),
           ...(evtEnd ? { endsAt: new Date(evtEnd).toISOString() } : {}),
-          ...(evtPlace ? { placeId: evtPlace } : {}),
+          placeId: evtPlace,
           ...(evtMin ? { priceMin: Number(evtMin) } : {}),
           ...(evtMax ? { priceMax: Number(evtMax) } : {}),
           kidFriendly: evtKids,
@@ -225,7 +233,7 @@ function MerchantDashboardPage() {
   /** open_hours json -> hours state, accepting the legacy single-window shape. */
   const jsonToHours = (raw: unknown) => {
     const base = Object.fromEntries(
-      DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "18:00" }]),
+      DAY_KEYS.map((d) => [d, { on: false, open: "09:00", close: "22:00" }]),
     ) as Record<string, { on: boolean; open: string; close: string }>;
     if (!raw || typeof raw !== "object") return base;
     const o = raw as Record<string, unknown>;
@@ -347,6 +355,8 @@ function MerchantDashboardPage() {
             description: dealForm.description.trim(),
             discount_label: dealForm.discount_label.trim() || null,
             budget_max: dealForm.budget_max ? Number(dealForm.budget_max) : null,
+            starts_at: dealStart ? new Date(dealStart).toISOString() : null,
+            ends_at: dealEnd ? new Date(dealEnd).toISOString() : null,
           } as never)
           .eq("id", editingDealId);
         if (error) throw error;
@@ -358,13 +368,16 @@ function MerchantDashboardPage() {
           description: dealForm.description.trim(),
           discount_label: dealForm.discount_label.trim() || null,
           budget_max: dealForm.budget_max ? Number(dealForm.budget_max) : null,
-          starts_at: new Date().toISOString(),
-          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          // Blank means no limit that way, rather than a silent 30-day guess.
+          starts_at: dealStart ? new Date(dealStart).toISOString() : null,
+          ends_at: dealEnd ? new Date(dealEnd).toISOString() : null,
           is_active: true,
         });
         if (error) throw error;
       }
       toast.success(t.localDealSaved);
+      setDealStart("");
+      setDealEnd("");
       setDealForm({
         placeId: dealForm.placeId,
         title: "",
@@ -412,6 +425,13 @@ function MerchantDashboardPage() {
     }
   };
 
+  const toLocal = (iso: string | null | undefined) =>
+    iso
+      ? new Date(new Date(iso).getTime() - new Date(iso).getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16)
+      : "";
+
   const startEditDeal = (d: {
     id: string;
     place_id: string;
@@ -419,6 +439,8 @@ function MerchantDashboardPage() {
     description: string | null;
     discount_label: string | null;
     budget_max: number | null;
+    starts_at?: string | null;
+    ends_at?: string | null;
   }) => {
     setEditingDealId(d.id);
     setDealForm({
@@ -428,6 +450,8 @@ function MerchantDashboardPage() {
       discount_label: d.discount_label ?? "",
       budget_max: d.budget_max != null ? String(d.budget_max) : "",
     });
+    setDealStart(toLocal(d.starts_at));
+    setDealEnd(toLocal(d.ends_at));
   };
 
   return (
@@ -556,7 +580,7 @@ function MerchantDashboardPage() {
                 fri: t.dayFri,
                 sat: t.daySat,
               }[d];
-              const h = hours[d] ?? { on: false, open: "09:00", close: "18:00" };
+              const h = hours[d] ?? { on: false, open: "09:00", close: "22:00" };
               return (
                 <div key={d} className="flex flex-wrap items-center gap-2 text-sm">
                   <label className="flex w-28 items-center gap-2">
@@ -663,63 +687,34 @@ function MerchantDashboardPage() {
       <section className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-2 text-sm font-semibold">{t.evtManage}</h2>
 
-        {(myEvents.data ?? []).length === 0 ? (
-          <p className="mb-3 text-xs text-muted-foreground">{t.evtMineNone}</p>
-        ) : (
-          <ul className="mb-3 space-y-2 text-sm">
-            {(myEvents.data ?? []).map((e) => (
-              <li
-                key={e.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2"
-              >
-                <span>
-                  <span className="font-medium">{e.title}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {new Date(e.startsAt).toLocaleString()}
-                  </span>
-                </span>
-                <span className="flex shrink-0 gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => startEditEvent(e)}
-                  >
-                    {t.edit}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void removeEvent(e.id)}
-                  >
-                    {t.delete}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
         <div className="space-y-2 border-t border-border pt-3">
           <Input
             placeholder={t.evtName}
             value={evtName}
             onChange={(e) => setEvtName(e.target.value)}
           />
-          <Input
-            type="datetime-local"
-            aria-label={t.evtWhen}
-            value={evtWhen}
-            onChange={(e) => setEvtWhen(e.target.value)}
-          />
-          <Input
-            type="datetime-local"
-            aria-label={t.evtEndWhen}
-            placeholder={t.evtEndWhen}
-            value={evtEnd}
-            onChange={(e) => setEvtEnd(e.target.value)}
-          />
+          <label className="block text-xs text-muted-foreground">
+            {t.evtStartLabel}
+            <Input
+              type="datetime-local"
+              step={60}
+              lang="en-GB"
+              aria-label={t.evtStartLabel}
+              value={evtWhen}
+              onChange={(e) => setEvtWhen(e.target.value)}
+            />
+          </label>
+          <label className="block text-xs text-muted-foreground">
+            {t.evtEndLabel}
+            <Input
+              type="datetime-local"
+              step={60}
+              lang="en-GB"
+              aria-label={t.evtEndLabel}
+              value={evtEnd}
+              onChange={(e) => setEvtEnd(e.target.value)}
+            />
+          </label>
           <select
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             value={evtPlace}
@@ -760,7 +755,7 @@ function MerchantDashboardPage() {
           <div className="flex gap-2">
             <Button
               size="sm"
-              disabled={busy || !evtName.trim() || !evtWhen}
+              disabled={busy || !evtName.trim() || !evtWhen || !evtPlace}
               onClick={() => void addEvent()}
             >
               {editingEventId ? t.save : t.evtAdd}
@@ -772,6 +767,44 @@ function MerchantDashboardPage() {
             ) : null}
           </div>
         </div>
+
+        {(myEvents.data ?? []).length === 0 ? (
+          <p className="mb-3 text-xs text-muted-foreground">{t.evtMineNone}</p>
+        ) : (
+          <ul className="mb-3 space-y-2 text-sm">
+            {(myEvents.data ?? []).map((e) => (
+              <li
+                key={e.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-2"
+              >
+                <span>
+                  <span className="font-medium">{e.title}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {new Date(e.startsAt).toLocaleString()}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => startEditEvent(e)}
+                  >
+                    {t.edit}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => void removeEvent(e.id)}
+                  >
+                    {t.delete}
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {(myPlaces.data ?? []).length > 0 && (
@@ -818,6 +851,30 @@ function MerchantDashboardPage() {
               value={dealForm.budget_max}
               onChange={(e) => setDealForm((f) => ({ ...f, budget_max: e.target.value }))}
             />
+          </div>
+          <div className="mb-2 grid gap-2 sm:grid-cols-2">
+            <label className="block text-xs text-muted-foreground">
+              {t.dealStartLabel}
+              <Input
+                type="datetime-local"
+                step={60}
+                lang="en-GB"
+                aria-label={t.dealStartLabel}
+                value={dealStart}
+                onChange={(e) => setDealStart(e.target.value)}
+              />
+            </label>
+            <label className="block text-xs text-muted-foreground">
+              {t.dealEndLabel}
+              <Input
+                type="datetime-local"
+                step={60}
+                lang="en-GB"
+                aria-label={t.dealEndLabel}
+                value={dealEnd}
+                onChange={(e) => setDealEnd(e.target.value)}
+              />
+            </label>
           </div>
           <Button disabled={busy} onClick={saveDeal}>
             {t.localSaveDeal}

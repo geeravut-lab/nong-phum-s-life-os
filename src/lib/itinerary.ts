@@ -15,6 +15,12 @@ export type Stop = {
   /** Fixed clock time, when the stop is an event rather than a place. */
   startsAt?: string | null;
   address?: string | null;
+  /**
+   * The physical place this stop happens at. An event's own title names what
+   * happens, not where - "แข่งกิน" is not somewhere Maps can find - so the
+   * venue is what gets routed to when there are no coordinates.
+   */
+  venue?: string | null;
 };
 
 const R = 6371; // km
@@ -107,7 +113,9 @@ export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number }
   // last resort and often useless to Maps ("แข่งกิน" is an event name, not a
   // place), so it is only used when there is nothing else.
   const key = (s: Stop) =>
-    s.lat != null && s.lng != null ? `${s.lat},${s.lng}` : s.address?.trim() || s.title;
+    s.lat != null && s.lng != null
+      ? `${s.lat},${s.lng}`
+      : s.address?.trim() || s.venue?.trim() || s.title;
 
   const points = ordered.map(key).filter(Boolean);
   if (points.length === 0) return "https://www.google.com/maps";

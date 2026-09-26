@@ -137,7 +137,10 @@ export const upsertLocalEvent = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid().optional(),
-        placeId: z.string().uuid().nullable().optional(),
+        // Mandatory: an event has to happen somewhere. Without a place there
+        // is no address and no pin, so routing falls back to the event's name
+        // and sends people nowhere.
+        placeId: z.string().uuid(),
         title: z.string().min(1).max(160),
         description: z.string().max(1000).optional(),
         category: z.string().max(40).optional(),
@@ -165,7 +168,7 @@ export const upsertLocalEvent = createServerFn({ method: "POST" })
       lng: null,
       address: null,
     };
-    if (data.placeId) {
+    {
       const { data: place } = await supabaseAdmin
         .from("local_places")
         .select("id, owner_user_id, lat, lng, address, area")
@@ -180,7 +183,7 @@ export const upsertLocalEvent = createServerFn({ method: "POST" })
     }
 
     const fields = {
-      place_id: data.placeId ?? null,
+      place_id: data.placeId,
       title: data.title.trim(),
       description: data.description?.trim() ?? "",
       category: data.category?.trim() || "event",
