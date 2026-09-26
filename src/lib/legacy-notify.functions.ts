@@ -213,6 +213,8 @@ export const updateMemorialExtras = createServerFn({ method: "POST" })
       .object({
         memorialId: z.string().uuid(),
         videoUrl: z.string().url().max(500).optional().or(z.literal("")),
+        /** A file already uploaded to the documents bucket, as its path. */
+        videoPath: z.string().max(500).optional(),
         scheduleText: z.string().max(4000).optional(),
         isPublic: z.boolean().optional(),
       })
@@ -251,7 +253,13 @@ export const updateMemorialExtras = createServerFn({ method: "POST" })
     const { data: row, error: upErr } = await supabaseAdmin
       .from("memorials")
       .update({
-        ...(data.videoUrl !== undefined ? { video_url: data.videoUrl || null } : {}),
+        // A path wins over a link: an upload is the more deliberate act, and
+        // the memorial page tells them apart by the storage: prefix.
+        ...(data.videoPath
+          ? { video_url: `storage:${data.videoPath}` }
+          : data.videoUrl !== undefined
+            ? { video_url: data.videoUrl || null }
+            : {}),
         ...(data.scheduleText !== undefined ? { schedule_text: data.scheduleText } : {}),
         ...(data.isPublic !== undefined ? { is_public: data.isPublic } : {}),
         ...(shareToken ? { share_token: shareToken } : {}),
@@ -273,6 +281,8 @@ export const createWreathPayment = createServerFn({ method: "POST" })
         fromName: z.string().min(1).max(120),
         message: z.string().max(1000).default(""),
         amount: z.number().min(0).max(1_000_000),
+        // A tree planted in the person's name instead of flowers.
+        kind: z.enum(["wreath", "tree"]).default("wreath"),
       })
       .parse(input),
   )
@@ -328,6 +338,8 @@ export const createWreathPaymentPublic = createServerFn({ method: "POST" })
         fromName: z.string().min(1).max(120),
         message: z.string().max(1000).default(""),
         amount: z.number().min(0).max(1_000_000),
+        // A tree planted in the person's name instead of flowers.
+        kind: z.enum(["wreath", "tree"]).default("wreath"),
       })
       .parse(input),
   )
@@ -360,6 +372,7 @@ export const createWreathPaymentPublic = createServerFn({ method: "POST" })
         from_name: data.fromName,
         message: data.message,
         amount,
+        kind: data.kind,
         payment_status: amount > 0 ? "pending" : "none",
         promptpay_id: promptpayId,
       })
@@ -400,4 +413,32 @@ export const markWreathPaid = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+/**
+ * The playable url for a memorial's farewell video.
+ *
+ * Public on purpose - the memorial page is opened by mourners who have the link
+ * and no account - but it takes the share token, not an id, and the memorial has
+ * to be public. An uploaded file is returned as a signed url that expires, so
+ * the video is never left readable by anyone who guesses a bucket path.
+ */
+export const getMemorialVideo = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: mem } = await supabaseAdmin
+      .from("memorials")
+      .select("video_url, is_public")
+      .eq("share_token", data.token)
+      .maybeSingle();
+    if (!mem?.is_public || !mem.video_url) return { url: null, uploaded: false };
+
+    const raw = mem.video_url as string;
+    if (!raw.startsWith("storage:")) return { url: raw, uploaded: false };
+
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("documents")
+      .createSignedUrl(raw.slice("storage:".length), 60 * 60);
+    if (error) return { url: null, uploaded: true };
+    return { url: signed?.signedUrl ?? null, uploaded: true };
   });

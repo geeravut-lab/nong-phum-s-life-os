@@ -444,6 +444,44 @@ function LegacyAfterPage() {
                     {t.r2VideoSave}
                   </Button>
                 </div>
+                {/* A family that filmed something on a phone has nowhere to put
+                    it if the only field is a link, and asking them to publish it
+                    on YouTube first is not reasonable. The file goes straight
+                    from the browser into the bucket - a server function would
+                    hit the request body limit long before a real video does. */}
+                <Input
+                  type="file"
+                  accept="video/*"
+                  className="text-xs"
+                  disabled={busy}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 200 * 1024 * 1024) {
+                      toast.error(t.r2VideoTooBig);
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      const { data: u } = await supabase.auth.getUser();
+                      const uid = u.user?.id;
+                      if (!uid) throw new Error("no session");
+                      const path = `${uid}/memorial/${m.id}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+                      const { error: upErr } = await supabase.storage
+                        .from("documents")
+                        .upload(path, file, { contentType: file.type || "video/mp4" });
+                      if (upErr) throw upErr;
+                      await runMemExtra({ data: { memorialId: m.id, videoPath: path } });
+                      toast.success(t.r2VideoUploaded);
+                      void qc.invalidateQueries({ queryKey: ["memorials"] });
+                    } catch (err) {
+                      toast.error(errorText(err, t));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                />
+                <p className="text-[10px] text-muted-foreground">{t.r2VideoOrLink}</p>
               </div>
             </article>
           ))

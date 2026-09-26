@@ -40,6 +40,7 @@ import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
 import { Route as AuthenticatedAdminUsageRouteImport } from './routes/_authenticated/admin_.usage'
+import { Route as AuthenticatedFamilyTimelineRouteImport } from './routes/_authenticated/family_.timeline'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedLegacyInviteTokenRouteImport } from './routes/_authenticated/legacy_.invite.$token'
@@ -205,6 +206,12 @@ const AuthenticatedAdminUsageRoute = AuthenticatedAdminUsageRouteImport.update({
   path: '/admin/usage',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFamilyTimelineRoute =
+  AuthenticatedFamilyTimelineRouteImport.update({
+    id: '/family_/timeline',
+    path: '/family/timeline',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLegacyAfterRoute =
   AuthenticatedLegacyAfterRouteImport.update({
     id: '/legacy_/after',
@@ -255,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/usage': typeof AuthenticatedAdminUsageRoute
+  '/family/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -290,6 +298,7 @@ export interface FileRoutesByTo {
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/usage': typeof AuthenticatedAdminUsageRoute
+  '/family/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -327,6 +336,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/admin_/usage': typeof AuthenticatedAdminUsageRoute
+  '/_authenticated/family_/timeline': typeof AuthenticatedFamilyTimelineRoute
   '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
   '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
   '/_authenticated/legacy_/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/admin/safety'
     | '/admin/support'
     | '/admin/usage'
+    | '/family/timeline'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/admin/safety'
     | '/admin/support'
     | '/admin/usage'
+    | '/family/timeline'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -435,6 +447,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/safety'
     | '/_authenticated/admin_/support'
     | '/_authenticated/admin_/usage'
+    | '/_authenticated/family_/timeline'
     | '/_authenticated/legacy_/after'
     | '/_authenticated/local_/merchant'
     | '/_authenticated/legacy_/invite/$token'
@@ -669,6 +682,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/family_/timeline': {
+      id: '/_authenticated/family_/timeline'
+      path: '/family/timeline'
+      fullPath: '/family/timeline'
+      preLoaderRoute: typeof AuthenticatedFamilyTimelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/legacy_/after': {
       id: '/_authenticated/legacy_/after'
       path: '/legacy/after'
@@ -718,6 +738,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminUsageRoute: typeof AuthenticatedAdminUsageRoute
+  AuthenticatedFamilyTimelineRoute: typeof AuthenticatedFamilyTimelineRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
   AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
   AuthenticatedLegacyInviteTokenRoute: typeof AuthenticatedLegacyInviteTokenRoute
@@ -748,6 +769,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminUsageRoute: AuthenticatedAdminUsageRoute,
+  AuthenticatedFamilyTimelineRoute: AuthenticatedFamilyTimelineRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
   AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
   AuthenticatedLegacyInviteTokenRoute: AuthenticatedLegacyInviteTokenRoute,

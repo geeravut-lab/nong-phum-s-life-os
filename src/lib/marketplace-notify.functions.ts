@@ -57,7 +57,9 @@ export const notifyJobChat = createServerFn({ method: "POST" })
 export const notifyJobOffer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ jobId: z.string().uuid(), event: z.enum(["offered", "accepted"]) }).parse(input),
+    z
+      .object({ jobId: z.string().uuid(), event: z.enum(["offered", "accepted", "withdrawn"]) })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -77,6 +79,23 @@ export const notifyJobOffer = createServerFn({ method: "POST" })
         {
           kind: "job_offer",
           title: "มีข้อเสนอใหม่",
+          body: (job.title as string) ?? "",
+          href: "/helpme",
+          refTable: "jobs",
+          refId: data.jobId,
+        },
+        context.userId,
+      );
+      return { sent };
+    }
+
+    if (data.event === "withdrawn") {
+      // A quote taken back: the person who posted the job was waiting on it.
+      const sent = await notifyUsers(
+        [job.user_id as string],
+        {
+          kind: "job_offer",
+          title: "ข้อเสนอถูกถอน",
           body: (job.title as string) ?? "",
           href: "/helpme",
           refTable: "jobs",

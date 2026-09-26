@@ -11,7 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { createWreathPaymentPublic, markWreathPaid } from "@/lib/legacy-notify.functions";
+import {
+  createWreathPaymentPublic,
+  getMemorialVideo,
+  markWreathPaid,
+} from "@/lib/legacy-notify.functions";
 
 export const Route = createFileRoute("/memorial/$token")({
   component: MemorialPublicPage,
@@ -23,10 +27,14 @@ function MemorialPublicPage() {
   const qc = useQueryClient();
   const runWreath = useServerFn(createWreathPaymentPublic);
   const runMarkPaid = useServerFn(markWreathPaid);
+  const runVideo = useServerFn(getMemorialVideo);
 
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [wreathAmt, setWreathAmt] = useState("");
+  // A wreath or a tree planted in their name - the same transaction, a
+  // different meaning, and the eco option the spec asks for.
+  const [tributeKind, setTributeKind] = useState<"wreath" | "tree">("wreath");
   const [busy, setBusy] = useState(false);
   const [payInfo, setPayInfo] = useState<{
     wreathId: string;
@@ -61,6 +69,12 @@ function MemorialPublicPage() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  const videoQ = useQuery({
+    queryKey: ["memorial-video", token],
+    queryFn: () =>
+      runVideo({ data: { token } }) as Promise<{ url: string | null; uploaded: boolean }>,
   });
 
   const wreathQ = useQuery({
@@ -106,6 +120,7 @@ function MemorialPublicPage() {
           fromName: name.trim(),
           message: body.trim(),
           amount: Number.isFinite(amount) ? amount : 0,
+          kind: tributeKind,
         },
       });
       toast.success(t.p6WreathSent);
@@ -145,7 +160,10 @@ function MemorialPublicPage() {
 
   const m = memQ.data;
   const scheduleText = (m as { schedule_text?: string }).schedule_text;
-  const videoUrl = (m as { video_url?: string | null }).video_url;
+  // An uploaded file is stored as storage:<path> and has to be signed before it
+  // can be played; a pasted link is already playable.
+  const videoUrl = videoQ.data?.url ?? null;
+  const videoUploaded = videoQ.data?.uploaded ?? false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -163,7 +181,9 @@ function MemorialPublicPage() {
         {videoUrl ? (
           <div className="mt-6 overflow-hidden rounded-xl border border-border">
             <p className="bg-muted/50 px-3 py-1.5 text-xs font-medium">{t.r2Video}</p>
-            {/youtube\.com|youtu\.be|vimeo\.com/.test(videoUrl) ? (
+            {videoUploaded ? (
+              <video controls preload="metadata" className="w-full bg-black" src={videoUrl} />
+            ) : /youtube\.com|youtu\.be|vimeo\.com/.test(videoUrl) ? (
               <div className="aspect-video w-full bg-black">
                 <iframe
                   title="farewell"
@@ -214,7 +234,14 @@ function MemorialPublicPage() {
           {(wreathQ.data ?? []).map((w) => (
             <article key={w.id} className="rounded-xl border border-border p-3 text-sm">
               <div className="flex justify-between gap-2">
-                <span className="font-medium">{w.from_name}</span>
+                <span className="font-medium">
+                  {w.from_name}
+                  {(w as { kind?: string }).kind === "tree" ? (
+                    <Badge variant="outline" className="ml-2 text-[10px]">
+                      {t.ecoTreeBadge}
+                    </Badge>
+                  ) : null}
+                </span>
                 {Number(w.amount) > 0 ? (
                   <Badge variant={w.payment_status === "paid" ? "default" : "secondary"}>
                     ฿{Number(w.amount).toLocaleString()} · {w.payment_status}
@@ -246,6 +273,28 @@ function MemorialPublicPage() {
             value={wreathAmt}
             onChange={(e) => setWreathAmt(e.target.value)}
           />
+          <div className="space-y-1">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["wreath", t.ecoKindWreath],
+                  ["tree", t.ecoKindTree],
+                ] as const
+              ).map(([kind, label]) => (
+                <Button
+                  key={kind}
+                  size="sm"
+                  variant={tributeKind === kind ? "default" : "outline"}
+                  onClick={() => setTributeKind(kind)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {tributeKind === "tree" ? t.ecoNote : ""}
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button disabled={busy || !name.trim() || !body.trim()} onClick={postMessage}>
               {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}

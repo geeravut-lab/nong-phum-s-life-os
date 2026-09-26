@@ -485,6 +485,7 @@ export type Database = {
       };
       documents: {
         Row: {
+          search_text: string | null;
           amount: number | null;
           category: string;
           counterparty: string | null;
@@ -2143,6 +2144,8 @@ export type Database = {
       };
       digital_wreaths: {
         Row: {
+          kind: string;
+          tree_partner: string | null;
           amount: number;
           created_at: string;
           from_name: string;
@@ -2154,6 +2157,8 @@ export type Database = {
           promptpay_id: string | null;
         };
         Insert: {
+          kind?: string;
+          tree_partner?: string | null;
           amount?: number;
           created_at?: string;
           from_name: string;
@@ -2165,6 +2170,8 @@ export type Database = {
           promptpay_id?: string | null;
         };
         Update: {
+          kind?: string;
+          tree_partner?: string | null;
           amount?: number;
           created_at?: string;
           from_name?: string;
