@@ -6,6 +6,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { Copy, Loader2, LogOut, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { updateAgendaItem } from "@/lib/agenda.functions";
+import {
+  deleteFamilyRoutine,
+  listFamilyRoutines,
+  logRoutine,
+  upsertFamilyRoutine,
+  type RoutineRow,
+} from "@/lib/routines.functions";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -42,6 +49,10 @@ function FamilyPage() {
   const runCreateEvent = useServerFn(createFamilyEvent);
   const runDeleteEvent = useServerFn(deleteFamilyEvent);
   const runUpdateAgenda = useServerFn(updateAgendaItem);
+  const runListRoutines = useServerFn(listFamilyRoutines);
+  const runUpsertRoutine = useServerFn(upsertFamilyRoutine);
+  const runDeleteRoutine = useServerFn(deleteFamilyRoutine);
+  const runLogRoutine = useServerFn(logRoutine);
   const runPostCheckin = useServerFn(postFamilyCheckin);
   const runListCheckins = useServerFn(listFamilyCheckins);
   const runAssign = useServerFn(assignFamilyTask);
@@ -57,6 +68,10 @@ function FamilyPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [routineName, setRoutineName] = useState("");
+  const [routineSubject, setRoutineSubject] = useState("");
+  const [routineInterval, setRoutineInterval] = useState("1");
+  const [routineGrace, setRoutineGrace] = useState("2");
   const [editEvent, setEditEvent] = useState<{
     id: string;
     title: string;
@@ -270,6 +285,70 @@ function FamilyPage() {
       setEditEvent(null);
       void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
       void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const routinesQ = useQuery({
+    enabled: !!familyId,
+    queryKey: ["family-routines", familyId],
+    queryFn: async () => {
+      const res = (await runListRoutines({ data: { familyId: familyId! } })) as {
+        routines: RoutineRow[];
+      };
+      return res.routines ?? [];
+    },
+  });
+
+  const refreshRoutines = () =>
+    void qc.invalidateQueries({ queryKey: ["family-routines", familyId] });
+
+  const addRoutine = async () => {
+    if (!familyId || !routineName.trim() || !routineSubject) return;
+    setBusy(true);
+    try {
+      await runUpsertRoutine({
+        data: {
+          familyId,
+          subjectUserId: routineSubject,
+          title: routineName.trim(),
+          intervalDays: Math.max(1, Math.min(90, Number(routineInterval) || 1)),
+          graceDays: Math.max(0, Math.min(30, Number(routineGrace) || 0)),
+        },
+      });
+      setRoutineName("");
+      toast.success(t.saved);
+      refreshRoutines();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logToday = async (routineId: string) => {
+    setBusy(true);
+    try {
+      await runLogRoutine({ data: { routineId } });
+      toast.success(t.routineLogged);
+      refreshRoutines();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeRoutine = async (id: string) => {
+    if (!window.confirm(t.routineDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDeleteRoutine({ data: { id } });
+      toast.success(t.saved);
+      refreshRoutines();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t.error);
     } finally {
@@ -512,6 +591,101 @@ function FamilyPage() {
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Family Radar: routine tracking + deterministic change detection */}
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="text-sm font-semibold">{t.routineTitle}</h2>
+            <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.routineSub}</p>
+
+            {(routinesQ.data ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t.routineEmpty}</p>
+            ) : (
+              <ul className="mb-3 space-y-2 text-sm">
+                {(routinesQ.data ?? []).map((r) => (
+                  <li key={r.id} className="rounded-lg border border-border p-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{r.title}</span>
+                      {r.overdue ? <Badge variant="destructive">{t.routineOverdue}</Badge> : null}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {labelFor(r.subjectUserId)} ·{" "}
+                      {r.lastLoggedOn
+                        ? `${t.routineLastLogged}: ${r.daysSince === 0 ? t.routineLogged : `${r.daysSince} ${t.routineDaysAgo}`}`
+                        : t.routineNever}
+                    </p>
+                    <div className="mt-1.5 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || r.daysSince === 0}
+                        onClick={() => void logToday(r.id)}
+                      >
+                        {r.daysSince === 0 ? t.routineLogged : t.routineLogToday}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        aria-label={t.delete}
+                        title={t.delete}
+                        onClick={() => void removeRoutine(r.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="space-y-2 border-t border-border pt-3">
+              <Input
+                placeholder={t.routineName}
+                value={routineName}
+                onChange={(e) => setRoutineName(e.target.value)}
+              />
+              <select
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                value={routineSubject}
+                onChange={(e) => setRoutineSubject(e.target.value)}
+                aria-label={t.routineSubject}
+              >
+                <option value="">{t.routineSubject}</option>
+                {(members ?? []).map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {labelFor(m.user_id, m.display_name)}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={routineInterval}
+                  onChange={(e) => setRoutineInterval(e.target.value)}
+                  aria-label={t.routineInterval}
+                  placeholder={t.routineInterval}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={30}
+                  value={routineGrace}
+                  onChange={(e) => setRoutineGrace(e.target.value)}
+                  aria-label={t.routineGrace}
+                  placeholder={t.routineGrace}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={busy || !routineName.trim() || !routineSubject}
+                onClick={() => void addRoutine()}
+              >
+                {t.routineAdd}
+              </Button>
+            </div>
           </section>
 
           {/* R4 Care check-in */}

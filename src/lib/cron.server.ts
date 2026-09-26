@@ -106,6 +106,7 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
       ["reminders_rolled_over", () => rolloverStale(now, overBudget)],
       ["reminders_notified", () => notifyDue(now, overBudget, summary, line)],
       ["digest_lookahead_claimed", () => claimForDigest(line, overBudget)],
+      ["routine_changes_alerted", () => detectRoutineChanges(now, overBudget)],
       ["line_sent", () => deliverQueued(line, overBudget)],
       [
         "ai_events_deleted",
@@ -355,6 +356,93 @@ async function appendToDigest(
  * claim, so notifyDue (which runs right after) tells the user again. The
  * candidate query over-selects by period length; the exact check is in JS.
  */
+/**
+ * Family Radar change detection.
+ *
+ * Deterministic on purpose: a routine is "changed" when the days since its last
+ * log exceed interval_days + grace_days. Nothing is inferred and nothing is
+ * diagnosed - the notification states that the pattern differs from usual and
+ * suggests getting in touch, which is the wording the blueprint asks for.
+ *
+ * alerted_at is the idempotency guard: set when an alert goes out, cleared by
+ * the next log, so one gap produces one alert rather than one every five
+ * minutes.
+ */
+async function detectRoutineChanges(now: Date, overBudget: () => boolean): Promise<number> {
+  const { data: routines, error } = await supabaseAdmin
+    .from("family_routines")
+    .select("id, family_id, subject_user_id, title, interval_days, grace_days")
+    .eq("is_active", true)
+    .is("alerted_at", null)
+    .limit(200);
+  if (error) throw new Error(`family_routines: ${error.message}`);
+  if (!routines || routines.length === 0) return 0;
+
+  const todayMs = Date.parse(todayInBangkok(now) + "T00:00:00Z");
+  let alerted = 0;
+
+  for (const r of routines) {
+    if (overBudget()) break;
+
+    const { data: last } = await supabaseAdmin
+      .from("routine_logs")
+      .select("logged_on")
+      .eq("routine_id", r.id as string)
+      .order("logged_on", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Never logged yet: nothing to compare against, so there is no pattern to
+    // have changed. Waiting for a first log avoids alerting on setup.
+    if (!last?.logged_on) continue;
+
+    const gapDays = Math.floor(
+      (todayMs - Date.parse((last.logged_on as string) + "T00:00:00Z")) / DAY,
+    );
+    const limit = (r.interval_days as number) + (r.grace_days as number);
+    if (gapDays <= limit) continue;
+
+    // Claim first: if another invocation already alerted, this update matches
+    // no row and we skip, so the notification is written at most once.
+    const { data: claimed } = await supabaseAdmin
+      .from("family_routines")
+      .update({ alerted_at: new Date(now).toISOString() })
+      .eq("id", r.id as string)
+      .is("alerted_at", null)
+      .select("id");
+    if (!claimed || claimed.length === 0) continue;
+
+    const { data: members } = await supabaseAdmin
+      .from("family_members")
+      .select("user_id, display_name")
+      .eq("family_id", r.family_id as string);
+
+    const subject =
+      (members ?? []).find((m) => m.user_id === r.subject_user_id)?.display_name || "สมาชิก";
+
+    const rows = (members ?? [])
+      .map((m) => m.user_id as string)
+      // The person being tracked is not told their own pattern changed.
+      .filter((uid) => uid !== r.subject_user_id)
+      .map((uid) => ({
+        user_id: uid,
+        kind: "family_routine",
+        title: "กิจวัตรเปลี่ยนจากปกติ",
+        body: `ข้อมูล "${r.title}" ของ${subject} เปลี่ยนจากรูปแบบปกติ (${gapDays} วันที่ไม่มีบันทึก) แนะนำให้ลองติดต่อสอบถาม`,
+        href: "/family",
+        ref_table: "family_routines",
+        ref_id: r.id as string,
+      }));
+
+    if (rows.length > 0) {
+      await supabaseAdmin.from("app_notifications").insert(rows);
+      alerted += rows.length;
+    }
+  }
+
+  return alerted;
+}
+
 async function rolloverStale(now: Date, overBudget: () => boolean): Promise<number> {
   const { data: rows, error } = await supabaseAdmin
     .from("reminders")

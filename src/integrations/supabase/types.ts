@@ -796,6 +796,78 @@ export type Database = {
           },
         ];
       };
+      family_routines: {
+        Row: {
+          alerted_at: string | null;
+          created_at: string;
+          created_by: string;
+          family_id: string;
+          grace_days: number;
+          id: string;
+          interval_days: number;
+          is_active: boolean;
+          note: string;
+          subject_user_id: string;
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          alerted_at?: string | null;
+          created_at?: string;
+          created_by: string;
+          family_id: string;
+          grace_days?: number;
+          id?: string;
+          interval_days?: number;
+          is_active?: boolean;
+          note?: string;
+          subject_user_id: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          alerted_at?: string | null;
+          created_at?: string;
+          created_by?: string;
+          family_id?: string;
+          grace_days?: number;
+          id?: string;
+          interval_days?: number;
+          is_active?: boolean;
+          note?: string;
+          subject_user_id?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      routine_logs: {
+        Row: {
+          created_at: string;
+          id: string;
+          logged_by: string;
+          logged_on: string;
+          note: string;
+          routine_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          logged_by: string;
+          logged_on?: string;
+          note?: string;
+          routine_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          logged_by?: string;
+          logged_on?: string;
+          note?: string;
+          routine_id?: string;
+        };
+        Relationships: [];
+      };
       helper_profiles: {
         Row: {
           area: string | null;
