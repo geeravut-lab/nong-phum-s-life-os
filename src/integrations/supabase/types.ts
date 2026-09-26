@@ -1763,6 +1763,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      legacy_will: {
+        Row: {
+          created_at: string;
+          document_id: string | null;
+          executor_contact: string;
+          executor_name: string;
+          has_will: boolean;
+          lawyer_contact: string;
+          lawyer_name: string;
+          location_hint: string;
+          made_on: string | null;
+          notes: string;
+          updated_at: string;
+          user_id: string;
+          will_kind: string;
+        };
+        Insert: {
+          created_at?: string;
+          document_id?: string | null;
+          executor_contact?: string;
+          executor_name?: string;
+          has_will?: boolean;
+          lawyer_contact?: string;
+          lawyer_name?: string;
+          location_hint?: string;
+          made_on?: string | null;
+          notes?: string;
+          updated_at?: string;
+          user_id: string;
+          will_kind?: string;
+        };
+        Update: {
+          created_at?: string;
+          document_id?: string | null;
+          executor_contact?: string;
+          executor_name?: string;
+          has_will?: boolean;
+          lawyer_contact?: string;
+          lawyer_name?: string;
+          location_hint?: string;
+          made_on?: string | null;
+          notes?: string;
+          updated_at?: string;
+          user_id?: string;
+          will_kind?: string;
+        };
+        Relationships: [];
+      };
       legacy_wishes: {
         Row: {
           body: string;

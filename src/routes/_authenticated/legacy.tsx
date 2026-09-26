@@ -35,6 +35,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
+import { getMyWill, saveMyWill, type WillRecord } from "@/lib/legacy-will.functions";
 import { legacyAssist } from "@/lib/legacy.functions";
 import { applyLegacyImports, suggestLegacyFromLifeOs } from "@/lib/docs-legacy.functions";
 import { createVerifierInvite, ensureMyPlanCode } from "@/lib/death.functions";
@@ -69,6 +70,43 @@ function LegacyPage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runAssist = useServerFn(legacyAssist);
+  const runGetWill = useServerFn(getMyWill);
+  const runSaveWill = useServerFn(saveMyWill);
+  const willQ = useQuery({
+    queryKey: ["legacy-will"],
+    queryFn: async () => ((await runGetWill()) as { will: WillRecord }).will,
+  });
+  const [will, setWill] = useState<WillRecord | null>(null);
+  const w = will ?? willQ.data ?? null;
+  const setW = (patch: Partial<WillRecord>) =>
+    setWill({ ...(w ?? ({} as WillRecord)), ...patch } as WillRecord);
+
+  const saveWill = async () => {
+    if (!w) return;
+    setBusy(true);
+    try {
+      await runSaveWill({
+        data: {
+          hasWill: w.hasWill,
+          willKind: w.willKind,
+          madeOn: w.madeOn || null,
+          locationHint: w.locationHint,
+          executorName: w.executorName,
+          executorContact: w.executorContact,
+          lawyerName: w.lawyerName,
+          lawyerContact: w.lawyerContact,
+          notes: w.notes,
+        },
+      });
+      toast.success(t.saved);
+      void qc.invalidateQueries({ queryKey: ["legacy-will"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const runSuggest = useServerFn(suggestLegacyFromLifeOs);
   const runApplyImport = useServerFn(applyLegacyImports);
   const [importKeys, setImportKeys] = useState<Set<string>>(new Set());
@@ -1172,6 +1210,80 @@ function LegacyPage() {
           )}
         </section>
       )}
+      {/* 6. Will & estate - location of the real document, never the will itself */}
+      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <h2 className="text-sm font-semibold">{t.willTitle}</h2>
+        <p className="mt-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+          {t.willDisclaimer}
+        </p>
+        <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.willPrivate}</p>
+
+        <label className="mb-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={!!w?.hasWill}
+            onChange={(e) => setW({ hasWill: e.target.checked })}
+          />
+          {t.willHas}
+        </label>
+
+        <div className="space-y-2">
+          <select
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            value={w?.willKind ?? "other"}
+            onChange={(e) => setW({ willKind: e.target.value as WillRecord["willKind"] })}
+            aria-label={t.willKind}
+          >
+            <option value="handwritten">{t.willKindHandwritten}</option>
+            <option value="amphoe">{t.willKindAmphoe}</option>
+            <option value="lawyer">{t.willKindLawyer}</option>
+            <option value="other">{t.willKindOther}</option>
+          </select>
+          <Input
+            type="date"
+            aria-label={t.willMadeOn}
+            value={w?.madeOn ?? ""}
+            onChange={(e) => setW({ madeOn: e.target.value })}
+          />
+          <Textarea
+            placeholder={t.willLocation}
+            value={w?.locationHint ?? ""}
+            onChange={(e) => setW({ locationHint: e.target.value })}
+          />
+          <div className="flex gap-2">
+            <Input
+              placeholder={t.willExecutor}
+              value={w?.executorName ?? ""}
+              onChange={(e) => setW({ executorName: e.target.value })}
+            />
+            <Input
+              placeholder={t.willExecutorContact}
+              value={w?.executorContact ?? ""}
+              onChange={(e) => setW({ executorContact: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder={t.willLawyer}
+              value={w?.lawyerName ?? ""}
+              onChange={(e) => setW({ lawyerName: e.target.value })}
+            />
+            <Input
+              placeholder={t.willLawyerContact}
+              value={w?.lawyerContact ?? ""}
+              onChange={(e) => setW({ lawyerContact: e.target.value })}
+            />
+          </div>
+          <Textarea
+            placeholder={t.willNotes}
+            value={w?.notes ?? ""}
+            onChange={(e) => setW({ notes: e.target.value })}
+          />
+          <Button size="sm" disabled={busy} onClick={() => void saveWill()}>
+            {t.save}
+          </Button>
+        </div>
+      </section>
     </AppShell>
   );
 }
