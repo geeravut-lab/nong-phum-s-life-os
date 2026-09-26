@@ -10,10 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import {
-  createWreathPaymentPublic,
-  markWreathPaid,
-} from "@/lib/legacy-notify.functions";
+import { createWreathPaymentPublic, markWreathPaid } from "@/lib/legacy-notify.functions";
 
 export const Route = createFileRoute("/memorial/$token")({
   component: MemorialPublicPage,
@@ -197,9 +194,7 @@ function MemorialPublicPage() {
         {scheduleText ? (
           <section className="mt-6 rounded-xl border border-border bg-card p-4">
             <h2 className="text-sm font-semibold">{t.r2Schedule}</h2>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-              {scheduleText}
-            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{scheduleText}</p>
           </section>
         ) : null}
 
@@ -225,9 +220,7 @@ function MemorialPublicPage() {
                   </Badge>
                 ) : null}
               </div>
-              {w.message ? (
-                <p className="mt-1 text-muted-foreground">{w.message}</p>
-              ) : null}
+              {w.message ? <p className="mt-1 text-muted-foreground">{w.message}</p> : null}
             </article>
           ))}
         </section>
@@ -257,11 +250,7 @@ function MemorialPublicPage() {
               {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               {t.p6SendMessage}
             </Button>
-            <Button
-              variant="secondary"
-              disabled={busy || !name.trim()}
-              onClick={postWreath}
-            >
+            <Button variant="secondary" disabled={busy || !name.trim()} onClick={postWreath}>
               {t.p6SendWreath}
             </Button>
           </div>

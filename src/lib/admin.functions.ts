@@ -61,7 +61,11 @@ export const getAiConfig = createServerFn({ method: "GET" })
     let updatedByLabel: string | null = null;
     if (settings?.updated_by) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: p } = await supabaseAdmin.from("profiles").select("display_name").eq("id", settings.updated_by).maybeSingle();
+      const { data: p } = await supabaseAdmin
+        .from("profiles")
+        .select("display_name")
+        .eq("id", settings.updated_by)
+        .maybeSingle();
       const { data: u } = await supabaseAdmin.auth.admin.getUserById(settings.updated_by);
       updatedByLabel = p?.display_name ?? u.user?.email ?? settings.updated_by;
     }
@@ -111,7 +115,9 @@ export const updateAiSettings = createServerFn({ method: "POST" })
     // Drop empty overrides so "cleared in the UI" means "use the default in code".
     const overrides: ModelOverrides = {};
     for (const [provider, tasks] of Object.entries(data.model_overrides)) {
-      const kept = Object.fromEntries(Object.entries(tasks ?? {}).filter(([, v]) => v && v.trim() !== ""));
+      const kept = Object.fromEntries(
+        Object.entries(tasks ?? {}).filter(([, v]) => v && v.trim() !== ""),
+      );
       if (Object.keys(kept).length > 0) overrides[provider as ProviderId] = kept;
     }
 
@@ -142,13 +148,23 @@ export const updateAiSettings = createServerFn({ method: "POST" })
 export const testAiModel = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) =>
-    z.object({ provider: ProviderIdSchema, task: TaskSchema, modelId: z.string().trim().min(1).max(200) }).parse(input),
+    z
+      .object({
+        provider: ProviderIdSchema,
+        task: TaskSchema,
+        modelId: z.string().trim().min(1).max(200),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const ai = await import("./ai-provider.server");
     const { generateText } = await import("ai");
     if (!ai.availableProviders().includes(data.provider)) {
-      return { ok: false as const, ms: 0, error: `${ai.providerEnvKey(data.provider)} is not set in the environment.` };
+      return {
+        ok: false as const,
+        ms: 0,
+        error: `${ai.providerEnvKey(data.provider)} is not set in the environment.`,
+      };
     }
     const started = Date.now();
     try {
@@ -181,7 +197,11 @@ export const testAiModel = createServerFn({ method: "POST" })
     } catch (err) {
       const status = (err as { statusCode?: number } | null)?.statusCode;
       const message = err instanceof Error ? err.message : String(err);
-      return { ok: false as const, ms: Date.now() - started, error: `${status ? status + " " : ""}${message.slice(0, 300)}` };
+      return {
+        ok: false as const,
+        ms: Date.now() - started,
+        error: `${status ? status + " " : ""}${message.slice(0, 300)}`,
+      };
     }
   });
 
@@ -211,7 +231,12 @@ export const getNotificationConfig = createServerFn({ method: "GET" })
       sentThisMonth(now),
       token ? getQuota(token) : Promise.resolve(null),
       context.supabase.from("line_links").select("is_friend", { count: "exact", head: true }),
-      context.supabase.from("cron_ticks").select("tick, finished_at, summary, error").order("tick", { ascending: false }).limit(1).maybeSingle(),
+      context.supabase
+        .from("cron_ticks")
+        .select("tick, finished_at, summary, error")
+        .order("tick", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
     const { count: friends } = await context.supabase
       .from("line_links")
@@ -234,7 +259,8 @@ export const updateNotificationSettings = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) => NotificationSettingsInput.parse(input))
   .handler(async ({ data, context }) => {
-    if (data.line_digest_reserve > data.line_monthly_cap) throw new Error("reserve cannot exceed the cap");
+    if (data.line_digest_reserve > data.line_monthly_cap)
+      throw new Error("reserve cannot exceed the cap");
     // Under the caller's JWT: the has_role policy on the table is the second gate.
     const { error } = await context.supabase
       .from("notification_settings")

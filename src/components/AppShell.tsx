@@ -1,6 +1,8 @@
 import { toast } from "sonner";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { CalendarDays, FileText,
+import {
+  CalendarDays,
+  FileText,
   HandHelping,
   Heart,
   MapPinned,
@@ -25,10 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import {
-  markNotificationsReadForPath,
-  useInboxBadges,
-} from "@/hooks/useInboxBadges";
+import { markNotificationsReadForPath, useInboxBadges } from "@/hooks/useInboxBadges";
 
 export function PhumMark({ className = "size-9" }: { className?: string }) {
   return (
@@ -78,7 +77,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         ? "Premium"
         : "Free";
 
-
   const [deferredPrompt, setDeferredPrompt] = useState<{
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: string }>;
@@ -91,10 +89,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     setIsStandalone(standalone);
     // Capture any prompt stored early by root bootstrap
-    const early = (window as unknown as { __pwaDeferred?: {
-      prompt: () => Promise<void>;
-      userChoice: Promise<{ outcome: string }>;
-    } }).__pwaDeferred;
+    const early = (
+      window as unknown as {
+        __pwaDeferred?: {
+          prompt: () => Promise<void>;
+          userChoice: Promise<{ outcome: string }>;
+        };
+      }
+    ).__pwaDeferred;
     if (early) setDeferredPrompt(early);
     const handler = (e: Event) => {
       e.preventDefault();
@@ -129,25 +131,34 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
-
-
   const adminPending = useQuery({
     queryKey: ["admin-pending-total"],
     enabled: !!isAdmin,
     refetchInterval: 15000,
     queryFn: async () => {
       const [d, s, p, prem] = await Promise.all([
-        supabase.from("donations").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("safety_reports").select("id", { count: "exact", head: true }).in("status", ["open", "reviewing"]),
-        supabase.from("job_payments").select("id", { count: "exact", head: true }).eq("payment_status", "held"),
-        supabase.from("premium_payments").select("id", { count: "exact", head: true }).eq("payment_status", "pending"),
+        supabase
+          .from("donations")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("safety_reports")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["open", "reviewing"]),
+        supabase
+          .from("job_payments")
+          .select("id", { count: "exact", head: true })
+          .eq("payment_status", "held"),
+        supabase
+          .from("premium_payments")
+          .select("id", { count: "exact", head: true })
+          .eq("payment_status", "pending"),
       ]);
       return (d.count ?? 0) + (s.count ?? 0) + (p.count ?? 0) + (prem.count ?? 0);
     },
   });
   const adminPendingTotal = adminPending.data ?? 0;
 
-  
   const qc = useQueryClient();
 
   // Re-check admin role after login / user switch (no full page refresh needed)
@@ -165,7 +176,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const activeNavBase = useMemo(() => {
     if (!pathname) return "";
-    if (pathname.startsWith("/helpme") || pathname.startsWith("/helper-dashboard")) return "/helpme";
+    if (pathname.startsWith("/helpme") || pathname.startsWith("/helper-dashboard"))
+      return "/helpme";
     if (pathname.startsWith("/local")) return "/local";
     if (pathname.startsWith("/admin")) return "/admin";
     return pathname;
@@ -262,10 +274,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <ShieldEllipsis className="size-4 shrink-0" />
                 <NavDot show={hasBadge("/admin")} />
               </span>
-              <span className="truncate">{t.navAdmin}
+              <span className="truncate">
+                {t.navAdmin}
                 {adminPendingTotal > 0 ? (
                   <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-destructive" />
-                ) : null}</span>
+                ) : null}
+              </span>
             </Link>
           ) : null}
           <Link to="/settings" className={linkClass} activeProps={{ className: activeClass }}>
@@ -366,10 +380,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <ShieldEllipsis className="size-4 shrink-0" />
                     <NavDot show={hasBadge("/admin")} />
                   </span>
-                  <span className="truncate">{t.navAdmin}
-                {adminPendingTotal > 0 ? (
-                  <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-destructive" />
-                ) : null}</span>
+                  <span className="truncate">
+                    {t.navAdmin}
+                    {adminPendingTotal > 0 ? (
+                      <span className="ml-1 inline-block size-2 animate-pulse rounded-full bg-destructive" />
+                    ) : null}
+                  </span>
                 </Link>
               ) : null}
               <Link

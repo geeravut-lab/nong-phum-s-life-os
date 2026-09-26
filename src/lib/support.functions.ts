@@ -60,7 +60,11 @@ export const createDonation = createServerFn({ method: "POST" })
     let email: string | null = null;
     if (!data.anonymous) {
       const [{ data: profile }, { data: auth }] = await Promise.all([
-        context.supabase.from("profiles").select("display_name").eq("id", context.userId).maybeSingle(),
+        context.supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("id", context.userId)
+          .maybeSingle(),
         context.supabase.auth.getUser(),
       ]);
       display_name = profile?.display_name || auth.user?.email || context.userId.slice(0, 8);
@@ -96,7 +100,11 @@ export const settleDonation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("donations")
-      .update({ status: data.status, confirmed_at: new Date().toISOString(), confirmed_by: context.userId })
+      .update({
+        status: data.status,
+        confirmed_at: new Date().toISOString(),
+        confirmed_by: context.userId,
+      })
       .eq("id", data.id)
       .eq("status", "pending") // settle once; a second click on a stale card does nothing
       .select("id")
@@ -117,7 +125,8 @@ export const updateDonationSettings = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SettingsInput.parse(input))
   .handler(async ({ data, context }) => {
     const digits = data.promptpayId.replace(/[^0-9]/g, "");
-    if (digits && !isValidPromptPayId(digits)) throw new Error("promptpay_id must be 10, 13 or 15 digits");
+    if (digits && !isValidPromptPayId(digits))
+      throw new Error("promptpay_id must be 10, 13 or 15 digits");
     const { error } = await context.supabase
       .from("donation_settings")
       .update({

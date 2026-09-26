@@ -14,7 +14,7 @@ import {
   type BenefitProfile,
   type BenefitRow,
   type MatchLevel,
-} from "@/lib/benefits"
+} from "@/lib/benefits";
 
 const STATUSES = ["interested", "in_progress", "received"] as const;
 type Status = (typeof STATUSES)[number];

@@ -66,9 +66,7 @@ export async function listJobEvidence(jobId: string): Promise<JobEvidence[]> {
     const { data: signed } = await supabase.storage
       .from("documents")
       .createSignedUrl(r.storage_path, 3600);
-    withUrls.push(
-      signed?.signedUrl ? { ...r, url: signed.signedUrl } : r,
-    );
+    withUrls.push(signed?.signedUrl ? { ...r, url: signed.signedUrl } : r);
   }
   return withUrls;
 }
@@ -84,11 +82,9 @@ export async function uploadJobEvidence(jobId: string, file: File, note?: string
   const ext = file.name.split(".").pop()?.slice(0, 8) || "bin";
   const path = `job-evidence/${jobId}/${crypto.randomUUID()}.${ext}`;
 
-  const { error: upErr } = await supabase.storage.from("documents").upload(
-    path,
-    file,
-    file.type ? { contentType: file.type, upsert: false } : { upsert: false },
-  );
+  const { error: upErr } = await supabase.storage
+    .from("documents")
+    .upload(path, file, file.type ? { contentType: file.type, upsert: false } : { upsert: false });
   if (upErr) throw new Error(upErr.message);
 
   const { error } = await supabase.from("job_evidence").insert({

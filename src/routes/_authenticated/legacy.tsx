@@ -36,10 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { legacyAssist } from "@/lib/legacy.functions";
-import {
-  applyLegacyImports,
-  suggestLegacyFromLifeOs,
-} from "@/lib/docs-legacy.functions";
+import { applyLegacyImports, suggestLegacyFromLifeOs } from "@/lib/docs-legacy.functions";
 import { createVerifierInvite, ensureMyPlanCode } from "@/lib/death.functions";
 import {
   ASSET_KINDS,
@@ -88,7 +85,10 @@ function LegacyPage() {
 
   const runInvite = useServerFn(createVerifierInvite);
   const runPlanCode = useServerFn(ensureMyPlanCode);
-  const [planCodeInfo, setPlanCodeInfo] = useState<{ planCode: string; inviteBaseUrl: string } | null>(null);
+  const [planCodeInfo, setPlanCodeInfo] = useState<{
+    planCode: string;
+    inviteBaseUrl: string;
+  } | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("hub");
@@ -114,7 +114,9 @@ function LegacyPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("legacy_contacts")
-        .select("id,user_id,full_name,relation,phone,email,priority,is_verifier,personal_message,invite_status,linked_user_id,invite_token,created_at")
+        .select(
+          "id,user_id,full_name,relation,phone,email,priority,is_verifier,personal_message,invite_status,linked_user_id,invite_token,created_at",
+        )
         .eq("user_id", user!.id)
         .order("priority", { ascending: true });
       if (error) throw error;
@@ -275,7 +277,11 @@ function LegacyPage() {
   };
 
   // --- Wish form ---
-  const [wForm, setWForm] = useState({ section: "final_wishes" as WishSection, title: "", body: "" });
+  const [wForm, setWForm] = useState({
+    section: "final_wishes" as WishSection,
+    title: "",
+    body: "",
+  });
   const addWish = async (sectionOverride?: WishSection) => {
     if (!user || !wForm.body.trim()) return;
     setBusy(true);
@@ -297,7 +303,10 @@ function LegacyPage() {
 
   const delRow = async (table: string, id: string) => {
     setBusy(true);
-    const { error } = await supabase.from(table as "legacy_contacts").delete().eq("id", id);
+    const { error } = await supabase
+      .from(table as "legacy_contacts")
+      .delete()
+      .eq("id", id);
     setBusy(false);
     if (error) toast.error(error.message);
     else {
@@ -358,7 +367,10 @@ function LegacyPage() {
       if (expenses?.length) {
         hintParts.push("Recent expenses: " + JSON.stringify(expenses));
       }
-      const { data: fam } = await supabase.from("family_members").select("display_name,member_role").limit(10);
+      const { data: fam } = await supabase
+        .from("family_members")
+        .select("display_name,member_role")
+        .limit(10);
       if (fam?.length) hintParts.push("Family: " + JSON.stringify(fam));
       const result = await runAssist({
         data: {
@@ -420,7 +432,10 @@ function LegacyPage() {
     }
   };
 
-  const saveSocial = async (field: "organ_donation" | "body_donation" | "social_intent", value: string) => {
+  const saveSocial = async (
+    field: "organ_donation" | "body_donation" | "social_intent",
+    value: string,
+  ) => {
     if (!user) return;
     await ensureProfile();
     const payload: {
@@ -497,7 +512,6 @@ function LegacyPage() {
         ))}
       </div>
 
-      
       {tab === "hub" && (
         <div className="mb-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium">{t.planCodeTitle}</p>
@@ -523,7 +537,9 @@ function LegacyPage() {
             </Button>
             {planCodeInfo && (
               <>
-                <span className="font-mono text-lg font-semibold tracking-widest">{planCodeInfo.planCode}</span>
+                <span className="font-mono text-lg font-semibold tracking-widest">
+                  {planCodeInfo.planCode}
+                </span>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -540,7 +556,6 @@ function LegacyPage() {
         </div>
       )}
 
-      
       {tab === "hub" && (
         <section className="mb-4 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-soft">
           <p className="text-sm font-medium">{t.r3ImportTitle}</p>
@@ -578,7 +593,10 @@ function LegacyPage() {
             <>
               <ul className="max-h-64 space-y-2 overflow-auto">
                 {importCandidates.map((c) => (
-                  <li key={c.key} className="flex items-start gap-2 rounded-lg border border-border p-2 text-sm">
+                  <li
+                    key={c.key}
+                    className="flex items-start gap-2 rounded-lg border border-border p-2 text-sm"
+                  >
                     <input
                       type="checkbox"
                       className="mt-1"
@@ -689,7 +707,12 @@ function LegacyPage() {
           {inviteUrl && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs break-all">
               <p className="mb-1 font-medium">{t.invLastLink}</p>
-              <a href={inviteUrl} className="text-primary underline" target="_blank" rel="noreferrer">
+              <a
+                href={inviteUrl}
+                className="text-primary underline"
+                target="_blank"
+                rel="noreferrer"
+              >
                 {inviteUrl}
               </a>
             </div>
@@ -875,7 +898,9 @@ function LegacyPage() {
                 <div>
                   <p className="font-medium">
                     {a.title}{" "}
-                    <Badge variant="outline">{labelAssetKind(t as unknown as Record<string, unknown>, a.kind)}</Badge>
+                    <Badge variant="outline">
+                      {labelAssetKind(t as unknown as Record<string, unknown>, a.kind)}
+                    </Badge>
                     {a.is_liability ? (
                       <Badge variant="destructive" className="ml-1">
                         {t.legacyAssetLiability}
@@ -935,9 +960,7 @@ function LegacyPage() {
                 ))}
               </SelectContent>
             </Select>
-            {tab === "will" && (
-              <p className="text-xs text-muted-foreground">{t.legacyWillHint}</p>
-            )}
+            {tab === "will" && <p className="text-xs text-muted-foreground">{t.legacyWillHint}</p>}
             {tab === "vault" && (
               <p className="text-xs text-muted-foreground">{t.legacyVaultHint}</p>
             )}
@@ -998,11 +1021,17 @@ function LegacyPage() {
                 <li key={w.id} className="rounded-xl border border-border p-3 text-sm">
                   <div className="flex justify-between gap-2">
                     <div>
-                      <Badge variant="outline">{labelWishSection(t as unknown as Record<string, unknown>, w.section)}</Badge>
+                      <Badge variant="outline">
+                        {labelWishSection(t as unknown as Record<string, unknown>, w.section)}
+                      </Badge>
                       {w.title ? <p className="mt-1 font-medium">{w.title}</p> : null}
                       <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{w.body}</p>
                     </div>
-                    <Button size="icon" variant="ghost" onClick={() => delRow("legacy_wishes", w.id)}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => delRow("legacy_wishes", w.id)}
+                    >
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
@@ -1038,7 +1067,11 @@ function LegacyPage() {
                   </p>
                   {c.notes ? <p className="text-xs text-muted-foreground">{c.notes}</p> : null}
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => delRow("legacy_checklist", c.id)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => delRow("legacy_checklist", c.id)}
+                >
                   <Trash2 className="size-4" />
                 </Button>
               </li>
@@ -1107,16 +1140,18 @@ function LegacyPage() {
             placeholder={t.legacyAiPlaceholder}
           />
           <Button disabled={busy || aiMsg.trim().length < 3} onClick={runAi}>
-            {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Sparkles className="mr-2 size-4" />}
+            {busy ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 size-4" />
+            )}
             {t.legacyAiRun}
           </Button>
           {aiResult && (
             <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3 text-sm">
               <p className="font-medium">{aiResult.summary}</p>
               {aiResult.assets.length > 0 && (
-                <p className="text-xs">
-                  Assets: {aiResult.assets.map((a) => a.title).join(", ")}
-                </p>
+                <p className="text-xs">Assets: {aiResult.assets.map((a) => a.title).join(", ")}</p>
               )}
               {aiResult.wishes.length > 0 && (
                 <p className="text-xs">

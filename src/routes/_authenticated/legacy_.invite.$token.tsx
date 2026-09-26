@@ -62,8 +62,7 @@ function LegacyInvitePage() {
 
       {!preview && (
         <p className="text-sm text-muted-foreground">
-          <Loader2 className="mr-2 inline size-4 animate-spin" />
-          …
+          <Loader2 className="mr-2 inline size-4 animate-spin" />…
         </p>
       )}
 
@@ -87,7 +86,11 @@ function LegacyInvitePage() {
             <p className="text-sm text-muted-foreground">{t.invAlready}</p>
           ) : (
             <Button disabled={busy} onClick={onAccept}>
-              {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <ShieldCheck className="mr-2 size-4" />}
+              {busy ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-2 size-4" />
+              )}
               {t.invAcceptBtn}
             </Button>
           )}

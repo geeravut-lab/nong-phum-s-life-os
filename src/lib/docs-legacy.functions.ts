@@ -131,9 +131,7 @@ export const suggestLegacyFromLifeOs = createServerFn({ method: "GET" })
       (contacts ?? []).map((c) => (c.full_name as string).toLowerCase()),
     );
     const wishTitles = new Set((wishes ?? []).map((w) => (w.title as string).toLowerCase()));
-    const checkTitles = new Set(
-      (checklist ?? []).map((c) => (c.title as string).toLowerCase()),
-    );
+    const checkTitles = new Set((checklist ?? []).map((c) => (c.title as string).toLowerCase()));
 
     const { data: expenses } = await supabaseAdmin
       .from("expenses")
@@ -215,10 +213,7 @@ export const suggestLegacyFromLifeOs = createServerFn({ method: "GET" })
     if (savedBenefits?.length) {
       const ids = savedBenefits.map((b) => b.benefit_id as string).filter(Boolean);
       const { data: benefitRows } = ids.length
-        ? await supabaseAdmin
-            .from("benefits")
-            .select("id, title, title_en, provider")
-            .in("id", ids)
+        ? await supabaseAdmin.from("benefits").select("id, title, title_en, provider").in("id", ids)
         : { data: [] as Array<{ id: string; title: string; provider: string }> };
       const byId = new Map((benefitRows ?? []).map((b) => [b.id as string, b]));
       for (const sb of savedBenefits) {
@@ -243,9 +238,7 @@ export const suggestLegacyFromLifeOs = createServerFn({ method: "GET" })
 
     const { data: docs } = await supabaseAdmin
       .from("documents")
-      .select(
-        "id, title, category, summary, due_date, warranty_until, is_warranty, counterparty",
-      )
+      .select("id, title, category, summary, due_date, warranty_until, is_warranty, counterparty")
       .eq("user_id", uid)
       .eq("kind", "analyzed")
       .in("category", ["insurance", "government", "finance", "warranty", "vehicle", "home"])
@@ -264,7 +257,8 @@ export const suggestLegacyFromLifeOs = createServerFn({ method: "GET" })
           payload: {
             kind: "other",
             title,
-            notes: `${d.summary || ""}\nWarranty until: ${d.warranty_until || d.due_date || ""}`.trim(),
+            notes:
+              `${d.summary || ""}\nWarranty until: ${d.warranty_until || d.due_date || ""}`.trim(),
             location_hint: (d.counterparty as string) || "",
           },
         });
@@ -324,8 +318,7 @@ export const applyLegacyImports = createServerFn({ method: "POST" })
           title: p.title ?? "รายการ",
           details: p.notes ?? "",
           location_hint: p.location_hint ?? "",
-          estimated_value:
-            typeof p.estimated_value === "number" ? p.estimated_value : null,
+          estimated_value: typeof p.estimated_value === "number" ? p.estimated_value : null,
           is_liability: (p.kind ?? "") === "debt",
         });
         if (!error) applied += 1;

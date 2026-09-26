@@ -122,10 +122,7 @@ function BenefitsPage() {
     });
   }, [profileQ.data]);
 
-  const matches = useMemo(
-    () => matchBenefits(benefitsQ.data ?? [], form),
-    [benefitsQ.data, form],
-  );
+  const matches = useMemo(() => matchBenefits(benefitsQ.data ?? [], form), [benefitsQ.data, form]);
 
   const deadlines = useMemo(() => upcomingDeadlines(matches), [matches]);
 
@@ -162,10 +159,12 @@ function BenefitsPage() {
 
   const setStatus = async (benefitId: string, status: Status) => {
     if (!user) return;
-    const { error } = await supabase.from("user_benefits").upsert(
-      { user_id: user.id, benefit_id: benefitId, status },
-      { onConflict: "user_id,benefit_id" },
-    );
+    const { error } = await supabase
+      .from("user_benefits")
+      .upsert(
+        { user_id: user.id, benefit_id: benefitId, status },
+        { onConflict: "user_id,benefit_id" },
+      );
     if (error) {
       toast.error(error.message);
       return;
@@ -194,8 +193,7 @@ function BenefitsPage() {
         groups: p.groups.length ? (p.groups as BenefitGroup[]) : f.groups,
         has_social_security:
           p.has_social_security != null ? p.has_social_security : f.has_social_security,
-        has_welfare_card:
-          p.has_welfare_card != null ? p.has_welfare_card : f.has_welfare_card,
+        has_welfare_card: p.has_welfare_card != null ? p.has_welfare_card : f.has_welfare_card,
       }));
       setInterviewSummary(result.summary);
       if (result.needsMoreInfo && result.followUpQuestions?.length) {
@@ -223,8 +221,7 @@ function BenefitsPage() {
         ? `Benefit deadline: ${benefitTitle(item.benefit, lang)}`
         : `กำหนดสิทธิ: ${benefitTitle(item.benefit, lang)}`;
     const due =
-      item.date?.toISOString() ??
-      new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      item.date?.toISOString() ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     const { error } = await supabase.from("reminders").insert({
       user_id: user.id,
       title,
@@ -494,9 +491,7 @@ function BenefitsPage() {
                       )}{" "}
                       · {benefit.provider}
                       {benefit.source_name ? ` · ${benefit.source_name}` : ""}
-                      {benefit.verified_at
-                        ? ` · ${t.benVerified}: ${benefit.verified_at}`
-                        : ""}
+                      {benefit.verified_at ? ` · ${t.benVerified}: ${benefit.verified_at}` : ""}
                     </p>
                   </div>
                   <Badge className={levelBadge[level].className}>{levelBadge[level].label}</Badge>

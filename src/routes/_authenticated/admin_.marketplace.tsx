@@ -107,11 +107,21 @@ function AdminMarketplacePage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>{t.mktCommissionRate}</Label>
-              <Input className="mt-1" type="number" value={rate} onChange={(e) => setRate(e.target.value)} />
+              <Input
+                className="mt-1"
+                type="number"
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+              />
             </div>
             <div>
               <Label>{t.mktServiceFee}</Label>
-              <Input className="mt-1" type="number" value={fee} onChange={(e) => setFee(e.target.value)} />
+              <Input
+                className="mt-1"
+                type="number"
+                value={fee}
+                onChange={(e) => setFee(e.target.value)}
+              />
             </div>
             <div>
               <Label>{t.mktCancelFeePct}</Label>
@@ -124,7 +134,12 @@ function AdminMarketplacePage() {
             </div>
             <div>
               <Label>{t.mktPromptPay}</Label>
-              <Input className="mt-1" value={pp} onChange={(e) => setPp(e.target.value)} placeholder="0xxxxxxxxxx" />
+              <Input
+                className="mt-1"
+                value={pp}
+                onChange={(e) => setPp(e.target.value)}
+                placeholder="0xxxxxxxxxx"
+              />
             </div>
           </div>
           <div className="flex items-center gap-3">

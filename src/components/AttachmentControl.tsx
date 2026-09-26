@@ -57,7 +57,11 @@ export function AttachmentControl({ table, rowId, doc, onChanged }: Props) {
       onChanged();
     } catch (err) {
       if (err instanceof AttachmentError) {
-        toast.error(err.code === "too_large" ? t.docsFileTooLarge(MAX_ATTACHMENT_MB) : t.attachTypeUnsupported);
+        toast.error(
+          err.code === "too_large"
+            ? t.docsFileTooLarge(MAX_ATTACHMENT_MB)
+            : t.attachTypeUnsupported,
+        );
       } else {
         toast.error(`${t.attachFailed} ${err instanceof Error ? err.message : ""}`.trim());
       }
@@ -81,14 +85,27 @@ export function AttachmentControl({ table, rowId, doc, onChanged }: Props) {
     }
   };
 
-  const open = () => doc?.storage_path && openAttachment(doc.storage_path).catch((err) => toast.error(err.message));
+  const open = () =>
+    doc?.storage_path && openAttachment(doc.storage_path).catch((err) => toast.error(err.message));
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <input ref={input} type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
+      <input
+        ref={input}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        onChange={onFile}
+      />
 
       {!doc ? (
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={busy} onClick={pick}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          disabled={busy}
+          onClick={pick}
+        >
           <Paperclip className="mr-1 size-3.5" />
           {busy ? t.attachUploading : t.attachReceipt}
         </Button>
@@ -109,7 +126,14 @@ export function AttachmentControl({ table, rowId, doc, onChanged }: Props) {
             )}
             <span className="max-w-[10rem] truncate">{doc.title}</span>
           </button>
-          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={busy} onClick={pick} title={t.attachReplace}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            disabled={busy}
+            onClick={pick}
+            title={t.attachReplace}
+          >
             <RefreshCw className={`size-3.5 ${busy ? "animate-spin" : ""}`} />
           </Button>
           <Button
@@ -124,7 +148,13 @@ export function AttachmentControl({ table, rowId, doc, onChanged }: Props) {
           </Button>
         </>
       ) : (
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={open} title={doc.title}>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          onClick={open}
+          title={doc.title}
+        >
           <FileText className="mr-1 size-3.5" />
           {t.attachSourceDoc}
         </Button>

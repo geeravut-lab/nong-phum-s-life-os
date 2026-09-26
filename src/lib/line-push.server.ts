@@ -30,7 +30,9 @@ export function lineChannelToken(): string | null {
  */
 export function appOpenUrl(path = "/today"): string {
   const liff = process.env["LINE_LIFF_ID"];
-  return liff ? `https://liff.line.me/${liff}${path}` : `https://lavieos.netlify.app${path}?openExternalBrowser=1`;
+  return liff
+    ? `https://liff.line.me/${liff}${path}`
+    : `https://lavieos.netlify.app${path}?openExternalBrowser=1`;
 }
 
 async function call(path: string, init: RequestInit & { token: string }): Promise<Response> {
@@ -40,7 +42,11 @@ async function call(path: string, init: RequestInit & { token: string }): Promis
     return await fetch(API + path, {
       ...init,
       signal: ctrl.signal,
-      headers: { authorization: `Bearer ${init.token}`, "content-type": "application/json", ...(init.headers ?? {}) },
+      headers: {
+        authorization: `Bearer ${init.token}`,
+        "content-type": "application/json",
+        ...(init.headers ?? {}),
+      },
     });
   } finally {
     clearTimeout(timer);
@@ -56,15 +62,26 @@ export async function checkFriend(token: string, lineUserId: string): Promise<Fr
   try {
     res = await call(`/v2/bot/profile/${encodeURIComponent(lineUserId)}`, { method: "GET", token });
   } catch (err) {
-    return { ok: false, kind: "retryable", status: 0, message: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      kind: "retryable",
+      status: 0,
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
   if (res.status === 200) {
     const p = (await res.json()) as { displayName?: string; pictureUrl?: string };
-    return { ok: true, friend: true, ...(p.displayName ? { displayName: p.displayName } : {}), ...(p.pictureUrl ? { pictureUrl: p.pictureUrl } : {}) };
+    return {
+      ok: true,
+      friend: true,
+      ...(p.displayName ? { displayName: p.displayName } : {}),
+      ...(p.pictureUrl ? { pictureUrl: p.pictureUrl } : {}),
+    };
   }
   if (res.status === 404) return { ok: true, friend: false };
   const message = await res.text().catch(() => "");
-  if (res.status === 401 || res.status === 403) return { ok: false, kind: "auth", status: res.status, message };
+  if (res.status === 401 || res.status === 403)
+    return { ok: false, kind: "auth", status: res.status, message };
   return { ok: false, kind: "retryable", status: res.status, message };
 }
 
@@ -77,7 +94,12 @@ export type PushResult =
  * notification_log row id): a retry of a request LINE already accepted comes
  * back as 409 and is treated as sent, so a crash after send cannot double up.
  */
-export async function pushFlex(token: string, lineUserId: string, flex: FlexMessage, retryKey: string): Promise<PushResult> {
+export async function pushFlex(
+  token: string,
+  lineUserId: string,
+  flex: FlexMessage,
+  retryKey: string,
+): Promise<PushResult> {
   let res: Response;
   try {
     res = await call("/v2/bot/message/push", {
@@ -87,24 +109,47 @@ export async function pushFlex(token: string, lineUserId: string, flex: FlexMess
       body: JSON.stringify({ to: lineUserId, messages: [flex] }),
     });
   } catch (err) {
-    return { ok: false, kind: "retryable", status: 0, message: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      kind: "retryable",
+      status: 0,
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
   if (res.ok) return { ok: true, duplicate: false };
   if (res.status === 409) return { ok: true, duplicate: true };
   const message = (await res.text().catch(() => "")).slice(0, 500);
-  if (res.status === 401 || res.status === 403) return { ok: false, kind: "auth", status: res.status, message };
+  if (res.status === 401 || res.status === 403)
+    return { ok: false, kind: "auth", status: res.status, message };
   if (res.status === 400) return { ok: false, kind: "target", status: res.status, message };
-  if (res.status === 429 && /monthly/i.test(message)) return { ok: false, kind: "quota", status: res.status, message };
+  if (res.status === 429 && /monthly/i.test(message))
+    return { ok: false, kind: "quota", status: res.status, message };
   return { ok: false, kind: "retryable", status: res.status, message };
 }
 
 /** Free: validates message objects without sending or counting. */
-export async function validateFlex(token: string, flex: FlexMessage): Promise<{ ok: boolean; status: number; message: string }> {
-  const res = await call("/v2/bot/message/validate/push", { method: "POST", token, body: JSON.stringify({ messages: [flex] }) });
-  return { ok: res.ok, status: res.status, message: res.ok ? "" : (await res.text().catch(() => "")).slice(0, 500) };
+export async function validateFlex(
+  token: string,
+  flex: FlexMessage,
+): Promise<{ ok: boolean; status: number; message: string }> {
+  const res = await call("/v2/bot/message/validate/push", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ messages: [flex] }),
+  });
+  return {
+    ok: res.ok,
+    status: res.status,
+    message: res.ok ? "" : (await res.text().catch(() => "")).slice(0, 500),
+  };
 }
 
-export type LineQuota = { limitType: string | null; limit: number | null; totalUsage: number | null; error: string | null };
+export type LineQuota = {
+  limitType: string | null;
+  limit: number | null;
+  totalUsage: number | null;
+  error: string | null;
+};
 
 /** LINE's own view of this month. `totalUsage` may lag behind reality (docs). */
 export async function getQuota(token: string): Promise<LineQuota> {
@@ -113,7 +158,13 @@ export async function getQuota(token: string): Promise<LineQuota> {
       call("/v2/bot/message/quota", { method: "GET", token }),
       call("/v2/bot/message/quota/consumption", { method: "GET", token }),
     ]);
-    if (!q.ok || !c.ok) return { limitType: null, limit: null, totalUsage: null, error: `quota ${q.status} / consumption ${c.status}` };
+    if (!q.ok || !c.ok)
+      return {
+        limitType: null,
+        limit: null,
+        totalUsage: null,
+        error: `quota ${q.status} / consumption ${c.status}`,
+      };
     const quota = (await q.json()) as { type?: string; value?: number };
     const cons = (await c.json()) as { totalUsage?: number };
     return {
@@ -123,6 +174,11 @@ export async function getQuota(token: string): Promise<LineQuota> {
       error: null,
     };
   } catch (err) {
-    return { limitType: null, limit: null, totalUsage: null, error: err instanceof Error ? err.message : String(err) };
+    return {
+      limitType: null,
+      limit: null,
+      totalUsage: null,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }

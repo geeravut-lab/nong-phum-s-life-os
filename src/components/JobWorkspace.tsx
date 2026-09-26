@@ -82,7 +82,6 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
     }
   }, [messages.data, enabled, jobId]);
 
-
   if (!enabled) return null;
 
   const send = async () => {
@@ -175,7 +174,12 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
           </Button>
           {counterpartyUserId && (
             <>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => setReportOpen((v) => !v)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => setReportOpen((v) => !v)}
+              >
                 <Flag className="mr-1 size-3.5" />
                 {t.reportUser}
               </Button>
@@ -204,7 +208,11 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
             maxLength={2000}
           />
           <div className="flex gap-2">
-            <Button size="sm" disabled={busy || reportReason.trim().length < 3} onClick={() => onReport(false)}>
+            <Button
+              size="sm"
+              disabled={busy || reportReason.trim().length < 3}
+              onClick={() => onReport(false)}
+            >
               {t.submitReport}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setReportOpen(false)}>
@@ -218,8 +226,19 @@ export function JobWorkspace({ jobId, counterpartyUserId, enabled = true }: Prop
         <div className="mb-2 flex items-center justify-between">
           <p className="text-xs font-medium text-muted-foreground">{t.evidenceTitle}</p>
           <div>
-            <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onFile} />
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={onFile}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+            >
               <ImagePlus className="mr-1 size-3.5" />
               {t.evidenceAdd}
             </Button>

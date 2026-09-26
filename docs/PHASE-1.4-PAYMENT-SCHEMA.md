@@ -13,24 +13,24 @@
 
 ### `job_payments` (ledger ต่อ job 1:1 ตอนนี้; ขยายหลายงวดได้ภายหลัง)
 
-| คอลัมน์ | ความหมาย |
-|--------|----------|
-| `job_id` UNIQUE | อ้างอิง jobs |
-| `amount` | ยอดที่ลูกค้าจ่าย (agreed_price + service_fee ถ้ามี) |
-| `platform_fee` | ส่วนแพลตฟอร์ม |
-| `provider_amount` | ส่วน helper หลังหัก fee |
-| `payment_status` | `pending` → `held` → `released` \| `partial-refunded` \| `failed` |
-| `payout_status` | `null` \| `pending` \| `paid` \| `refunded` |
-| `service_ended` | helper กดจบ |
-| `verified_at` | ลูกค้ากด Verified |
-| `paid_at` | ยืนยันรับเงินเข้า (PromptPay verify / gateway callback) |
-| `released_at` | เวลา released |
-| `payout_paid_at` | Admin โอนแล้ว |
-| `promptpay_id` snapshot | เลขพร้อมเพย์ตอนจ่าย |
-| `payer_ref` | อ้างอิงที่ลูกค้ากรอก |
-| `cancel_fee_pct` | % ค่าปรับ (default จาก platform_settings) |
-| `payout_slip_path` | path สลิปใน storage (optional) |
-| `notes` | หมายเหตุ admin |
+| คอลัมน์                 | ความหมาย                                                          |
+| ----------------------- | ----------------------------------------------------------------- |
+| `job_id` UNIQUE         | อ้างอิง jobs                                                      |
+| `amount`                | ยอดที่ลูกค้าจ่าย (agreed_price + service_fee ถ้ามี)               |
+| `platform_fee`          | ส่วนแพลตฟอร์ม                                                     |
+| `provider_amount`       | ส่วน helper หลังหัก fee                                           |
+| `payment_status`        | `pending` → `held` → `released` \| `partial-refunded` \| `failed` |
+| `payout_status`         | `null` \| `pending` \| `paid` \| `refunded`                       |
+| `service_ended`         | helper กดจบ                                                       |
+| `verified_at`           | ลูกค้ากด Verified                                                 |
+| `paid_at`               | ยืนยันรับเงินเข้า (PromptPay verify / gateway callback)           |
+| `released_at`           | เวลา released                                                     |
+| `payout_paid_at`        | Admin โอนแล้ว                                                     |
+| `promptpay_id` snapshot | เลขพร้อมเพย์ตอนจ่าย                                               |
+| `payer_ref`             | อ้างอิงที่ลูกค้ากรอก                                              |
+| `cancel_fee_pct`        | % ค่าปรับ (default จาก platform_settings)                         |
+| `payout_slip_path`      | path สลิปใน storage (optional)                                    |
+| `notes`                 | หมายเหตุ admin                                                    |
 
 ### ขยาย `platform_settings`
 

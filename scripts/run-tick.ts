@@ -10,7 +10,9 @@
 import { readFileSync } from "node:fs";
 
 // .env.local on this machine has a UTF-8 BOM; strip it or the first key is lost.
-for (const line of readFileSync(".env.local", "utf8").replace(/^﻿/, "").split(/\r?\n/)) {
+for (const line of readFileSync(".env.local", "utf8")
+  .replace(/^\uFEFF/, "")
+  .split(/\r?\n/)) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
   if (m && process.env[m[1]!] === undefined) process.env[m[1]!] = m[2]!.replace(/^"(.*)"$/, "$1");
 }

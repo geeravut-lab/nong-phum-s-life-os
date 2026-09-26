@@ -70,10 +70,7 @@ export function pickLabel(lang: string, th: string, en: string) {
   return lang === "en" ? en : th;
 }
 
-export function localized(
-  lang: string,
-  pair: { th: string; en: string },
-) {
+export function localized(lang: string, pair: { th: string; en: string }) {
   return lang === "en" ? pair.en : pair.th;
 }
 
@@ -153,8 +150,7 @@ function scoreOne(benefit: BenefitRow, profile: BenefitProfile | null): BenefitM
     }
   }
   if (el.max_annual_income != null) {
-    const annual =
-      profile.monthly_income != null ? profile.monthly_income * 12 : null;
+    const annual = profile.monthly_income != null ? profile.monthly_income * 12 : null;
     if (annual == null) soft++;
     else if (annual > el.max_annual_income) {
       hardFail = true;
@@ -206,10 +202,7 @@ function scoreOne(benefit: BenefitRow, profile: BenefitProfile | null): BenefitM
 }
 
 /** Next calendar date for a benefit deadline (month/day), or null. */
-export function nextDeadlineDate(
-  benefit: BenefitRow,
-  from: Date = new Date(),
-): Date | null {
+export function nextDeadlineDate(benefit: BenefitRow, from: Date = new Date()): Date | null {
   if (benefit.deadline_month == null) return null;
   const day = benefit.deadline_day ?? 1;
   const y = from.getFullYear();
@@ -228,10 +221,7 @@ export type DeadlineItem = {
 };
 
 /** Upcoming deadlines for matched (eligible/maybe) benefits + any with notes. */
-export function upcomingDeadlines(
-  matches: BenefitMatch[],
-  limit = 8,
-): DeadlineItem[] {
+export function upcomingDeadlines(matches: BenefitMatch[], limit = 8): DeadlineItem[] {
   const now = new Date();
   const items: DeadlineItem[] = [];
   for (const m of matches) {
@@ -240,9 +230,7 @@ export function upcomingDeadlines(
     if (!b.deadline_month && !b.deadline_note) continue;
     const date = nextDeadlineDate(b, now);
     const daysLeft =
-      date != null
-        ? Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-        : null;
+      date != null ? Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)) : null;
     items.push({ benefit: b, date, note: b.deadline_note ?? null, daysLeft });
   }
   items.sort((a, b) => {

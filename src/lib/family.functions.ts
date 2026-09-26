@@ -26,9 +26,7 @@ async function requireFamilyOwner(userId: string, familyId: string) {
 
 export const listFamilyEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ familyId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ familyId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFamilyMember(context.userId, data.familyId);
     const { data: rows, error } = await supabaseAdmin
@@ -77,9 +75,7 @@ export const createFamilyEvent = createServerFn({ method: "POST" })
 
 export const deleteFamilyEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ eventId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ eventId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: ev } = await supabaseAdmin
       .from("family_events")
@@ -133,7 +129,9 @@ export const postFamilyCheckin = createServerFn({ method: "POST" })
         .eq("family_id", data.familyId)
         .neq("user_id", context.userId);
       const title =
-        data.status === "emergency" ? "ฉุกเฉิน — ต้องการความช่วยเหลือ" : "สมาชิกต้องการความช่วยเหลือ";
+        data.status === "emergency"
+          ? "ฉุกเฉิน — ต้องการความช่วยเหลือ"
+          : "สมาชิกต้องการความช่วยเหลือ";
       for (const m of members ?? []) {
         await supabaseAdmin.from("app_notifications").insert({
           user_id: m.user_id,
@@ -151,9 +149,7 @@ export const postFamilyCheckin = createServerFn({ method: "POST" })
 
 export const listFamilyCheckins = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ familyId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ familyId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFamilyMember(context.userId, data.familyId);
     const since = new Date(Date.now() - 14 * 864e5).toISOString();
@@ -218,9 +214,7 @@ export const assignFamilyTask = createServerFn({ method: "POST" })
 
 export const listFamilyPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ familyId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ familyId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFamilyMember(context.userId, data.familyId);
     const { data: rows, error } = await supabaseAdmin
@@ -274,13 +268,10 @@ export const upsertFamilyPermission = createServerFn({ method: "POST" })
     return row;
   });
 
-
 /** Resolve display labels: profiles.display_name (ชื่อที่ให้น้องภูมิเรียก) → email → short id */
 export const listFamilyMemberLabels = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ familyId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ familyId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await requireFamilyMember(context.userId, data.familyId);
     const { data: members, error } = await supabaseAdmin
@@ -308,9 +299,7 @@ export const listFamilyMemberLabels = createServerFn({ method: "POST" })
       }
       if (!label) {
         try {
-          const { data: u } = await supabaseAdmin.auth.admin.getUserById(
-            m.user_id as string,
-          );
+          const { data: u } = await supabaseAdmin.auth.admin.getUserById(m.user_id as string);
           label =
             (u.user?.user_metadata as Record<string, string> | undefined)?.["full_name"] ||
             (u.user?.user_metadata as Record<string, string> | undefined)?.["name"] ||

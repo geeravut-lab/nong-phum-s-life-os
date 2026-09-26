@@ -98,10 +98,18 @@ function TasksPage() {
     qc.invalidateQueries();
   };
 
-  const toggle = async (r: { id: string; status: string; due_at: string | null; recurrence: string }) => {
+  const toggle = async (r: {
+    id: string;
+    status: string;
+    due_at: string | null;
+    recurrence: string;
+  }) => {
     try {
       if (r.status === "done") {
-        const { error } = await supabase.from("reminders").update({ status: "open" }).eq("id", r.id);
+        const { error } = await supabase
+          .from("reminders")
+          .update({ status: "open" })
+          .eq("id", r.id);
         if (error) throw error;
       } else {
         const { advancedTo } = await completeReminder(r);

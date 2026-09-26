@@ -49,7 +49,9 @@ export function LineLinkCard() {
         toast.error(t.lineRecheckFailed);
         return;
       }
-      toast[r.link.isFriend ? "success" : "warning"](r.link.isFriend ? t.lineFriendYes : t.lineFriendNo);
+      toast[r.link.isFriend ? "success" : "warning"](
+        r.link.isFriend ? t.lineFriendYes : t.lineFriendNo,
+      );
       qc.invalidateQueries({ queryKey: ["line-link"] });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
@@ -94,7 +96,9 @@ export function LineLinkCard() {
             )}
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{link.displayName ?? "LINE"}</p>
-              <p className="text-xs text-muted-foreground">{t.lineLinkedAt(formatDay(new Date(link.linkedAt), lang))}</p>
+              <p className="text-xs text-muted-foreground">
+                {t.lineLinkedAt(formatDay(new Date(link.linkedAt), lang))}
+              </p>
             </div>
           </div>
 
@@ -118,8 +122,15 @@ export function LineLinkCard() {
                     </a>
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => recheck.mutate()} disabled={recheck.isPending}>
-                  <RefreshCw className={`mr-1.5 size-3.5 ${recheck.isPending ? "animate-spin" : ""}`} />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => recheck.mutate()}
+                  disabled={recheck.isPending}
+                >
+                  <RefreshCw
+                    className={`mr-1.5 size-3.5 ${recheck.isPending ? "animate-spin" : ""}`}
+                  />
                   {t.lineRecheck}
                 </Button>
               </div>
@@ -132,7 +143,10 @@ export function LineLinkCard() {
         </div>
       )}
 
-      <AlertDialog open={confirmOpen} onOpenChange={(v) => !disconnect.isPending && setConfirmOpen(v)}>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(v) => !disconnect.isPending && setConfirmOpen(v)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t.lineUnlinkConfirmTitle}</AlertDialogTitle>

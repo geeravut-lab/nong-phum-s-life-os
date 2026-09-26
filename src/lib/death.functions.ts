@@ -97,9 +97,7 @@ export const ensureMyPlanCode = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const code = await ensurePlanCode(context.userId);
     const origin =
-      process.env["APP_PUBLIC_URL"] ||
-      process.env["URL"] ||
-      "https://lavieos.netlify.app";
+      process.env["APP_PUBLIC_URL"] || process.env["URL"] || "https://lavieos.netlify.app";
     return {
       planCode: code,
       inviteBaseUrl: `${origin.replace(/\/$/, "")}/legacy/invite`,
@@ -109,9 +107,7 @@ export const ensureMyPlanCode = createServerFn({ method: "POST" })
 /** Owner: create/refresh invite link for a contact marked as verifier. */
 export const createVerifierInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ contactId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ contactId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("legacy_contacts")
@@ -134,9 +130,7 @@ export const createVerifierInvite = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
 
     const origin =
-      process.env["APP_PUBLIC_URL"] ||
-      process.env["URL"] ||
-      "https://lavieos.netlify.app";
+      process.env["APP_PUBLIC_URL"] || process.env["URL"] || "https://lavieos.netlify.app";
     const url = `${origin.replace(/\/$/, "")}/legacy/invite/${token}`;
     return { token, url, contactName: row.full_name };
   });
@@ -144,9 +138,7 @@ export const createVerifierInvite = createServerFn({ method: "POST" })
 /** Invitee: accept invite after login → bind linked_user_id. */
 export const acceptVerifierInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(8).max(64) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: row, error } = await supabaseAdmin
       .from("legacy_contacts")
@@ -188,9 +180,7 @@ export const acceptVerifierInvite = createServerFn({ method: "POST" })
 /** Preview invite (authenticated) — for the accept page. */
 export const previewVerifierInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(8).max(64) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(8).max(64) }).parse(input))
   .handler(async ({ data }) => {
     const { data: row } = await supabaseAdmin
       .from("legacy_contacts")
@@ -255,9 +245,7 @@ export const reportDeathByPlanCode = createServerFn({ method: "POST" })
         .eq("invite_status", "accepted")
         .maybeSingle();
       if (!link) {
-        throw new Error(
-          "Not authorized: accept a verifier invite for this plan first",
-        );
+        throw new Error("Not authorized: accept a verifier invite for this plan first");
       }
     }
 
@@ -382,7 +370,9 @@ export const confirmDeathCase = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: c, error } = await supabaseAdmin
       .from("death_cases")
-      .select("id, status, subject_user_id, required_confirmations, confirmation_count, reported_by")
+      .select(
+        "id, status, subject_user_id, required_confirmations, confirmation_count, reported_by",
+      )
       .eq("id", data.caseId)
       .single();
     if (error || !c) throw new Error(error?.message ?? "case not found");
@@ -472,9 +462,7 @@ export const listMyVerifierCases = createServerFn({ method: "GET" })
 /** List post-life actions for a confirmed case (or seed if missing). */
 export const listPostLifeActions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ caseId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ caseId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const admin = supabaseAdmin;
     const { data: c, error } = await admin
@@ -495,19 +483,84 @@ export const listPostLifeActions = createServerFn({ method: "POST" })
       .limit(1);
     if (!existing?.length) {
       const subject = c.subject_user_id as string;
-      const templates: Array<{ phase: string; sort_order: number; title: string; description: string }> = [
-        { phase: "24h", sort_order: 1, title: "แจ้งบุคคลที่กำหนด", description: "ติดต่อคนที่ไว้ใจตามลำดับความสำคัญในแผนฝากไว้" },
-        { phase: "24h", sort_order: 2, title: "เปิด Memorial", description: "ตรวจสอบ/แชร์หน้าอาลัยบุ๊คให้ครอบครัว" },
-        { phase: "24h", sort_order: 3, title: "แจ้งข้อมูลที่ได้รับอนุญาต", description: "ส่งเฉพาะข้อมูลที่เจ้าของแผนอนุญาต" },
-        { phase: "3d", sort_order: 1, title: "เอกสารสำคัญ", description: "รวบรวมบัตรประชาชน สำเนา และเอกสารที่อ้างในแผน" },
-        { phase: "3d", sort_order: 2, title: "สถานที่และพิธี", description: "ยืนยันสถานที่จัดพิธีตามความต้องการงานศพ" },
-        { phase: "3d", sort_order: 3, title: "ผู้ให้บริการ", description: "ติดต่อวัด/สถานที่/ผู้ให้บริการที่เกี่ยวข้อง" },
-        { phase: "3d", sort_order: 4, title: "แผนงานศพ (ถ้ามี)", description: "ดูแพ็กเกจจาก AI Funeral Planner และสถานะการชำระ" },
-        { phase: "later", sort_order: 1, title: "ทรัพย์สิน", description: "เปิดดูรายการทรัพย์สินในแผนฝากไว้ (ไม่ใช่เอกสารทางกฎหมาย)" },
-        { phase: "later", sort_order: 2, title: "หนี้สิน / ภาระ", description: "ตรวจสอบรายการหนี้และภาระที่บันทึกไว้" },
-        { phase: "later", sort_order: 3, title: "ประกันและสิทธิ", description: "ติดต่อบริษัทประกัน / สิทธิที่เกี่ยวข้อง" },
-        { phase: "later", sort_order: 4, title: "บัญชีและดิจิทัล", description: "จัดการบัญชีตามที่ระบุในแผน" },
-        { phase: "later", sort_order: 5, title: "มรดก / พินัยกรรม (อ้างอิง)", description: "ติดตามที่เก็บพินัยกรรม — ดำเนินการตามกฎหมายภายนอกแอป" },
+      const templates: Array<{
+        phase: string;
+        sort_order: number;
+        title: string;
+        description: string;
+      }> = [
+        {
+          phase: "24h",
+          sort_order: 1,
+          title: "แจ้งบุคคลที่กำหนด",
+          description: "ติดต่อคนที่ไว้ใจตามลำดับความสำคัญในแผนฝากไว้",
+        },
+        {
+          phase: "24h",
+          sort_order: 2,
+          title: "เปิด Memorial",
+          description: "ตรวจสอบ/แชร์หน้าอาลัยบุ๊คให้ครอบครัว",
+        },
+        {
+          phase: "24h",
+          sort_order: 3,
+          title: "แจ้งข้อมูลที่ได้รับอนุญาต",
+          description: "ส่งเฉพาะข้อมูลที่เจ้าของแผนอนุญาต",
+        },
+        {
+          phase: "3d",
+          sort_order: 1,
+          title: "เอกสารสำคัญ",
+          description: "รวบรวมบัตรประชาชน สำเนา และเอกสารที่อ้างในแผน",
+        },
+        {
+          phase: "3d",
+          sort_order: 2,
+          title: "สถานที่และพิธี",
+          description: "ยืนยันสถานที่จัดพิธีตามความต้องการงานศพ",
+        },
+        {
+          phase: "3d",
+          sort_order: 3,
+          title: "ผู้ให้บริการ",
+          description: "ติดต่อวัด/สถานที่/ผู้ให้บริการที่เกี่ยวข้อง",
+        },
+        {
+          phase: "3d",
+          sort_order: 4,
+          title: "แผนงานศพ (ถ้ามี)",
+          description: "ดูแพ็กเกจจาก AI Funeral Planner และสถานะการชำระ",
+        },
+        {
+          phase: "later",
+          sort_order: 1,
+          title: "ทรัพย์สิน",
+          description: "เปิดดูรายการทรัพย์สินในแผนฝากไว้ (ไม่ใช่เอกสารทางกฎหมาย)",
+        },
+        {
+          phase: "later",
+          sort_order: 2,
+          title: "หนี้สิน / ภาระ",
+          description: "ตรวจสอบรายการหนี้และภาระที่บันทึกไว้",
+        },
+        {
+          phase: "later",
+          sort_order: 3,
+          title: "ประกันและสิทธิ",
+          description: "ติดต่อบริษัทประกัน / สิทธิที่เกี่ยวข้อง",
+        },
+        {
+          phase: "later",
+          sort_order: 4,
+          title: "บัญชีและดิจิทัล",
+          description: "จัดการบัญชีตามที่ระบุในแผน",
+        },
+        {
+          phase: "later",
+          sort_order: 5,
+          title: "มรดก / พินัยกรรม (อ้างอิง)",
+          description: "ติดตามที่เก็บพินัยกรรม — ดำเนินการตามกฎหมายภายนอกแอป",
+        },
       ];
       await admin.from("post_life_actions").insert(
         templates.map((x) => ({
@@ -520,9 +573,7 @@ export const listPostLifeActions = createServerFn({ method: "POST" })
 
     const { data: rows, error: aErr } = await admin
       .from("post_life_actions")
-      .select(
-        "id, case_id, phase, sort_order, title, description, status, done_at, note",
-      )
+      .select("id, case_id, phase, sort_order, title, description, status, done_at, note")
       .eq("case_id", data.caseId)
       .order("sort_order", { ascending: true });
     if (aErr) throw new Error(aErr.message);

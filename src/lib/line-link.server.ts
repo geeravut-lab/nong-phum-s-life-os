@@ -57,7 +57,11 @@ export class LineLinkError extends Error {
 function channel() {
   const id = process.env["LINE_LOGIN_CHANNEL_ID"];
   const secret = process.env["LINE_LOGIN_CHANNEL_SECRET"];
-  if (!id || !secret) throw new LineLinkError("not_configured", "LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET not set");
+  if (!id || !secret)
+    throw new LineLinkError(
+      "not_configured",
+      "LINE_LOGIN_CHANNEL_ID / LINE_LOGIN_CHANNEL_SECRET not set",
+    );
   return { id, secret };
 }
 
@@ -77,7 +81,11 @@ export type LineLinkView = {
 };
 
 export async function getLink(userId: string): Promise<LineLinkView | null> {
-  const { data, error } = await supabaseAdmin.from("line_links").select("*").eq("user_id", userId).maybeSingle();
+  const { data, error } = await supabaseAdmin
+    .from("line_links")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
   if (error) throw new Error(`line_links read: ${error.message}`);
   if (!data) return null;
   return {
@@ -92,7 +100,10 @@ export async function getLink(userId: string): Promise<LineLinkView | null> {
 }
 
 /** Mints a state for this user and returns the LINE authorize URL to send them to. */
-export async function startLink(userId: string, origin: string): Promise<{ url: string; state: string }> {
+export async function startLink(
+  userId: string,
+  origin: string,
+): Promise<{ url: string; state: string }> {
   const { id } = channel();
   if (!ALLOWED_ORIGINS.has(origin)) throw new LineLinkError("bad_origin", origin);
 
@@ -161,7 +172,8 @@ export async function finishLink(input: FinishInput): Promise<LineLinkView> {
     throw new LineLinkError("token_exchange_failed", `LINE answered ${tokenRes.status}`);
   }
   const tokens = (await tokenRes.json()) as { access_token?: string; id_token?: string };
-  if (!tokens.access_token || !tokens.id_token) throw new LineLinkError("token_exchange_failed", "no tokens in response");
+  if (!tokens.access_token || !tokens.id_token)
+    throw new LineLinkError("token_exchange_failed", "no tokens in response");
 
   try {
     // 3. Verify the ID token WITH LINE — never decode-and-trust.
@@ -176,17 +188,22 @@ export async function finishLink(input: FinishInput): Promise<LineLinkView> {
       throw new LineLinkError("id_token_invalid", `LINE answered ${verifyRes.status}`);
     }
     const claims = (await verifyRes.json()) as { sub?: string; name?: string; picture?: string };
-    if (!claims.sub || !/^U[0-9a-f]{32}$/.test(claims.sub)) throw new LineLinkError("id_token_invalid", "no usable sub");
+    if (!claims.sub || !/^U[0-9a-f]{32}$/.test(claims.sub))
+      throw new LineLinkError("id_token_invalid", "no usable sub");
 
     // 4. Friendship with the OA, asked with the user's own token while we have it.
     let isFriend = false;
-    const fsRes = await fetch(FRIENDSHIP_URL, { headers: { authorization: `Bearer ${tokens.access_token}` } });
+    const fsRes = await fetch(FRIENDSHIP_URL, {
+      headers: { authorization: `Bearer ${tokens.access_token}` },
+    });
     if (fsRes.ok) {
       const fs = (await fsRes.json()) as { friendFlag?: boolean };
       isFriend = fs.friendFlag === true;
     } else {
       // Not fatal: the link still stands, the UI will say "not a friend yet".
-      console.warn(`[line] friendship status ${fsRes.status} (is the OA linked to the LINE Login channel?)`);
+      console.warn(
+        `[line] friendship status ${fsRes.status} (is the OA linked to the LINE Login channel?)`,
+      );
       if (input.friendshipStatusChanged === true) isFriend = true;
     }
 
@@ -215,7 +232,11 @@ export async function finishLink(input: FinishInput): Promise<LineLinkView> {
     fetch(REVOKE_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ access_token: tokens.access_token, client_id: id, client_secret: secret }),
+      body: new URLSearchParams({
+        access_token: tokens.access_token,
+        client_id: id,
+        client_secret: secret,
+      }),
     }).catch(() => undefined);
   }
 

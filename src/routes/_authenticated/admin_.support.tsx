@@ -22,12 +22,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDay, formatMoney } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
-import { getDonationReport, isValidPromptPayId, settleDonation, updateDonationSettings } from "@/lib/support.functions";
+import {
+  getDonationReport,
+  isValidPromptPayId,
+  settleDonation,
+  updateDonationSettings,
+} from "@/lib/support.functions";
 
 // Admin side of the donation playbook, three parts on one page: settings
 // (PromptPay id / on-off / purpose), the review queue ("ยืนยันรับเงิน" — not
@@ -71,7 +83,11 @@ function PendingSection() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
   const settle = useServerFn(settleDonation);
-  const [target, setTarget] = useState<{ id: string; amount: number; status: "confirmed" | "rejected" } | null>(null);
+  const [target, setTarget] = useState<{
+    id: string;
+    amount: number;
+    status: "confirmed" | "rejected";
+  } | null>(null);
 
   const pending = useQuery({
     queryKey: ["donations-pending"],
@@ -121,7 +137,9 @@ function PendingSection() {
                 <div>
                   <dt className="inline">{t.adminDonationDonor}: </dt>
                   <dd className="inline text-foreground">
-                    {d.anonymous ? t.supportAnonymousShort : `${d.display_name ?? "—"}${d.email ? ` · ${d.email}` : ""}`}
+                    {d.anonymous
+                      ? t.supportAnonymousShort
+                      : `${d.display_name ?? "—"}${d.email ? ` · ${d.email}` : ""}`}
                   </dd>
                 </div>
                 <div>
@@ -134,7 +152,9 @@ function PendingSection() {
                 </div>
                 <div>
                   <dt className="inline">{t.adminDonationReportedAt}: </dt>
-                  <dd className="inline text-foreground">{formatDay(new Date(d.created_at), lang, true)}</dd>
+                  <dd className="inline text-foreground">
+                    {formatDay(new Date(d.created_at), lang, true)}
+                  </dd>
                 </div>
               </dl>
               {/* Confirm on the right (thumb-side), the destructive choice on the left. */}
@@ -143,11 +163,18 @@ function PendingSection() {
                   size="sm"
                   variant="outline"
                   className="text-destructive"
-                  onClick={() => setTarget({ id: d.id, amount: Number(d.amount_baht), status: "rejected" })}
+                  onClick={() =>
+                    setTarget({ id: d.id, amount: Number(d.amount_baht), status: "rejected" })
+                  }
                 >
                   {t.donationNotFound}
                 </Button>
-                <Button size="sm" onClick={() => setTarget({ id: d.id, amount: Number(d.amount_baht), status: "confirmed" })}>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    setTarget({ id: d.id, amount: Number(d.amount_baht), status: "confirmed" })
+                  }
+                >
                   {t.donationConfirmReceipt}
                 </Button>
               </div>
@@ -156,18 +183,27 @@ function PendingSection() {
         </ul>
       )}
 
-      <AlertDialog open={!!target} onOpenChange={(v) => !mutation.isPending && !v && setTarget(null)}>
+      <AlertDialog
+        open={!!target}
+        onOpenChange={(v) => !mutation.isPending && !v && setTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {target?.status === "confirmed" ? t.donationConfirmDialog(formatMoney(target.amount)) : t.donationRejectDialog}
+              {target?.status === "confirmed"
+                ? t.donationConfirmDialog(formatMoney(target.amount))
+                : t.donationRejectDialog}
             </AlertDialogTitle>
             <AlertDialogDescription>{t.adminDonationsNoRights}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={mutation.isPending}>{t.cancelBtn}</AlertDialogCancel>
             <AlertDialogAction
-              className={target?.status === "rejected" ? "bg-destructive text-white hover:bg-destructive/90" : ""}
+              className={
+                target?.status === "rejected"
+                  ? "bg-destructive text-white hover:bg-destructive/90"
+                  : ""
+              }
               disabled={mutation.isPending}
               onClick={(e) => {
                 e.preventDefault();
@@ -187,7 +223,11 @@ function PendingSection() {
 
 function ReportSection() {
   const { t, lang } = useI18n();
-  const report = useQuery({ queryKey: ["donations-report"], queryFn: () => getDonationReport(), staleTime: 5 * 60_000 });
+  const report = useQuery({
+    queryKey: ["donations-report"],
+    queryFn: () => getDonationReport(),
+    staleTime: 5 * 60_000,
+  });
   const [period, setPeriod] = useState<Period>("30");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -197,7 +237,8 @@ function ReportSection() {
     let since = 0;
     let until = Infinity;
     const now = Date.now();
-    if (period === "7" || period === "30" || period === "90") since = now - Number(period) * 86_400_000;
+    if (period === "7" || period === "30" || period === "90")
+      since = now - Number(period) * 86_400_000;
     if (period === "custom") {
       if (start) since = new Date(`${start}T00:00:00+07:00`).getTime();
       if (end) until = new Date(`${end}T23:59:59.999+07:00`).getTime();
@@ -219,8 +260,17 @@ function ReportSection() {
       const s = String(v ?? "");
       return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
-    const lines = [[t.adminColTime, t.adminDonationDonor, t.adminDonationChannel, t.adminDonationAmountBaht]]
-      .concat(rows.map((r) => [formatDay(new Date(r.at), lang, true), r.who, `PromptPay${r.ref ? ` (${t.supportRefShort} ${r.ref})` : ""}`, String(r.amountBaht)]))
+    const lines = [
+      [t.adminColTime, t.adminDonationDonor, t.adminDonationChannel, t.adminDonationAmountBaht],
+    ]
+      .concat(
+        rows.map((r) => [
+          formatDay(new Date(r.at), lang, true),
+          r.who,
+          `PromptPay${r.ref ? ` (${t.supportRefShort} ${r.ref})` : ""}`,
+          String(r.amountBaht),
+        ]),
+      )
       .map((r) => r.map(esc).join(","));
     // BOM: without it Excel mangles Thai.
     const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
@@ -251,7 +301,12 @@ function ReportSection() {
       <p className="mt-1 text-xs text-muted-foreground">{t.adminDonationsReportNote}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {periods.map(([p, label]) => (
-          <Button key={p} size="sm" variant={period === p ? "default" : "outline"} onClick={() => setPeriod(p)}>
+          <Button
+            key={p}
+            size="sm"
+            variant={period === p ? "default" : "outline"}
+            onClick={() => setPeriod(p)}
+          >
             {label}
           </Button>
         ))}
@@ -260,7 +315,12 @@ function ReportSection() {
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <Label htmlFor="rep-start">{t.periodFrom}</Label>
-            <Input id="rep-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            <Input
+              id="rep-start"
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="rep-end">{t.periodTo}</Label>
@@ -273,8 +333,15 @@ function ReportSection() {
       ) : (
         <>
           <div className="mt-3 grid grid-cols-3 gap-2">
-            <Stat label={t.adminDonationTotal} value={`฿${formatMoney(total)}`} sub={t.adminDonationCount(rows.length)} />
-            <Stat label={t.adminDonationAverage} value={`฿${formatMoney(rows.length ? total / rows.length : 0)}`} />
+            <Stat
+              label={t.adminDonationTotal}
+              value={`฿${formatMoney(total)}`}
+              sub={t.adminDonationCount(rows.length)}
+            />
+            <Stat
+              label={t.adminDonationAverage}
+              value={`฿${formatMoney(rows.length ? total / rows.length : 0)}`}
+            />
             <Stat label={t.adminDonationDonors} value={String(donors)} />
           </div>
           {shown.length > 0 && (
@@ -291,16 +358,24 @@ function ReportSection() {
                 <TableBody>
                   {shown.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap text-xs">{formatDay(new Date(r.at), lang, true)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {formatDay(new Date(r.at), lang, true)}
+                      </TableCell>
                       <TableCell className="text-xs">{r.who}</TableCell>
-                      <TableCell className="text-xs">PromptPay{r.ref ? ` (${t.supportRefShort} ${r.ref})` : ""}</TableCell>
-                      <TableCell className="text-right text-xs font-medium">{formatMoney(r.amountBaht)}</TableCell>
+                      <TableCell className="text-xs">
+                        PromptPay{r.ref ? ` (${t.supportRefShort} ${r.ref})` : ""}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-medium">
+                        {formatMoney(r.amountBaht)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
               {rows.length > shown.length && (
-                <p className="mt-1 text-xs text-muted-foreground">{t.adminDonationMore(rows.length - shown.length)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t.adminDonationMore(rows.length - shown.length)}
+                </p>
               )}
             </div>
           )}
@@ -329,15 +404,27 @@ function SettingsSection() {
   const settings = useQuery({
     queryKey: ["donation-settings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("donation_settings").select("promptpay_id, enabled, purpose").eq("id", true).maybeSingle();
+      const { data, error } = await supabase
+        .from("donation_settings")
+        .select("promptpay_id, enabled, purpose")
+        .eq("id", true)
+        .maybeSingle();
       if (error) throw error;
       return data ?? { promptpay_id: null, enabled: false, purpose: "" };
     },
   });
-  const [form, setForm] = useState<{ promptpayId: string; enabled: boolean; purpose: string } | null>(null);
+  const [form, setForm] = useState<{
+    promptpayId: string;
+    enabled: boolean;
+    purpose: string;
+  } | null>(null);
   useEffect(() => {
     if (settings.data && form === null) {
-      setForm({ promptpayId: settings.data.promptpay_id ?? "", enabled: settings.data.enabled, purpose: settings.data.purpose });
+      setForm({
+        promptpayId: settings.data.promptpay_id ?? "",
+        enabled: settings.data.enabled,
+        purpose: settings.data.purpose,
+      });
     }
   }, [settings.data, form]);
 
@@ -355,8 +442,11 @@ function SettingsSection() {
   const digits = (form?.promptpayId ?? "").replace(/[^0-9]/g, "");
   const idOk = digits === "" || isValidPromptPayId(digits);
   const dirty =
-    !!settings.data && !!form &&
-    (digits !== (settings.data.promptpay_id ?? "") || form.enabled !== settings.data.enabled || form.purpose !== settings.data.purpose);
+    !!settings.data &&
+    !!form &&
+    (digits !== (settings.data.promptpay_id ?? "") ||
+      form.enabled !== settings.data.enabled ||
+      form.purpose !== settings.data.purpose);
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -374,22 +464,35 @@ function SettingsSection() {
               onChange={(e) => setForm({ ...form, promptpayId: e.target.value })}
               placeholder="0812345678"
             />
-            <p className={`text-xs ${idOk ? "text-muted-foreground" : "text-destructive"}`}>{t.adminPromptPayHint}</p>
+            <p className={`text-xs ${idOk ? "text-muted-foreground" : "text-destructive"}`}>
+              {t.adminPromptPayHint}
+            </p>
           </div>
           <div className="flex items-center justify-between rounded-xl border border-border p-3">
             <div>
               <p className="text-sm font-medium">{t.adminDonationsEnabled}</p>
               <p className="text-xs text-muted-foreground">{t.adminDonationsEnabledHint}</p>
             </div>
-            <Switch checked={form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} />
+            <Switch
+              checked={form.enabled}
+              onCheckedChange={(v) => setForm({ ...form, enabled: v })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pp-purpose">{t.adminPurposeLabel}</Label>
-            <Textarea id="pp-purpose" rows={4} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} />
+            <Textarea
+              id="pp-purpose"
+              rows={4}
+              value={form.purpose}
+              onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+            />
             <p className="text-xs text-muted-foreground">{t.adminPurposeHint}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={!dirty || !idOk || mutation.isPending} onClick={() => mutation.mutate()}>
+            <Button
+              disabled={!dirty || !idOk || mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
               {t.adminSave}
             </Button>
             <Button variant="ghost" disabled={!dirty} onClick={() => setForm(null)}>

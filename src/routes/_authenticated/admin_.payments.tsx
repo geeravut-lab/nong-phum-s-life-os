@@ -165,7 +165,9 @@ function AdminPaymentsPage() {
               <PaymentCard key={r.id} row={r} t={t}>
                 <Button
                   size="sm"
-                  onClick={() => setDialog({ kind: "payout", id: r.id, amount: Number(r.provider_amount) })}
+                  onClick={() =>
+                    setDialog({ kind: "payout", id: r.id, amount: Number(r.provider_amount) })
+                  }
                 >
                   {t.payMarkPayoutPaid}
                 </Button>
@@ -222,8 +224,8 @@ function PaymentCard({
           <h3 className="font-medium">{title}</h3>
           <p className="text-lg font-semibold">฿{formatMoney(Number(row.amount))}</p>
           <p className="text-xs text-muted-foreground">
-            {t.payProviderShare}: ฿{formatMoney(Number(row.provider_amount))} · {t.payPlatformFee}: ฿
-            {formatMoney(Number(row.platform_fee))}
+            {t.payProviderShare}: ฿{formatMoney(Number(row.provider_amount))} · {t.payPlatformFee}:
+            ฿{formatMoney(Number(row.platform_fee))}
           </p>
           {row.payer_ref && (
             <p className="mt-1 text-xs">

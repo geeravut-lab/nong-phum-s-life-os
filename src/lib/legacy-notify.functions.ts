@@ -41,9 +41,7 @@ async function assertCaseAccess(userId: string, caseId: string) {
 /** Build personalized notify messages for trusted contacts + memorial/schedule links. */
 export const generateDeathNotifyMessages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ caseId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ caseId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const c = await assertCaseAccess(context.userId, data.caseId);
     const subjectId = c.subject_user_id as string;
@@ -74,9 +72,7 @@ export const generateDeathNotifyMessages = createServerFn({ method: "POST" })
     }
 
     const memorialUrl =
-      mem?.share_token && mem.is_public
-        ? `${appOrigin()}/memorial/${mem.share_token}`
-        : null;
+      mem?.share_token && mem.is_public ? `${appOrigin()}/memorial/${mem.share_token}` : null;
 
     // Funeral schedule from plan
     const { data: plan } = await supabaseAdmin
@@ -89,7 +85,13 @@ export const generateDeathNotifyMessages = createServerFn({ method: "POST" })
 
     let scheduleBlock = (mem?.schedule_text as string) || "";
     if (!scheduleBlock && plan) {
-      const pkgs = (plan.packages as Array<{ id: string; name: string; summary?: string; timeline?: string[] }>) ?? [];
+      const pkgs =
+        (plan.packages as Array<{
+          id: string;
+          name: string;
+          summary?: string;
+          timeline?: string[];
+        }>) ?? [];
       const selected = pkgs.find((p) => p.id === plan.selected_package) ?? pkgs[0];
       if (selected) {
         const lines = [
@@ -155,13 +157,14 @@ export const generateDeathNotifyMessages = createServerFn({ method: "POST" })
         `ขอแจ้งว่า ${subjectLabel} ได้จากไปแล้ว และครอบครัวกำลังดำเนินการตามแผนที่ท่านวางไว้`,
         personal ? `\nข้อความที่ฝากถึงคุณ:\n「${personal}」` : "",
         memorialUrl ? `\nหน้าอาลัยบุ๊ค (Memorial):\n${memorialUrl}` : "",
-        scheduleBlock
-          ? `\nกำหนดการ / แผนพิธี (สรุป):\n${scheduleBlock}`
-          : "",
+        scheduleBlock ? `\nกำหนดการ / แผนพิธี (สรุป):\n${scheduleBlock}` : "",
         "",
         "ข้อความนี้สร้างจาก Life OS เพื่อช่วยประสานงาน — ไม่ใช่เอกสารทางกฎหมาย",
       ];
-      const message_body = parts.filter((p) => p !== undefined).join("\n").replace(/\n{3,}/g, "\n\n");
+      const message_body = parts
+        .filter((p) => p !== undefined)
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n");
 
       rows.push({
         case_id: data.caseId,
@@ -190,9 +193,7 @@ export const generateDeathNotifyMessages = createServerFn({ method: "POST" })
 
 export const listDeathNotifyMessages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ caseId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ caseId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertCaseAccess(context.userId, data.caseId);
     const { data: rows, error } = await supabaseAdmin

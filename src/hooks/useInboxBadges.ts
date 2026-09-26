@@ -110,9 +110,7 @@ export async function markNotificationsReadForPath(userId: string, path: string)
     .eq("user_id", userId)
     .is("read_at", null)
     .limit(100);
-  const ids = (data ?? [])
-    .filter((n) => kindToNav(n.kind, n.href) === path)
-    .map((n) => n.id);
+  const ids = (data ?? []).filter((n) => kindToNav(n.kind, n.href) === path).map((n) => n.id);
   if (!ids.length) return;
   await supabase
     .from("app_notifications")

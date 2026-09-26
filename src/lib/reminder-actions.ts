@@ -12,7 +12,10 @@ export type CompletableReminder = { id: string; due_at: string | null; recurrenc
 
 export type CompleteResult = { advancedTo: Date | null };
 
-export async function completeReminder(r: CompletableReminder, now: Date = new Date()): Promise<CompleteResult> {
+export async function completeReminder(
+  r: CompletableReminder,
+  now: Date = new Date(),
+): Promise<CompleteResult> {
   const at = now.toISOString();
   if (isRepeating(r.recurrence) && r.due_at) {
     const next = nextOccurrence(new Date(r.due_at), r.recurrence, now);
@@ -33,7 +36,10 @@ export async function completeReminder(r: CompletableReminder, now: Date = new D
     if (error) throw error;
     return { advancedTo: next };
   }
-  const { error } = await supabase.from("reminders").update({ status: "done", last_completed_at: at }).eq("id", r.id);
+  const { error } = await supabase
+    .from("reminders")
+    .update({ status: "done", last_completed_at: at })
+    .eq("id", r.id);
   if (error) throw error;
   return { advancedTo: null };
 }
