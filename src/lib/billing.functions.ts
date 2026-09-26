@@ -363,7 +363,7 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .single();
     if (error || !pay) throw new Error(error?.message ?? "not found");
     if (pay.user_id !== context.userId && !isAdmin) throw new Error("Forbidden");
-    // User reports transfer — draft/awaiting → pending for admin review
+    // User reports transfer — draft → pending for admin
     if (pay.payment_status === "paid") return { ok: true as const, status: "paid" as const };
     if (pay.payment_status === "rejected") throw new Error("รายการนี้ถูกปฏิเสธแล้ว");
 
@@ -378,7 +378,6 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
     return { ok: true as const, status: "pending" as const };
   });
 
-/** Admin: reject premium payment report */
 export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -435,21 +434,23 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
       })
       .eq("id", data.paymentId);
 
-    await supabaseAdmin
-      .from("profiles")
-      .update({
-        plan_tier: pay.plan_tier,
-        plan_expires_at: end.toISOString(),
-      })
-      .eq("id", pay.user_id);
+    if (pay.plan_tier !== "payg") {
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          plan_tier: pay.plan_tier,
+          plan_expires_at: end.toISOString(),
+        })
+        .eq("id", pay.user_id);
 
-    await supabaseAdmin.from("user_subscriptions").insert({
-      user_id: pay.user_id,
-      plan_tier: pay.plan_tier,
-      status: "active",
-      expires_at: end.toISOString(),
-      notes: `premium_payment:${pay.id}`,
-    });
+      await supabaseAdmin.from("user_subscriptions").insert({
+        user_id: pay.user_id,
+        plan_tier: pay.plan_tier,
+        status: "active",
+        expires_at: end.toISOString(),
+        notes: `premium_payment:${pay.id}`,
+      });
+    }
 
     return { ok: true as const, expiresAt: end.toISOString() };
   });
@@ -484,12 +485,11 @@ export const createPaygOrder = createServerFn({ method: "POST" })
       .from("premium_payments")
       .insert({
         user_id: context.userId,
-        plan_tier: "premium",
+        plan_tier: "payg",
         period: "monthly",
         amount: amountBaht,
         payment_status: "draft",
         promptpay_id: settings.promptpayId,
-        
       } as never)
       .select("id, amount, promptpay_id")
       .single();
@@ -502,4 +502,22 @@ export const createPaygOrder = createServerFn({ method: "POST" })
       qrUrl: `https://promptpay.io/${row.promptpay_id}/${amt.toFixed(2)}`,
       message: "ok" as const,
     };
+  });
+
+
+/** User: list own premium / family / PAYG payments (not pure draft without report optional: show draft+pending+paid) */
+export const listMyPremiumPayments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabaseAdmin = await admin();
+    const { data, error } = await supabaseAdmin
+      .from("premium_payments")
+      .select("id, plan_tier, period, amount, payment_status, payer_ref, created_at, paid_at")
+      .eq("user_id", context.userId)
+      .in("payment_status", ["draft", "pending", "paid", "rejected", "cancelled", "expired"])
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    // Hide pure draft with no payer_ref older than display? Show all for transparency after create
+    return { items: data ?? [] };
   });

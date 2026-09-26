@@ -175,9 +175,7 @@ function AdminPage() {
     <AppShell>
       <header className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">{t.adminTitle}</h1>
-        {t.adminSub ? (
-          <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p>
-        ) : null}
+        <p className="mt-1 text-sm text-muted-foreground">{t.adminSub}</p>
       </header>
 
       {/* ---- In effect now ---- */}
@@ -721,8 +719,8 @@ function PremiumPayHubCard() {
   });
   const n = pending.data ?? 0;
   return (
-    <Link
-      to="/admin/premium"
+    <a
+      href="/admin/premium"
       className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
     >
       <div>
@@ -734,9 +732,9 @@ function PremiumPayHubCard() {
           {n}
         </Badge>
       ) : (
-        <span className="text-xs text-muted-foreground">{"—"}</span>
+        <span className="text-xs text-muted-foreground">—</span>
       )}
-    </Link>
+    </a>
   );
 }
 

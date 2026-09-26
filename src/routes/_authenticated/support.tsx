@@ -21,6 +21,7 @@ import {
   createPremiumOrder,
   createPaygOrder,
   getBillingPublic,
+  listMyPremiumPayments,
 } from "@/lib/billing.functions";
 import { createDonation, DONATION_MAX, DONATION_MIN, getSupportConfig } from "@/lib/support.functions";
 
@@ -62,6 +63,7 @@ function SupportPage() {
   const runOrder = useServerFn(createPremiumOrder);
   const runConfirmPrem = useServerFn(confirmPremiumPaid);
   const runPayg = useServerFn(createPaygOrder);
+  const runMyPrem = useServerFn(listMyPremiumPayments);
   const [premBusy, setPremBusy] = useState(false);
   const [premRef, setPremRef] = useState("");
   const [premQr, setPremQr] = useState<{
@@ -69,6 +71,22 @@ function SupportPage() {
     amount: number;
     qrUrl: string;
   } | null>(null);
+
+  const myPremQ = useQuery({
+    queryKey: ["my-premium-payments"],
+    queryFn: async () =>
+      (await runMyPrem()) as {
+        items: Array<{
+          id: string;
+          plan_tier: string;
+          period: string;
+          amount: number;
+          payment_status: string;
+          payer_ref: string | null;
+          created_at: string;
+        }>;
+      },
+  });
 
   const billingQ = useQuery({
     queryKey: ["billing-public"],
@@ -239,7 +257,7 @@ function SupportPage() {
 
       
       {/* Premium — below donation amount flow */}
-      <section className="mt-6 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         {billingQ.data?.isPremium ? (
           <p className="text-sm font-semibold text-primary">{t.billYouArePremium}</p>
         ) : (
@@ -417,6 +435,7 @@ function SupportPage() {
                       setPremRef("");
                       void qc.invalidateQueries({ queryKey: ["billing-public"] });
                       void qc.invalidateQueries({ queryKey: ["my-plan"] });
+                      void qc.invalidateQueries({ queryKey: ["my-premium-payments"] });
                     } catch (e) {
                       toast.error(e instanceof Error ? e.message : t.error);
                     } finally {
@@ -431,6 +450,55 @@ function SupportPage() {
           </>
         )}
       </section>
+
+      
+      {/* My Premium / Family / PAYG */}
+      {myPremQ.data && myPremQ.data.items.length > 0 && (
+        <section className="mt-5 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-semibold">{t.billMyPaymentsTitle}</h2>
+          <ul className="mt-2 divide-y divide-border">
+            {myPremQ.data.items.map((d) => (
+              <li key={d.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                <div>
+                  <p className="font-medium">
+                    ฿{Number(d.amount).toLocaleString()} ·{" "}
+                    {d.plan_tier === "payg"
+                      ? "PAYG"
+                      : d.plan_tier === "family"
+                        ? t.billFamily
+                        : t.billPremiumTitle}{" "}
+                    {d.plan_tier !== "payg" ? `· ${d.period}` : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(d.created_at).toLocaleString()}
+                    {d.payer_ref ? ` · ref ${d.payer_ref}` : ""}
+                    {d.payment_status === "draft" ? " · QR" : ""}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    d.payment_status === "paid"
+                      ? "secondary"
+                      : d.payment_status === "rejected"
+                        ? "destructive"
+                        : "outline"
+                  }
+                >
+                  {d.payment_status === "pending"
+                    ? t.donationPending
+                    : d.payment_status === "paid"
+                      ? t.donationConfirmed
+                      : d.payment_status === "rejected"
+                        ? t.donationRejected
+                        : d.payment_status === "draft"
+                          ? "QR"
+                          : d.payment_status}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {mine.data && mine.data.length > 0 && (
         <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
