@@ -116,7 +116,14 @@ function clip(s: string, max: number): string {
 /** One card for one reminder that just came due. */
 export function immediateCard(r: FlexReminder, appUrl: string): FlexMessage {
   const when = r.due_at ? thaiDateTime(r.due_at) : "—";
-  const rows: unknown[] = [row("กำหนด", when), row("ความสำคัญ", PRIORITY_TH[r.priority] ?? r.priority, r.priority === "high" ? { color: DANGER, weight: "bold" } : {})];
+  const rows: unknown[] = [
+    row("กำหนด", when),
+    row(
+      "ความสำคัญ",
+      PRIORITY_TH[r.priority] ?? r.priority,
+      r.priority === "high" ? { color: DANGER, weight: "bold" } : {},
+    ),
+  ];
   if (RECURRENCE_TH[r.recurrence]) rows.push(row("ทำซ้ำ", RECURRENCE_TH[r.recurrence]!));
   if (r.notes?.trim()) rows.push(row("หมายเหตุ", clip(r.notes.trim(), 200)));
   return {
@@ -154,13 +161,20 @@ export function digestCard(items: FlexReminder[], dayIso: string, appUrl: string
       spacing: "xs",
       contents: [
         text(`${i + 1}. ${r.title}`, { size: "sm", weight: "bold", color: INK }),
-        ...(meta ? [text(meta, { size: "xs", color: r.priority === "high" ? DANGER : MUTED })] : []),
+        ...(meta
+          ? [text(meta, { size: "xs", color: r.priority === "high" ? DANGER : MUTED })]
+          : []),
       ],
     });
   });
   if (items.length > shown.length) {
     rows.push({ type: "separator" });
-    rows.push(text(`และอีก ${items.length - shown.length} เรื่อง ดูทั้งหมดในแอป`, { size: "xs", color: MUTED }));
+    rows.push(
+      text(`และอีก ${items.length - shown.length} เรื่อง ดูทั้งหมดในแอป`, {
+        size: "xs",
+        color: MUTED,
+      }),
+    );
   }
   const titles = items.map((r) => r.title).join(", ");
   return {

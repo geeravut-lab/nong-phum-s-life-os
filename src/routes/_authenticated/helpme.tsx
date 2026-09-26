@@ -16,7 +16,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
-import { draftJob, matchHelpers, suggestHelperSkills, suggestJobPrice } from "@/lib/marketplace.functions";
+import {
+  draftJob,
+  matchHelpers,
+  suggestHelperSkills,
+  suggestJobPrice,
+} from "@/lib/marketplace.functions";
 import { JobWorkspace } from "@/components/JobWorkspace";
 import {
   createJobPayment,
@@ -94,7 +99,9 @@ function RequesterTab() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [priceHint, setPriceHint] = useState<{ min: number; max: number; note: string } | null>(null);
+  const [priceHint, setPriceHint] = useState<{ min: number; max: number; note: string } | null>(
+    null,
+  );
   const [matchesFor, setMatchesFor] = useState<string | null>(null);
   const [matches, setMatches] = useState<Awaited<ReturnType<typeof matchHelpers>>>([]);
   const [reviewFor, setReviewFor] = useState<string | null>(null);
@@ -102,10 +109,11 @@ function RequesterTab() {
   const [reviewComment, setReviewComment] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
   const [payBusy, setPayBusy] = useState(false);
-  const [payPanel, setPayPanel] = useState<
-    | { jobId: string; amount: number; qrUrl: string | null }
-    | null
-  >(null);
+  const [payPanel, setPayPanel] = useState<{
+    jobId: string;
+    amount: number;
+    qrUrl: string | null;
+  } | null>(null);
   const [payRef, setPayRef] = useState("");
   const { data: settings } = useSettings();
 
@@ -216,8 +224,7 @@ function RequesterTab() {
       .from("job_offers")
       .update({
         status: "rejected",
-        reject_reason:
-          counterPrice != null && counterPrice > 0 ? `counter:${counterPrice}` : null,
+        reject_reason: counterPrice != null && counterPrice > 0 ? `counter:${counterPrice}` : null,
       })
       .eq("id", offerId);
     if (error) {
@@ -265,10 +272,7 @@ function RequesterTab() {
     }
   };
 
-  const submitReview = async (job: {
-    id: string;
-    assigned_helper_id: string | null;
-  }) => {
+  const submitReview = async (job: { id: string; assigned_helper_id: string | null }) => {
     if (!user || !job.assigned_helper_id || reviewBusy) return;
     if (reviewRating < 1 || reviewRating > 5) return;
     setReviewBusy(true);
@@ -293,7 +297,6 @@ function RequesterTab() {
       setReviewBusy(false);
     }
   };
-
 
   const startPay = async (jobId: string) => {
     setPayBusy(true);
@@ -337,7 +340,7 @@ function RequesterTab() {
     }
   };
 
-    const feeLabel =
+  const feeLabel =
     settings?.revenue_mode === "service_fee"
       ? `${settings?.service_fee} ${t.baht}`
       : `${settings?.commission_rate ?? 5}%`;
@@ -432,7 +435,8 @@ function RequesterTab() {
           )}
           {priceHint && (
             <p className="text-sm text-muted-foreground">
-              {t.priceGuidance}: ฿{priceHint.min.toLocaleString()}–฿{priceHint.max.toLocaleString()} — {priceHint.note}
+              {t.priceGuidance}: ฿{priceHint.min.toLocaleString()}–฿{priceHint.max.toLocaleString()}{" "}
+              — {priceHint.note}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -511,17 +515,22 @@ function RequesterTab() {
               ) &&
                 job.assigned_helper_id &&
                 (() => {
-                  const pays = (job.job_payments
-                    ? Array.isArray(job.job_payments)
-                      ? job.job_payments
-                      : [job.job_payments]
-                    : []) as Array<{
+                  const pays = (
+                    job.job_payments
+                      ? Array.isArray(job.job_payments)
+                        ? job.job_payments
+                        : [job.job_payments]
+                      : []
+                  ) as Array<{
                     payment_status: string;
                     amount: number;
                     payer_ref: string | null;
                   }>;
                   const pay = pays[0];
-                  const st = pay?.payment_status ?? (job as { payment_status?: string | null }).payment_status ?? null;
+                  const st =
+                    pay?.payment_status ??
+                    (job as { payment_status?: string | null }).payment_status ??
+                    null;
                   if (!st && (job.status === "matched" || job.status === "in_progress")) {
                     return (
                       <div className="mt-3">
@@ -564,7 +573,12 @@ function RequesterTab() {
                           </div>
                         )}
                         {!panel && st === "pending" && (
-                          <Button size="sm" variant="secondary" disabled={payBusy} onClick={() => startPay(job.id)}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={payBusy}
+                            onClick={() => startPay(job.id)}
+                          >
                             {t.payNow}
                           </Button>
                         )}
@@ -616,9 +630,7 @@ function RequesterTab() {
                               }
                             />
                           ))}
-                          <span className="ml-1 text-muted-foreground">
-                            {mine.rating}/5
-                          </span>
+                          <span className="ml-1 text-muted-foreground">{mine.rating}/5</span>
                         </p>
                         {mine.comment && (
                           <p className="mt-1 text-muted-foreground">{mine.comment}</p>
@@ -680,16 +692,10 @@ function RequesterTab() {
                                 })
                               }
                             >
-                              {reviewBusy ? (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                              ) : null}
+                              {reviewBusy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
                               {t.submitReview}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setReviewFor(null)}
-                            >
+                            <Button size="sm" variant="ghost" onClick={() => setReviewFor(null)}>
                               {t.cancelBtn}
                             </Button>
                           </div>
@@ -775,7 +781,10 @@ function RequesterTab() {
                           size="sm"
                           variant="secondary"
                           onClick={() => {
-                            const raw = window.prompt(t.counterPrompt, o.price != null ? String(o.price) : "");
+                            const raw = window.prompt(
+                              t.counterPrompt,
+                              o.price != null ? String(o.price) : "",
+                            );
                             if (raw == null) return;
                             const n = Number(raw);
                             if (!Number.isFinite(n) || n <= 0) {
@@ -811,8 +820,9 @@ function RequesterTab() {
                   counterpartyUserId={
                     // helper_user_id is on offers; fall back null if not loaded
                     (
-                      (job.job_offers as Array<{ helper_id: string; helper_user_id?: string; status: string }> | undefined)
-                        ?? []
+                      (job.job_offers as
+                        | Array<{ helper_id: string; helper_user_id?: string; status: string }>
+                        | undefined) ?? []
                     ).find((o) => o.status === "accepted" || o.helper_id === job.assigned_helper_id)
                       ?.helper_user_id ?? null
                   }
@@ -893,7 +903,9 @@ function HelperTab() {
       if (!profile?.id) return [];
       const { data } = await supabase
         .from("jobs")
-        .select("id, user_id, title, status, payment_status, job_payments(payment_status, service_ended)")
+        .select(
+          "id, user_id, title, status, payment_status, job_payments(payment_status, service_ended)",
+        )
         .eq("assigned_helper_id", profile.id)
         .in("status", ["matched", "in_progress", "done"])
         .order("updated_at", { ascending: false })
@@ -1111,7 +1123,10 @@ function HelperTab() {
             const held = (pay?.payment_status ?? job.payment_status) === "held";
             const ended = !!pay?.service_ended;
             return (
-              <article key={job.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <article
+                key={job.id}
+                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+              >
                 <h3 className="font-medium">{job.title}</h3>
                 <p className="text-xs text-muted-foreground">{job.status}</p>
                 {held && !ended && (
@@ -1137,12 +1152,21 @@ function HelperTab() {
           {(myOffers ?? [])
             .filter((o: any) => o.status === "pending")
             .map((o: any) => (
-              <article key={o.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+              <article
+                key={o.id}
+                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+              >
                 <h3 className="font-medium">{(o.jobs as any)?.title ?? o.job_id.slice(0, 8)}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {o.price != null ? `${o.price} ${t.baht}` : ""} {o.message ? `· ${o.message}` : ""}
+                  {o.price != null ? `${o.price} ${t.baht}` : ""}{" "}
+                  {o.message ? `· ${o.message}` : ""}
                 </p>
-                <Button className="mt-2" size="sm" variant="outline" onClick={() => withdrawOffer(o.id)}>
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => withdrawOffer(o.id)}
+                >
                   {t.withdrawOffer}
                 </Button>
               </article>

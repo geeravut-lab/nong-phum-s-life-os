@@ -50,7 +50,11 @@ function MicTestPage() {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
       const e = err as { name?: string; message?: string };
-      setPhase({ step: "denied", name: e?.name ?? "UnknownError", message: e?.message ?? String(err) });
+      setPhase({
+        step: "denied",
+        name: e?.name ?? "UnknownError",
+        message: e?.message ?? String(err),
+      });
       return;
     }
 
@@ -87,7 +91,11 @@ function MicTestPage() {
     } catch (err) {
       stream.getTracks().forEach((t) => t.stop());
       const e = err as { name?: string; message?: string };
-      setPhase({ step: "record-failed", name: e?.name ?? "UnknownError", message: e?.message ?? String(err) });
+      setPhase({
+        step: "record-failed",
+        name: e?.name ?? "UnknownError",
+        message: e?.message ?? String(err),
+      });
     }
   };
 
@@ -123,7 +131,9 @@ function MicTestPage() {
           </div>
         )}
         {phase.step === "recording" && (
-          <p className="text-3xl font-bold text-primary">✅ ได้ไมค์แล้ว กำลังอัด {phase.secondsLeft} วิ</p>
+          <p className="text-3xl font-bold text-primary">
+            ✅ ได้ไมค์แล้ว กำลังอัด {phase.secondsLeft} วิ
+          </p>
         )}
         {phase.step === "record-failed" && (
           <div className="space-y-2">
@@ -154,7 +164,9 @@ function MicTestPage() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-2 text-lg font-semibold">MediaRecorder.isTypeSupported()</h2>
         {hasRecorder === false && (
-          <p className="mb-2 text-lg font-bold text-destructive">❌ ไม่มี MediaRecorder ในเบราว์เซอร์นี้</p>
+          <p className="mb-2 text-lg font-bold text-destructive">
+            ❌ ไม่มี MediaRecorder ในเบราว์เซอร์นี้
+          </p>
         )}
         <ul className="space-y-1 font-mono text-base">
           {PROBE_TYPES.map((type) => (

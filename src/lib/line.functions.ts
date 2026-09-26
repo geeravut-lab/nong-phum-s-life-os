@@ -7,9 +7,14 @@ import type { LineLinkErrorCode, LineLinkView } from "./line-link.server";
 // to the account of whoever is calling. Errors travel as codes in the body
 // (server functions cannot set an HTTP status); details stay in server logs.
 
-export type LineLinkStatus = { link: LineLinkView | null; addFriendUrl: string | null; configured: boolean };
+export type LineLinkStatus = {
+  link: LineLinkView | null;
+  addFriendUrl: string | null;
+  configured: boolean;
+};
 
-export type LineLinkOutcome = { ok: true; link: LineLinkView } | { ok: false; code: LineLinkErrorCode };
+export type LineLinkOutcome =
+  { ok: true; link: LineLinkView } | { ok: false; code: LineLinkErrorCode };
 
 const origin = z.string().url().max(200);
 
@@ -20,7 +25,9 @@ export const getLineLink = createServerFn({ method: "GET" })
     return {
       link: await getLink(context.userId),
       addFriendUrl: addFriendUrl(),
-      configured: !!(process.env["LINE_LOGIN_CHANNEL_ID"] && process.env["LINE_LOGIN_CHANNEL_SECRET"]),
+      configured: !!(
+        process.env["LINE_LOGIN_CHANNEL_ID"] && process.env["LINE_LOGIN_CHANNEL_SECRET"]
+      ),
     };
   });
 

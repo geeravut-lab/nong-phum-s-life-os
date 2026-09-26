@@ -152,7 +152,9 @@ export async function getAiSettings(): Promise<AiSettingsRow | null> {
       .maybeSingle();
     if (error) throw error;
     settingsCache = {
-      row: data ? { ...data, model_overrides: (data.model_overrides ?? {}) as ModelOverrides } : null,
+      row: data
+        ? { ...data, model_overrides: (data.model_overrides ?? {}) as ModelOverrides }
+        : null,
       fetchedAt: now,
     };
   } catch (err) {
@@ -247,7 +249,13 @@ export async function resolveProvider(task: TaskKind | "config" = "config"): Pro
       lastGuardLogAt = now;
       const message = `ai_settings.default_provider is "${fromDb}" but ${PROVIDERS[fromDb].envKey} is not set; using "${envProvider}" from the environment instead`;
       console.error(`[ai] ${message}`);
-      await logAiEvent({ provider: fromDb, task, status: "error", error_code: "missing_api_key", message });
+      await logAiEvent({
+        provider: fromDb,
+        task,
+        status: "error",
+        error_code: "missing_api_key",
+        message,
+      });
     }
     return envProvider;
   }
@@ -266,7 +274,9 @@ async function resolveFallbackProvider(): Promise<ProviderId | undefined> {
 export async function resolveModelId(id: ProviderId, task: TaskKind): Promise<string> {
   const settings = await getAiSettings();
   const override = settings?.model_overrides?.[id]?.[task];
-  return typeof override === "string" && override.trim() !== "" ? override.trim() : PROVIDERS[id].models[task];
+  return typeof override === "string" && override.trim() !== ""
+    ? override.trim()
+    : PROVIDERS[id].models[task];
 }
 
 async function modelFor(id: ProviderId, task: TaskKind): Promise<LanguageModel> {
@@ -291,8 +301,9 @@ export async function getModel(task: TaskKind, override?: ProviderId): Promise<L
  * and would fail identically on the fallback, so they are not worth a second call.
  */
 function shouldTryFallback(error: unknown): boolean {
-  const status = (error as { statusCode?: number; status?: number } | null)?.statusCode
-    ?? (error as { status?: number } | null)?.status;
+  const status =
+    (error as { statusCode?: number; status?: number } | null)?.statusCode ??
+    (error as { status?: number } | null)?.status;
   if (typeof status === "number") {
     return status === 429 || status === 401 || status === 403 || status >= 500;
   }
@@ -302,8 +313,9 @@ function shouldTryFallback(error: unknown): boolean {
 }
 
 function errorCodeOf(error: unknown): string | null {
-  const status = (error as { statusCode?: number; status?: number } | null)?.statusCode
-    ?? (error as { status?: number } | null)?.status;
+  const status =
+    (error as { statusCode?: number; status?: number } | null)?.statusCode ??
+    (error as { status?: number } | null)?.status;
   if (typeof status === "number") return String(status);
   const name = (error as { name?: string } | null)?.name;
   return name && name !== "Error" ? name : null;
@@ -329,23 +341,47 @@ export async function withProviderFallback<T>(
   } catch (error) {
     const fallback = await resolveFallbackProvider();
     if (!fallback || fallback === primary || !shouldTryFallback(error)) {
-      await logAiEvent({ provider: primary, task, status: "error", error_code: errorCodeOf(error), message: messageOf(error) });
+      await logAiEvent({
+        provider: primary,
+        task,
+        status: "error",
+        error_code: errorCodeOf(error),
+        message: messageOf(error),
+      });
       throw error;
     }
     if (!apiKeyFor(fallback)) {
       const note = `fallback provider "${fallback}" is configured but ${PROVIDERS[fallback].envKey} is not set; rethrowing original error`;
       console.error(`[ai] ${note}`);
-      await logAiEvent({ provider: primary, task, status: "error", error_code: errorCodeOf(error), message: `${messageOf(error)} (${note})` });
+      await logAiEvent({
+        provider: primary,
+        task,
+        status: "error",
+        error_code: errorCodeOf(error),
+        message: `${messageOf(error)} (${note})`,
+      });
       throw error;
     }
     console.warn(
       `[ai] provider "${primary}" failed on task "${task}" (${messageOf(error)}); retrying once with "${fallback}"`,
     );
-    await logAiEvent({ provider: primary, task, status: "fallback", error_code: errorCodeOf(error), message: `${messageOf(error)} → retried on "${fallback}"` });
+    await logAiEvent({
+      provider: primary,
+      task,
+      status: "fallback",
+      error_code: errorCodeOf(error),
+      message: `${messageOf(error)} → retried on "${fallback}"`,
+    });
     try {
       return await call(await modelFor(fallback, task));
     } catch (fallbackError) {
-      await logAiEvent({ provider: fallback, task, status: "error", error_code: errorCodeOf(fallbackError), message: `fallback also failed: ${messageOf(fallbackError)}` });
+      await logAiEvent({
+        provider: fallback,
+        task,
+        status: "error",
+        error_code: errorCodeOf(fallbackError),
+        message: `fallback also failed: ${messageOf(fallbackError)}`,
+      });
       throw fallbackError;
     }
   }

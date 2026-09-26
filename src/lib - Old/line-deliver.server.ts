@@ -21,7 +21,14 @@
 //   409              → LINE already accepted this X-Line-Retry-Key: counts as sent
 import { supabaseAdmin } from "../integrations/supabase/client.server";
 import { digestCard, immediateCard, type FlexReminder } from "./line-flex";
-import { appOpenUrl, checkFriend, getQuota, lineChannelToken, pushFlex, type LineQuota } from "./line-push.server";
+import {
+  appOpenUrl,
+  checkFriend,
+  getQuota,
+  lineChannelToken,
+  pushFlex,
+  type LineQuota,
+} from "./line-push.server";
 import { bangkokDateAtHour, monthStartInBangkok, todayInBangkok } from "./time";
 
 export const MAX_ATTEMPTS = 3;
@@ -79,7 +86,11 @@ export function monthStartIso(now: Date): string {
 }
 
 export async function loadSettings(): Promise<NotificationSettings> {
-  const { data, error } = await supabaseAdmin.from("notification_settings").select("*").eq("id", true).maybeSingle();
+  const { data, error } = await supabaseAdmin
+    .from("notification_settings")
+    .select("*")
+    .eq("id", true)
+    .maybeSingle();
   if (error || !data) {
     if (error) console.error(`[line] notification_settings read: ${error.message}`);
     return DEFAULT_SETTINGS;
@@ -98,7 +109,10 @@ export async function sentThisMonth(now: Date): Promise<number> {
   return count ?? 0;
 }
 
-export async function loadLineContext(now: Date, summary: Record<string, number | string>): Promise<LineContext> {
+export async function loadLineContext(
+  now: Date,
+  summary: Record<string, number | string>,
+): Promise<LineContext> {
   return {
     now,
     token: lineChannelToken(),
@@ -136,7 +150,9 @@ export async function linkFor(ctx: LineContext, userId: string): Promise<LineLin
  * a push rather than crashing the tick.
  */
 export async function ensureFriend(ctx: LineContext, link: LineLinkRow): Promise<boolean> {
-  const age = link.friend_checked_at ? ctx.now.getTime() - new Date(link.friend_checked_at).getTime() : Infinity;
+  const age = link.friend_checked_at
+    ? ctx.now.getTime() - new Date(link.friend_checked_at).getTime()
+    : Infinity;
   if (age < FRIEND_CHECK_TTL_MS) return link.is_friend && !link.blocked_at;
   if (!ctx.token) return link.is_friend && !link.blocked_at;
 
@@ -152,7 +168,10 @@ export async function ensureFriend(ctx: LineContext, link: LineLinkRow): Promise
     ...(res.displayName ? { display_name: res.displayName } : {}),
     ...(res.pictureUrl ? { picture_url: res.pictureUrl } : {}),
   };
-  const { error } = await supabaseAdmin.from("line_links").update(patch).eq("user_id", link.user_id);
+  const { error } = await supabaseAdmin
+    .from("line_links")
+    .update(patch)
+    .eq("user_id", link.user_id);
   if (error) console.error(`[line] line_links update: ${error.message}`);
   Object.assign(link, patch);
   return res.friend;
@@ -173,16 +192,30 @@ export async function haltLine(ctx: LineContext, reason: string): Promise<void> 
   console.error(`[line] HALTED until ${until}: ${reason}`);
 }
 
-async function lineEvent(status: "error" | "fallback", code: string, message: string): Promise<void> {
-  const { error } = await supabaseAdmin
-    .from("ai_events")
-    .insert({ provider: "line", task: "push", status, error_code: code, message: message.slice(0, 1000) });
+async function lineEvent(
+  status: "error" | "fallback",
+  code: string,
+  message: string,
+): Promise<void> {
+  const { error } = await supabaseAdmin.from("ai_events").insert({
+    provider: "line",
+    task: "push",
+    status,
+    error_code: code,
+    message: message.slice(0, 1000),
+  });
   if (error) console.error(`[line] could not write ai_events: ${error.message}`);
 }
 
 /** Bangkok hour of `now`, 0–23. */
 export function bangkokHour(now: Date): number {
-  return Number(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Bangkok", hour: "2-digit", hourCycle: "h23" }).format(now));
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Bangkok",
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(now),
+  );
 }
 
 /** Today's digest if it has not gone out yet, otherwise tomorrow's. */
@@ -207,7 +240,11 @@ export async function targetDigestDate(userId: string, now: Date): Promise<strin
 async function usedThisMonth(ctx: LineContext): Promise<number> {
   if (ctx.token && ctx.lineUsage === null) {
     ctx.lineUsage = await getQuota(ctx.token);
-    ctx.summary["line_quota"] = JSON.stringify({ own: ctx.sentThisMonth, line: ctx.lineUsage.totalUsage, limit: ctx.lineUsage.limit });
+    ctx.summary["line_quota"] = JSON.stringify({
+      own: ctx.sentThisMonth,
+      line: ctx.lineUsage.totalUsage,
+      limit: ctx.lineUsage.limit,
+    });
   }
   return Math.max(ctx.sentThisMonth, ctx.lineUsage?.totalUsage ?? 0);
 }
@@ -223,10 +260,17 @@ type LogRow = {
   attempts: number;
 };
 
-async function mark(row: LogRow, patch: { status: string; error?: string | null; bump?: boolean }): Promise<void> {
+async function mark(
+  row: LogRow,
+  patch: { status: string; error?: string | null; bump?: boolean },
+): Promise<void> {
   const { error } = await supabaseAdmin
     .from("notification_log")
-    .update({ status: patch.status, error: patch.error ?? null, ...(patch.bump ? { attempts: row.attempts + 1 } : {}) })
+    .update({
+      status: patch.status,
+      error: patch.error ?? null,
+      ...(patch.bump ? { attempts: row.attempts + 1 } : {}),
+    })
     .eq("id", row.id);
   if (error) console.error(`[line] notification_log update ${row.id}: ${error.message}`);
   if (patch.bump) row.attempts += 1;
@@ -302,7 +346,10 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
     if (remErr) throw new Error(`reminders read for push: ${remErr.message}`);
     const open = (rems ?? []) as (FlexReminder & { status: string })[];
     if (open.length === 0) {
-      await mark(row, { status: "skipped", error: row.kind === "immediate" ? "reminder_gone" : "nothing_open" });
+      await mark(row, {
+        status: "skipped",
+        error: row.kind === "immediate" ? "reminder_gone" : "nothing_open",
+      });
       continue;
     }
     const url = appOpenUrl("/today");
@@ -317,7 +364,11 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
 
     const res = await pushFlex(ctx.token, link.line_user_id, message, row.id);
     if (res.ok) {
-      await mark(row, { status: "sent", error: res.duplicate ? "accepted_earlier" : null, bump: true });
+      await mark(row, {
+        status: "sent",
+        error: res.duplicate ? "accepted_earlier" : null,
+        bump: true,
+      });
       ctx.sentThisMonth += 1;
       sent += 1;
       continue;
@@ -333,16 +384,27 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
         break;
       case "target": {
         await mark(row, { status: "failed", error: `line_400: ${res.message}`, bump: true });
-        const patch = { is_friend: false, blocked_at: ctx.now.toISOString(), friend_checked_at: ctx.now.toISOString() };
+        const patch = {
+          is_friend: false,
+          blocked_at: ctx.now.toISOString(),
+          friend_checked_at: ctx.now.toISOString(),
+        };
         await supabaseAdmin.from("line_links").update(patch).eq("user_id", link.user_id);
         Object.assign(link, patch);
         break;
       }
       case "retryable": {
         const final = row.attempts + 1 >= MAX_ATTEMPTS;
-        await mark(row, { status: final ? "failed" : "queued", error: `line_${res.status}: ${res.message}`, bump: true });
+        await mark(row, {
+          status: final ? "failed" : "queued",
+          error: `line_${res.status}: ${res.message}`,
+          bump: true,
+        });
         if (final && row.reminder_id) {
-          await supabaseAdmin.from("reminders").update({ notify_error: `line_${res.status}`, notify_attempts: MAX_ATTEMPTS }).eq("id", row.reminder_id);
+          await supabaseAdmin
+            .from("reminders")
+            .update({ notify_error: `line_${res.status}`, notify_attempts: MAX_ATTEMPTS })
+            .eq("id", row.reminder_id);
         }
         ctx.summary["line_retries"] = Number(ctx.summary["line_retries"] ?? 0) + 1;
         break;

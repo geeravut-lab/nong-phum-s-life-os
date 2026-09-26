@@ -49,7 +49,10 @@ function LineCallbackPage() {
 
     const run = async () => {
       if (lineError) {
-        setStatus({ step: "failed", code: lineError === "access_denied" ? "line_denied" : "line_error" });
+        setStatus({
+          step: "failed",
+          code: lineError === "access_denied" ? "line_denied" : "line_error",
+        });
         return;
       }
       if (!code || !state) {
@@ -95,11 +98,15 @@ function LineCallbackPage() {
           <>
             <p className="text-lg font-semibold text-primary">{t.lineCallbackDone}</p>
             {status.link.displayName && (
-              <p className="mt-2 text-sm text-muted-foreground">{t.lineLinkedAs(status.link.displayName)}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t.lineLinkedAs(status.link.displayName)}
+              </p>
             )}
             <p
               className={`mt-3 rounded-xl p-3 text-sm ${
-                status.link.isFriend ? "bg-primary/10 text-primary" : "bg-destructive/10 font-medium text-destructive"
+                status.link.isFriend
+                  ? "bg-primary/10 text-primary"
+                  : "bg-destructive/10 font-medium text-destructive"
               }`}
             >
               {status.link.isFriend ? t.lineFriendYes : t.lineFriendNo}

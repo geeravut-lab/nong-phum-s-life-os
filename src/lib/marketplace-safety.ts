@@ -11,9 +11,7 @@ export async function isBlockedBetween(a: string, b: string): Promise<boolean> {
     const { data: rows } = await supabase
       .from("user_blocks")
       .select("id")
-      .or(
-        `and(blocker_id.eq.${a},blocked_id.eq.${b}),and(blocker_id.eq.${b},blocked_id.eq.${a})`,
-      )
+      .or(`and(blocker_id.eq.${a},blocked_id.eq.${b}),and(blocker_id.eq.${b},blocked_id.eq.${a})`)
       .limit(1);
     return (rows?.length ?? 0) > 0;
   }

@@ -152,10 +152,11 @@ const th = {
   adminSupportTitle: "การสนับสนุน",
   adminSupportSub: "ตรวจสอบยอดเข้า รายงานรายได้ และตั้งค่าช่องทางพร้อมเพย์",
   adminSupportCard: "การสนับสนุน (บริจาค)",
-  adminSupportPendingCount: (n: number) => (n === 0 ? "ไม่มีรายการค้างตรวจสอบ" : `ค้างตรวจสอบ ${n} รายการ`),
+  adminSupportPendingCount: (n: number) =>
+    n === 0 ? "ไม่มีรายการค้างตรวจสอบ" : `ค้างตรวจสอบ ${n} รายการ`,
   adminDonationsReview: "ตรวจสอบการสนับสนุน",
   adminDonationsWarning:
-    "ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด \"ยืนยันรับเงิน\" ไม่ได้เปิดสิทธิ์อะไรให้ผู้ใช้ มีผลแค่กับตัวเลขในรายงาน",
+    'ตรวจ statement ธนาคารก่อนกดยืนยันทุกครั้ง — การกด "ยืนยันรับเงิน" ไม่ได้เปิดสิทธิ์อะไรให้ผู้ใช้ มีผลแค่กับตัวเลขในรายงาน',
   adminDonationsNone: "ไม่มีรายการรอตรวจสอบ",
   adminDonationDonor: "ผู้สนับสนุน",
   adminDonationTo: "เข้าพร้อมเพย์",
@@ -164,11 +165,13 @@ const th = {
   donationNotFound: "ไม่พบรายการ",
   donationConfirmDialog: (amount: string) => `ยืนยันว่าตรวจสอบยอด ฿${amount} เข้าบัญชีแล้ว?`,
   donationRejectDialog: "ทำเครื่องหมายว่าไม่พบรายการนี้ในบัญชี?",
-  adminDonationsNoRights: "การยืนยันมีผลกับรายงานเท่านั้น ไม่เปลี่ยนสิทธิ์ของผู้ใช้ และบันทึกว่าใครเป็นคนกด",
+  adminDonationsNoRights:
+    "การยืนยันมีผลกับรายงานเท่านั้น ไม่เปลี่ยนสิทธิ์ของผู้ใช้ และบันทึกว่าใครเป็นคนกด",
   donationConfirmedToast: "บันทึกว่ารับเงินแล้ว",
   donationRejectedToast: "ทำเครื่องหมายว่าไม่พบรายการแล้ว",
   adminDonationsReport: "รายงานยอดเงินเข้า",
-  adminDonationsReportNote: "นับเฉพาะรายการที่ยืนยันรับเงินแล้ว (ไม่รวมรอตรวจสอบ) — โหลดครั้งเดียว 500 รายการล่าสุด",
+  adminDonationsReportNote:
+    "นับเฉพาะรายการที่ยืนยันรับเงินแล้ว (ไม่รวมรอตรวจสอบ) — โหลดครั้งเดียว 500 รายการล่าสุด",
   period7: "7 วัน",
   period30: "30 วัน",
   period90: "90 วัน",
@@ -189,18 +192,22 @@ const th = {
   adminDonationsEnabled: "เปิดช่องทางสนับสนุน",
   adminDonationsEnabledHint: "ต้องมีเลขพร้อมเพย์ด้วยถึงจะแสดงฟอร์มให้ผู้ใช้",
   adminPurposeLabel: "เงินสนับสนุนใช้สำหรับ (บรรทัดละหัวข้อ)",
-  adminPurposeHint: "ข้อความนี้มีผลต่อการตัดสินใจสนับสนุนมากที่สุด — เขียนสิ่งที่ทำได้จริง ไม่ใช่การตลาด",
+  adminPurposeHint:
+    "ข้อความนี้มีผลต่อการตัดสินใจสนับสนุนมากที่สุด — เขียนสิ่งที่ทำได้จริง ไม่ใช่การตลาด",
   // admin — LINE notifications
   adminLineTitle: "การแจ้งเตือนทาง LINE",
   adminLineSub: "โควตา 300 ข้อความ/เดือนของ OA — ถ้าหมดทุกอย่างจะเงียบพร้อมกัน ตัวเลขนี้คือกันตาย",
   adminLineNotConfigured: "ยังไม่ได้ตั้ง LINE_CHANNEL_ACCESS_TOKEN — ยังไม่มีการส่ง",
   adminLineUsed: "ใช้ไปเดือนนี้",
-  adminLineUsedHint: (own: number, line: string) => `นับจากบันทึกของเรา ${own} · LINE รายงาน ${line} · ใช้ค่าที่มากกว่า`,
+  adminLineUsedHint: (own: number, line: string) =>
+    `นับจากบันทึกของเรา ${own} · LINE รายงาน ${line} · ใช้ค่าที่มากกว่า`,
   adminLineCap: "เพดานต่อเดือน",
   adminLineReserve: "กันไว้ให้เรื่องสำคัญมาก",
-  adminLineReserveHint: (stopAt: number) => `สรุปรายวันจะหยุดส่งเมื่อถึง ${stopAt} ข้อความ เรื่องสำคัญมากส่งต่อจนถึงเพดาน`,
+  adminLineReserveHint: (stopAt: number) =>
+    `สรุปรายวันจะหยุดส่งเมื่อถึง ${stopAt} ข้อความ เรื่องสำคัญมากส่งต่อจนถึงเพดาน`,
   adminLineDigestHour: "เวลาส่งสรุปรายวัน (นาฬิกาไทย)",
-  adminLineLinked: (n: number, friends: number) => `ผูก LINE แล้ว ${n} คน · เป็นเพื่อน OA ${friends} คน`,
+  adminLineLinked: (n: number, friends: number) =>
+    `ผูก LINE แล้ว ${n} คน · เป็นเพื่อน OA ${friends} คน`,
   adminLineHalted: (until: string) => `หยุดส่งทั้งระบบจนถึง ${until} — token ของ channel ถูกปฏิเสธ`,
   adminLineResume: "ยกเลิกการหยุดส่ง",
   adminLineLastTick: (at: string) => `tick ล่าสุด ${at}`,
@@ -405,9 +412,11 @@ const th = {
   deleteItemChat: (n: number) => `ข้อความแชท ${n} ข้อความ`,
   deleteItemHelpMe: "โปรไฟล์ผู้ช่วยและงานที่เคยประกาศ",
   deleteItemBenefits: "ข้อมูลสิทธิของคุณ",
-  deleteItemSso: "การเชื่อมกับบัญชี Aivora (ถ้าเข้าจาก Launcher อีกครั้งจะได้บัญชีใหม่ที่ว่างเปล่า)",
+  deleteItemSso:
+    "การเชื่อมกับบัญชี Aivora (ถ้าเข้าจาก Launcher อีกครั้งจะได้บัญชีใหม่ที่ว่างเปล่า)",
   deleteItemLine: "การเชื่อมต่อกับ LINE",
-  deleteItemDonations: "รายการสนับสนุนจะถูกเก็บไว้เป็นบัญชีรายได้โดยไม่ระบุตัวตน (ลบชื่อและอีเมลออก)",
+  deleteItemDonations:
+    "รายการสนับสนุนจะถูกเก็บไว้เป็นบัญชีรายได้โดยไม่ระบุตัวตน (ลบชื่อและอีเมลออก)",
   // LINE account linking (Settings card + /line/callback)
   lineTitle: "แจ้งเตือนทาง LINE",
   lineIntro: "เชื่อมต่อบัญชี LINE เพื่อให้น้องภูมิส่งการแจ้งเตือนถึงพี่ทาง LINE ได้",
@@ -623,7 +632,8 @@ const en = {
   navSupport: "Support",
   supportTitle: "Support Nong Phum",
   supportSub: "Every feature is free. No subscription.",
-  supportIntro: "This app is free to use. If it helps you, chip in for the running costs — any amount.",
+  supportIntro:
+    "This app is free to use. If it helps you, chip in for the running costs — any amount.",
   supportPurposeLabel: "Your support pays for",
   supportNotEnabled: "The support channel is not open yet",
   supportAdminHint: "set the PromptPay id in the admin page first",
@@ -650,10 +660,11 @@ const en = {
   adminSupportTitle: "Support (donations)",
   adminSupportSub: "Review incoming transfers, revenue report and PromptPay settings",
   adminSupportCard: "Support (donations)",
-  adminSupportPendingCount: (n: number) => (n === 0 ? "Nothing pending review" : `${n} pending review`),
+  adminSupportPendingCount: (n: number) =>
+    n === 0 ? "Nothing pending review" : `${n} pending review`,
   adminDonationsReview: "Review donations",
   adminDonationsWarning:
-    "Check the bank statement before confirming, every time. \"Confirm receipt\" grants the user nothing — it only changes the report.",
+    'Check the bank statement before confirming, every time. "Confirm receipt" grants the user nothing — it only changes the report.',
   adminDonationsNone: "Nothing pending review",
   adminDonationDonor: "Donor",
   adminDonationTo: "To PromptPay",
@@ -662,7 +673,8 @@ const en = {
   donationNotFound: "Not found",
   donationConfirmDialog: (amount: string) => `Confirm that ฿${amount} has arrived in the account?`,
   donationRejectDialog: "Mark this donation as not found in the account?",
-  adminDonationsNoRights: "This only affects the report — no user permission changes — and records who pressed it.",
+  adminDonationsNoRights:
+    "This only affects the report — no user permission changes — and records who pressed it.",
   donationConfirmedToast: "Recorded as received",
   donationRejectedToast: "Marked as not found",
   adminDonationsReport: "Revenue report",
@@ -687,18 +699,24 @@ const en = {
   adminDonationsEnabled: "Open the support channel",
   adminDonationsEnabledHint: "A PromptPay id is also required before users see the form",
   adminPurposeLabel: "Your support pays for (one item per line)",
-  adminPurposeHint: "This text drives the decision to donate more than anything else — write what you will actually do, not marketing",
+  adminPurposeHint:
+    "This text drives the decision to donate more than anything else — write what you will actually do, not marketing",
   adminLineTitle: "LINE notifications",
-  adminLineSub: "The OA allows 300 messages a month — when it runs out everything goes quiet at once. This is the guard.",
+  adminLineSub:
+    "The OA allows 300 messages a month — when it runs out everything goes quiet at once. This is the guard.",
   adminLineNotConfigured: "LINE_CHANNEL_ACCESS_TOKEN is not set — nothing is being sent",
   adminLineUsed: "Used this month",
-  adminLineUsedHint: (own: number, line: string) => `Our log counts ${own} · LINE reports ${line} · the larger one applies`,
+  adminLineUsedHint: (own: number, line: string) =>
+    `Our log counts ${own} · LINE reports ${line} · the larger one applies`,
   adminLineCap: "Monthly cap",
   adminLineReserve: "Reserved for urgent",
-  adminLineReserveHint: (stopAt: number) => `Daily digests stop at ${stopAt} messages; urgent ones continue up to the cap`,
+  adminLineReserveHint: (stopAt: number) =>
+    `Daily digests stop at ${stopAt} messages; urgent ones continue up to the cap`,
   adminLineDigestHour: "Daily digest hour (Bangkok)",
-  adminLineLinked: (n: number, friends: number) => `${n} users linked · ${friends} are friends of the OA`,
-  adminLineHalted: (until: string) => `All sending halted until ${until} — the channel token was rejected`,
+  adminLineLinked: (n: number, friends: number) =>
+    `${n} users linked · ${friends} are friends of the OA`,
+  adminLineHalted: (until: string) =>
+    `All sending halted until ${until} — the channel token was rejected`,
   adminLineResume: "Resume sending",
   adminLineLastTick: (at: string) => `last tick ${at}`,
   adminLineOpenUrl: "Card button opens",
@@ -893,9 +911,11 @@ const en = {
   deleteItemChat: (n: number) => `${n} chat message${n === 1 ? "" : "s"}`,
   deleteItemHelpMe: "your helper profile and any jobs you posted",
   deleteItemBenefits: "your benefits profile",
-  deleteItemSso: "the link to your Aivora account (signing in again from the launcher creates a fresh, empty account)",
+  deleteItemSso:
+    "the link to your Aivora account (signing in again from the launcher creates a fresh, empty account)",
   deleteItemLine: "the link to your LINE account",
-  deleteItemDonations: "your donation records stay in the income ledger, anonymised (name and email removed)",
+  deleteItemDonations:
+    "your donation records stay in the income ledger, anonymised (name and email removed)",
   lineTitle: "LINE notifications",
   lineIntro: "Connect your LINE account so Nong Phum can send you reminders on LINE.",
   lineNotConfigured: "Not available on this installation yet",
@@ -911,21 +931,25 @@ const en = {
   lineRecheckFailed: "Could not check with LINE right now. Try again.",
   lineUnlink: "Disconnect",
   lineUnlinkConfirmTitle: "Disconnect LINE?",
-  lineUnlinkConfirmText: "Nong Phum will stop sending reminders on LINE. You can reconnect at any time.",
+  lineUnlinkConfirmText:
+    "Nong Phum will stop sending reminders on LINE. You can reconnect at any time.",
   lineUnlinked: "LINE disconnected",
   lineCallbackWorking: "Connecting to LINE…",
   lineCallbackDone: "LINE connected",
   lineCallbackFailed: "Could not connect LINE",
   lineGoSettings: "Go to settings",
-  lineErrDenied: "You cancelled the LINE authorisation. Start again from Settings if you want to connect.",
+  lineErrDenied:
+    "You cancelled the LINE authorisation. Start again from Settings if you want to connect.",
   lineErrState: "This link has expired or was already used. Start again from Settings.",
-  lineErrOtherAccount: "This link was started from a different account. Start again from the account you are signed in to.",
+  lineErrOtherAccount:
+    "This link was started from a different account. Start again from the account you are signed in to.",
   lineErrNoSession: "You are not signed in. Sign in first, then connect LINE again.",
   lineErrInUse: "This LINE account is already connected to another Nong Phum account.",
   lineErrGeneric: "Something went wrong while connecting. Please try again.",
   deleteFamilyWarning: (name: string, others: number) =>
     `You own the family “${name}”. Deleting your account dissolves it: its ${others} other member${others === 1 ? "" : "s"} will lose everything shared in it and will not be told why.`,
-  deleteFamilyLeave: (n: number) => `You will leave ${n} famil${n === 1 ? "y" : "ies"} you belong to.`,
+  deleteFamilyLeave: (n: number) =>
+    `You will leave ${n} famil${n === 1 ? "y" : "ies"} you belong to.`,
   deleteTypeToConfirm: "To confirm, type",
   deleteConfirmBtn: "Delete permanently",
   deleting: "Deleting…",

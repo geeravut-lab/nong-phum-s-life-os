@@ -113,11 +113,21 @@ export async function retryDocument(
   if (error) throw error;
   if (!doc.storage_path) throw new Error("document has no file to analyse");
 
-  const { data: blob, error: dlErr } = await supabase.storage.from("documents").download(doc.storage_path);
+  const { data: blob, error: dlErr } = await supabase.storage
+    .from("documents")
+    .download(doc.storage_path);
   if (dlErr || !blob) throw dlErr ?? new Error("could not download the file");
 
   await supabase.from("documents").update({ status: "pending" }).eq("id", doc.id);
-  return analyzeAndFinalize(doc.id, blob, doc.mime_type ?? blob.type ?? "application/pdf", doc.title, analyze, lang, userId);
+  return analyzeAndFinalize(
+    doc.id,
+    blob,
+    doc.mime_type ?? blob.type ?? "application/pdf",
+    doc.title,
+    analyze,
+    lang,
+    userId,
+  );
 }
 
 async function analyzeAndFinalize(
@@ -137,7 +147,10 @@ async function analyzeAndFinalize(
     // Keep the row and the file: the user decides whether to retry or delete.
     await supabase
       .from("documents")
-      .update({ status: "failed", summary: cause instanceof Error ? cause.message.slice(0, 500) : String(cause) })
+      .update({
+        status: "failed",
+        summary: cause instanceof Error ? cause.message.slice(0, 500) : String(cause),
+      })
       .eq("id", documentId);
     throw new DocumentAnalysisError(documentId, cause);
   }

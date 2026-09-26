@@ -3,12 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type AgendaSource =
-  | "task"
-  | "family_event"
-  | "money"
-  | "helpme"
-  | "warranty";
+export type AgendaSource = "task" | "family_event" | "money" | "helpme" | "warranty";
 
 export type AgendaItem = {
   id: string;
@@ -49,12 +44,8 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const uid = context.userId;
-    const from = data.from
-      ? new Date(data.from)
-      : new Date(Date.now() - 14 * 864e5);
-    const to = data.to
-      ? new Date(data.to)
-      : new Date(Date.now() + 60 * 864e5);
+    const from = data.from ? new Date(data.from) : new Date(Date.now() - 14 * 864e5);
+    const to = data.to ? new Date(data.to) : new Date(Date.now() + 60 * 864e5);
     const fromIso = from.toISOString();
     const toIso = to.toISOString();
 
@@ -197,7 +188,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       jobsAssigned = data ?? [];
     }
 
-    const jobMap = new Map<string, (typeof jobsOwn extends (infer U)[] | null ? U : never)>();
+    const jobMap = new Map<string, typeof jobsOwn extends (infer U)[] | null ? U : never>();
     for (const j of [...(jobsOwn ?? []), ...(jobsAssigned ?? [])]) {
       jobMap.set(j.id as string, j);
     }
@@ -220,9 +211,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       });
     }
 
-    items.sort(
-      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
-    );
+    items.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
     return { items, familyId: familyId ?? null };
   });
@@ -453,7 +442,6 @@ Return updated fields. Use ISO 8601 with timezone for startsAtIso when changing 
       },
     };
   });
-
 
 export const deleteAgendaItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

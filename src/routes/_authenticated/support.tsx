@@ -23,7 +23,12 @@ import {
   getBillingPublic,
   listMyPremiumPayments,
 } from "@/lib/billing.functions";
-import { createDonation, DONATION_MAX, DONATION_MIN, getSupportConfig } from "@/lib/support.functions";
+import {
+  createDonation,
+  DONATION_MAX,
+  DONATION_MIN,
+  getSupportConfig,
+} from "@/lib/support.functions";
 
 // "สนับสนุน" — the user side of the Harmony donation playbook. Order on the
 // page: why the button exists → what the money is for (admin-set, never
@@ -58,7 +63,7 @@ function SupportPage() {
   });
 
   const [amountText, setAmountText] = useState("");
-  
+
   const runBilling = useServerFn(getBillingPublic);
   const runOrder = useServerFn(createPremiumOrder);
   const runConfirmPrem = useServerFn(confirmPremiumPaid);
@@ -129,10 +134,18 @@ function SupportPage() {
   const [anonymous, setAnonymous] = useState(false);
 
   const amountNumber = Number(amountText);
-  const amountOk = Number.isFinite(amountNumber) && amountNumber >= DONATION_MIN && amountNumber <= DONATION_MAX;
+  const amountOk =
+    Number.isFinite(amountNumber) && amountNumber >= DONATION_MIN && amountNumber <= DONATION_MAX;
 
   const submit = useMutation({
-    mutationFn: () => create({ data: { amountBaht: Math.round(chosen! * 100) / 100, ref: ref.trim() || undefined, anonymous } }),
+    mutationFn: () =>
+      create({
+        data: {
+          amountBaht: Math.round(chosen! * 100) / 100,
+          ref: ref.trim() || undefined,
+          anonymous,
+        },
+      }),
     onSuccess: () => {
       toast.success(t.supportReported);
       setChosen(null);
@@ -144,7 +157,10 @@ function SupportPage() {
   });
 
   const s = cfg.data;
-  const purposeLines = (s?.purpose ?? "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const purposeLines = (s?.purpose ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   return (
     <AppShell>
@@ -188,10 +204,7 @@ function SupportPage() {
           )}
         </section>
       ) : chosen === null ? (
-        
-      
-
-      <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
           <h2 className="text-sm font-semibold">{t.supportChooseAmount}</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             {QUICK_AMOUNTS.map((a) => (
@@ -245,7 +258,13 @@ function SupportPage() {
           >
             <div className="space-y-1.5">
               <Label htmlFor="donate-ref">{t.supportRefLabel}</Label>
-              <Input id="donate-ref" value={ref} maxLength={40} onChange={(e) => setRef(e.target.value)} placeholder={t.supportRefPlaceholder} />
+              <Input
+                id="donate-ref"
+                value={ref}
+                maxLength={40}
+                onChange={(e) => setRef(e.target.value)}
+                placeholder={t.supportRefPlaceholder}
+              />
               <p className="text-xs text-muted-foreground">{t.supportRefHint}</p>
             </div>
             <label className="flex items-center gap-2 text-sm">
@@ -259,12 +278,17 @@ function SupportPage() {
         </section>
       )}
 
-      
       {/* Premium — below donation amount flow */}
       <section className="mt-8 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold">{t.billYourPlan ?? "แพ็กปัจจุบัน"}:</span>
-          <Badge variant={billingQ.data?.planTier === "free" || !billingQ.data?.isPremium ? "outline" : "secondary"}>
+          <Badge
+            variant={
+              billingQ.data?.planTier === "free" || !billingQ.data?.isPremium
+                ? "outline"
+                : "secondary"
+            }
+          >
             {billingQ.data?.planTier === "family"
               ? (t.billFamily ?? "Family")
               : billingQ.data?.isPremium
@@ -273,8 +297,7 @@ function SupportPage() {
           </Badge>
           {billingQ.data?.planExpiresAt && billingQ.data?.isPremium ? (
             <span className="text-xs text-muted-foreground">
-              {t.billUntil ?? "ถึง"}{" "}
-              {new Date(billingQ.data.planExpiresAt).toLocaleDateString()}
+              {t.billUntil ?? "ถึง"} {new Date(billingQ.data.planExpiresAt).toLocaleDateString()}
             </span>
           ) : null}
         </div>
@@ -287,9 +310,8 @@ function SupportPage() {
               <li>
                 {t.billUsed}: {t.billUsedChat} {billingQ.data?.usage.chat_count ?? 0}/
                 {billingQ.data?.settings.freeChat} · {t.billUsedDoc}{" "}
-                {billingQ.data?.usage.document_count ?? 0}/
-                {billingQ.data?.settings.freeDocument} · {t.billUsedTotal}{" "}
-                {billingQ.data?.usage.total_count ?? 0}/
+                {billingQ.data?.usage.document_count ?? 0}/{billingQ.data?.settings.freeDocument} ·{" "}
+                {t.billUsedTotal} {billingQ.data?.usage.total_count ?? 0}/
                 {billingQ.data?.settings.freeTotal}
               </li>
               <li>{billingQ.data?.pricingExplain.freeSummary}</li>
@@ -318,7 +340,7 @@ function SupportPage() {
                             ? (t.billPaygNoOverage ?? "ยังไม่มียอดเกินโควต้า")
                             : res.message === "premium_skip"
                               ? t.billYouArePremium
-                              : (res.message || "—"),
+                              : res.message || "—",
                         );
                       } else {
                         setPremQr({
@@ -388,8 +410,8 @@ function SupportPage() {
                         }
                       }}
                     >
-                      {t.billPremiumTitle} ·{" "}
-                      {period === "yearly" ? t.billYearly : t.billMonthly} · ฿{price}
+                      {t.billPremiumTitle} · {period === "yearly" ? t.billYearly : t.billMonthly} ·
+                      ฿{price}
                       {period === "yearly" && billingQ.data?.pricingExplain.yearlySavePct
                         ? ` (${t.billSave} ${billingQ.data.pricingExplain.yearlySavePct}%)`
                         : ""}
@@ -514,7 +536,6 @@ function SupportPage() {
         )}
       </section>
 
-      
       {/* My Premium / Family / PAYG */}
       {myPremQ.data && myPremQ.data.items.length > 0 && (
         <section className="mt-5 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -535,7 +556,6 @@ function SupportPage() {
                   <p className="text-xs text-muted-foreground">
                     {new Date(d.created_at).toLocaleString()}
                     {d.payer_ref ? ` · ${t.supportRefShort} ${d.payer_ref}` : ""}
-                    
                   </p>
                 </div>
                 <Badge
@@ -619,7 +639,10 @@ function PromptPayQr({ promptpayId, amount }: { promptpayId: string; amount: num
     <div className="mt-3 flex flex-col items-center">
       <div className="rounded-xl p-2.5" style={{ background: "#fff" }}>
         {failed ? (
-          <div className="flex size-[210px] flex-col items-center justify-center text-center text-sm" style={{ color: "#111" }}>
+          <div
+            className="flex size-[210px] flex-col items-center justify-center text-center text-sm"
+            style={{ color: "#111" }}
+          >
             <p>{t.supportQrFailed}</p>
             <p className="mt-1 font-mono text-base font-semibold">{promptpayId}</p>
             <p className="mt-1">

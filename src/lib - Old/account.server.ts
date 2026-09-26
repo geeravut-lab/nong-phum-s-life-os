@@ -47,7 +47,10 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
   const counts = {} as DeletionPreview["counts"];
   await Promise.all(
     OWNED_TABLES.map(async (table) => {
-      const { count } = await db.from(table).select("id", { count: "exact", head: true }).eq("user_id", userId);
+      const { count } = await db
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
       counts[table] = count ?? 0;
     }),
   );
@@ -72,18 +75,39 @@ export async function deletionPreview(db: Db, userId: string): Promise<DeletionP
 
   const storageFiles = (await listUserFiles(userId)).length;
 
-  const { data: link } = await supabaseAdmin.from("aivora_links").select("aivora_user_id").eq("user_id", userId).maybeSingle();
-  const { data: line } = await supabaseAdmin.from("line_links").select("user_id").eq("user_id", userId).maybeSingle();
-  const { count: donations } = await supabaseAdmin.from("donations").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  const { data: link } = await supabaseAdmin
+    .from("aivora_links")
+    .select("aivora_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const { data: line } = await supabaseAdmin
+    .from("line_links")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const { count: donations } = await supabaseAdmin
+    .from("donations")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
 
-  return { counts, storageFiles, ownedFamilies, memberOfFamilies, isSsoUser: !!link, isLineLinked: !!line, donations: donations ?? 0 };
+  return {
+    counts,
+    storageFiles,
+    ownedFamilies,
+    memberOfFamilies,
+    isSsoUser: !!link,
+    isLineLinked: !!line,
+    donations: donations ?? 0,
+  };
 }
 
 async function listUserFiles(userId: string): Promise<string[]> {
   const out: string[] = [];
   let offset = 0;
   for (;;) {
-    const { data, error } = await supabaseAdmin.storage.from("documents").list(userId, { limit: 1000, offset });
+    const { data, error } = await supabaseAdmin.storage
+      .from("documents")
+      .list(userId, { limit: 1000, offset });
     if (error) throw error;
     if (!data?.length) break;
     for (const f of data) out.push(`${userId}/${f.name}`);
@@ -102,10 +126,17 @@ async function listUserFiles(userId: string): Promise<string[]> {
  *   d. auth.admin.deleteUser — the cascade takes every owned row from here
  * If (a) or (b) fails the account is left intact; the caller can retry.
  */
-export async function deleteAccount(db: Db, userId: string): Promise<{ removedFiles: number; dissolvedFamilies: number }> {
+export async function deleteAccount(
+  db: Db,
+  userId: string,
+): Promise<{ removedFiles: number; dissolvedFamilies: number }> {
   const preview = await deletionPreview(db, userId);
   const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
-  const { data: profile } = await supabaseAdmin.from("profiles").select("display_name").eq("id", userId).maybeSingle();
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
 
   // a. Families this user owns are about to be dissolved by the cascade.
   //    The cascade sets family_id = NULL on members' shared rows but leaves
@@ -116,7 +147,8 @@ export async function deleteAccount(db: Db, userId: string): Promise<{ removedFi
         .from(table)
         .update({ is_shared: false, family_id: null })
         .eq("family_id", fam.id);
-      if (error) throw new Error(`could not un-share ${table} in family ${fam.id}: ${error.message}`);
+      if (error)
+        throw new Error(`could not un-share ${table} in family ${fam.id}: ${error.message}`);
     }
   }
 
@@ -125,7 +157,8 @@ export async function deleteAccount(db: Db, userId: string): Promise<{ removedFi
   const files = await listUserFiles(userId);
   if (files.length > 0) {
     const { error } = await supabaseAdmin.storage.from("documents").remove(files);
-    if (error) throw new Error(`could not remove ${files.length} storage file(s): ${error.message}`);
+    if (error)
+      throw new Error(`could not remove ${files.length} storage file(s): ${error.message}`);
   }
 
   // b2. Donations are an income ledger with no FK to the user: the rows stay
@@ -139,7 +172,11 @@ export async function deleteAccount(db: Db, userId: string): Promise<{ removedFi
   }
 
   // c. Audit row — the only trace that survives.
-  const { data: link } = await supabaseAdmin.from("aivora_links").select("aivora_user_id").eq("user_id", userId).maybeSingle();
+  const { data: link } = await supabaseAdmin
+    .from("aivora_links")
+    .select("aivora_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
   const { error: auditErr } = await supabaseAdmin.from("account_deletions").insert({
     user_id: userId,
     email: authUser.user?.email ?? null,
@@ -148,7 +185,11 @@ export async function deleteAccount(db: Db, userId: string): Promise<{ removedFi
     removed: {
       ...preview.counts,
       storage_files: files.length,
-      families_dissolved: preview.ownedFamilies.map((f) => ({ id: f.id, name: f.name, other_members: f.otherMembers })),
+      families_dissolved: preview.ownedFamilies.map((f) => ({
+        id: f.id,
+        name: f.name,
+        other_members: f.otherMembers,
+      })),
       families_left: preview.memberOfFamilies,
     },
     requested_by: "self",

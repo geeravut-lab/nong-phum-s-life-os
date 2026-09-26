@@ -79,7 +79,11 @@ export const benefitCategoryLabels: Record<string, { th: string; en: string }> =
   other: { th: "อื่น ๆ", en: "Other" },
 };
 
-export function pickLabel(map: Record<string, { th: string; en: string }>, key: string, lang: Lang) {
+export function pickLabel(
+  map: Record<string, { th: string; en: string }>,
+  key: string,
+  lang: Lang,
+) {
   return map[key]?.[lang] ?? key;
 }
 
@@ -107,14 +111,23 @@ export function matchBenefit(benefit: BenefitRow, profile: BenefitProfile | null
 
   if (rules.min_age != null) {
     if (age == null) {
-      reasons.push({ th: `ต้องอายุ ${rules.min_age} ปีขึ้นไป (ยังไม่ทราบอายุ)`, en: `Requires age ${rules.min_age}+ (age unknown)` });
+      reasons.push({
+        th: `ต้องอายุ ${rules.min_age} ปีขึ้นไป (ยังไม่ทราบอายุ)`,
+        en: `Requires age ${rules.min_age}+ (age unknown)`,
+      });
     } else if (age >= rules.min_age) {
       matchedSomething = true;
       score += 20;
-      reasons.push({ th: `อายุ ${age} ปี ผ่านเกณฑ์ ${rules.min_age} ปีขึ้นไป`, en: `Age ${age} meets the ${rules.min_age}+ requirement` });
+      reasons.push({
+        th: `อายุ ${age} ปี ผ่านเกณฑ์ ${rules.min_age} ปีขึ้นไป`,
+        en: `Age ${age} meets the ${rules.min_age}+ requirement`,
+      });
     } else {
       blocked = true;
-      reasons.push({ th: `ต้องอายุ ${rules.min_age} ปีขึ้นไป`, en: `Requires age ${rules.min_age}+` });
+      reasons.push({
+        th: `ต้องอายุ ${rules.min_age} ปีขึ้นไป`,
+        en: `Requires age ${rules.min_age}+`,
+      });
     }
   }
 
@@ -123,7 +136,10 @@ export function matchBenefit(benefit: BenefitRow, profile: BenefitProfile | null
       score += 10;
     } else {
       blocked = true;
-      reasons.push({ th: `เกินเกณฑ์อายุไม่เกิน ${rules.max_age} ปี`, en: `Above the max age of ${rules.max_age}` });
+      reasons.push({
+        th: `เกินเกณฑ์อายุไม่เกิน ${rules.max_age} ปี`,
+        en: `Above the max age of ${rules.max_age}`,
+      });
     }
   }
 
@@ -174,13 +190,19 @@ export function matchBenefit(benefit: BenefitRow, profile: BenefitProfile | null
       score += 15;
     } else {
       blocked = true;
-      reasons.push({ th: "ต้องเป็นผู้ประกันตนในระบบประกันสังคม", en: "Requires an active social security registration" });
+      reasons.push({
+        th: "ต้องเป็นผู้ประกันตนในระบบประกันสังคม",
+        en: "Requires an active social security registration",
+      });
     }
   }
 
   if (rules.requires_no_social_security && profile?.has_social_security) {
     blocked = true;
-    reasons.push({ th: "สำหรับผู้ที่ไม่ได้อยู่ในระบบประกันสังคม", en: "For people not covered by social security" });
+    reasons.push({
+      th: "สำหรับผู้ที่ไม่ได้อยู่ในระบบประกันสังคม",
+      en: "For people not covered by social security",
+    });
   }
 
   if (blocked) {
@@ -189,14 +211,20 @@ export function matchBenefit(benefit: BenefitRow, profile: BenefitProfile | null
   } else if (matchedSomething || Object.keys(rules).length === 0) {
     level = "eligible";
     if (!reasons.length) {
-      reasons.push({ th: "เป็นสิทธิพื้นฐานที่คนไทยทั่วไปใช้ได้", en: "A general benefit most people can use" });
+      reasons.push({
+        th: "เป็นสิทธิพื้นฐานที่คนไทยทั่วไปใช้ได้",
+        en: "A general benefit most people can use",
+      });
     }
   }
 
   return { benefit, level, score: Math.min(100, score), reasons };
 }
 
-export function matchBenefits(benefits: BenefitRow[], profile: BenefitProfile | null): BenefitMatch[] {
+export function matchBenefits(
+  benefits: BenefitRow[],
+  profile: BenefitProfile | null,
+): BenefitMatch[] {
   const order: Record<MatchLevel, number> = { eligible: 0, maybe: 1, not: 2 };
   return benefits
     .map((b) => matchBenefit(b, profile))

@@ -58,7 +58,9 @@ export const adminConfirmJobPayment = createServerFn({ method: "POST" })
 export const adminCompletePayout = createServerFn({ method: "POST" })
   .middleware([requireAdmin])
   .inputValidator((input: unknown) =>
-    z.object({ paymentId: z.string().uuid(), notes: z.string().trim().max(500).optional() }).parse(input),
+    z
+      .object({ paymentId: z.string().uuid(), notes: z.string().trim().max(500).optional() })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { adminMarkPayoutPaid } = await import("./payment.server");

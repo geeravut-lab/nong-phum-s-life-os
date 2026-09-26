@@ -7,11 +7,12 @@ import type { SsoErrorCode, SsoExchangeResult } from "./sso.server";
 // from sso.server.ts, not from the browser.
 
 export type SsoExchangeResponse =
-  | ({ ok: true } & SsoExchangeResult)
-  | { ok: false; code: SsoErrorCode; status: number };
+  ({ ok: true } & SsoExchangeResult) | { ok: false; code: SsoErrorCode; status: number };
 
 export const exchangeSsoTicket = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ ticket: z.string().min(1).max(2000) }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ ticket: z.string().min(1).max(2000) }).parse(input),
+  )
   .handler(async ({ data }): Promise<SsoExchangeResponse> => {
     const { runSsoExchange, SsoError } = await import("./sso.server");
     try {

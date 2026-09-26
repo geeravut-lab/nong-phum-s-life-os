@@ -60,9 +60,7 @@ function DocsPage() {
       const dates = [due, war].filter(Boolean) as string[];
       if (!dates.length) return null;
       const soonest = dates.sort()[0]!;
-      const days =
-        (new Date(soonest + "T00:00:00+07:00").getTime() - Date.now()) /
-        (86400 * 1000);
+      const days = (new Date(soonest + "T00:00:00+07:00").getTime() - Date.now()) / (86400 * 1000);
       if (days > 60) return null;
       return { ...d, soonest, days };
     })
@@ -240,7 +238,6 @@ function DocsPage() {
         </section>
       )}
 
-
       {familyFailed && (
         <p className="mb-4 rounded-2xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
           {t.familyLoadError}
@@ -259,12 +256,18 @@ function DocsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="font-medium">{d.title}</h2>
                   {d.status === "pending" && <Badge variant="outline">{t.docStatusPending}</Badge>}
-                  {d.status === "failed" && <Badge variant="destructive">{t.docStatusFailed}</Badge>}
+                  {d.status === "failed" && (
+                    <Badge variant="destructive">{t.docStatusFailed}</Badge>
+                  )}
                   {/* The tick removes failed rows after FAILED_DOC_RETENTION_DAYS; say so before it happens. */}
                   {d.status === "failed" && (
-                    <Badge variant="outline">{t.docFailedRemovalIn(daysUntilFailedDocRemoved(d.updated_at))}</Badge>
+                    <Badge variant="outline">
+                      {t.docFailedRemovalIn(daysUntilFailedDocRemoved(d.updated_at))}
+                    </Badge>
                   )}
-                  {d.status === "ready" && <Badge variant="secondary">{catLabel(d.category, lang)}</Badge>}
+                  {d.status === "ready" && (
+                    <Badge variant="secondary">{catLabel(d.category, lang)}</Badge>
+                  )}
                   {d.due_date && (
                     <Badge variant="outline">
                       {t.dueDate}: {d.due_date}
@@ -284,7 +287,9 @@ function DocsPage() {
                 {d.status === "failed" ? (
                   <p className="mt-2 text-sm text-muted-foreground">
                     {t.docFailedHint}
-                    {d.summary && <span className="mt-1 block break-all font-mono text-xs">{d.summary}</span>}
+                    {d.summary && (
+                      <span className="mt-1 block break-all font-mono text-xs">{d.summary}</span>
+                    )}
                   </p>
                 ) : (
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{d.summary}</p>
@@ -296,8 +301,15 @@ function DocsPage() {
                     {t.download}
                   </Button>
                   {d.status === "failed" && (
-                    <Button size="sm" variant="outline" disabled={retrying === d.id} onClick={() => retry(d.id)}>
-                      <RefreshCw className={`mr-1.5 size-3.5 ${retrying === d.id ? "animate-spin" : ""}`} />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={retrying === d.id}
+                      onClick={() => retry(d.id)}
+                    >
+                      <RefreshCw
+                        className={`mr-1.5 size-3.5 ${retrying === d.id ? "animate-spin" : ""}`}
+                      />
                       {retrying === d.id ? t.docRetrying : t.docRetry}
                     </Button>
                   )}

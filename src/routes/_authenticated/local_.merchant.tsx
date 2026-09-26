@@ -21,7 +21,6 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { PLACE_CATEGORIES, type LocalPlace } from "@/lib/local.shared";
 
-
 function parseMapsUrl(url: string): { lat: number; lng: number } | null {
   try {
     const u = url.trim();
@@ -105,24 +104,44 @@ function MerchantDashboardPage() {
     if (!user || !form.name.trim()) return;
     setBusy(true);
     if (editingPlaceId) {
-      const { error } = await supabase.from("local_places").update({
-        name: form.name.trim(),
-        category: form.category,
-        description: form.description.trim(),
-        area: form.area.trim() || null,
-        phone: form.phone.trim() || null,
-        price_level: Number(form.price_level) || 2,
-        tags: form.tags.split(",").map((s) => s.trim()).filter(Boolean),
-        lat: parseMapsUrl(form.maps_url)?.lat ?? null,
-        lng: parseMapsUrl(form.maps_url)?.lng ?? null,
-        maps_url: form.maps_url.trim() || null,
-        is_public: form.is_public,
-      } as never).eq("id", editingPlaceId);
+      const { error } = await supabase
+        .from("local_places")
+        .update({
+          name: form.name.trim(),
+          category: form.category,
+          description: form.description.trim(),
+          area: form.area.trim() || null,
+          phone: form.phone.trim() || null,
+          price_level: Number(form.price_level) || 2,
+          tags: form.tags
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          lat: parseMapsUrl(form.maps_url)?.lat ?? null,
+          lng: parseMapsUrl(form.maps_url)?.lng ?? null,
+          maps_url: form.maps_url.trim() || null,
+          is_public: form.is_public,
+        } as never)
+        .eq("id", editingPlaceId);
       setBusy(false);
-      if (error) { toast.error(error.message); return; }
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       toast.success(t.saved);
       setEditingPlaceId(null);
-      setForm({ name: "", category: form.category, description: "", area: "", address: "", phone: "", price_level: "2", tags: "", maps_url: "", is_public: true });
+      setForm({
+        name: "",
+        category: form.category,
+        description: "",
+        area: "",
+        address: "",
+        phone: "",
+        price_level: "2",
+        tags: "",
+        maps_url: "",
+        is_public: true,
+      });
       void qc.invalidateQueries({ queryKey: ["my-local-places"] });
       void qc.invalidateQueries({ queryKey: ["local-places"] });
       return;
@@ -372,41 +391,43 @@ function MerchantDashboardPage() {
                 ? `https://www.google.com/maps?q=${p.lat},${p.lng}`
                 : null);
             return (
-            <article key={p.id} className="rounded-xl border border-border p-3 text-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium">{p.name}</span>
-                <div className="flex flex-wrap items-center gap-1">
-                  <Badge variant="outline">{p.category}</Badge>
-                  {maps ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={maps} target="_blank" rel="noreferrer">{t.localOpenMap}</a>
+              <article key={p.id} className="rounded-xl border border-border p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium">{p.name}</span>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline">{p.category}</Badge>
+                    {maps ? (
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={maps} target="_blank" rel="noreferrer">
+                          {t.localOpenMap}
+                        </a>
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setEditingPlaceId(p.id);
+                        setForm({
+                          name: p.name ?? "",
+                          category: p.category ?? "cafe",
+                          description: p.description ?? "",
+                          area: p.area ?? "",
+                          address: (p as { address?: string | null }).address ?? "",
+                          phone: p.phone ?? "",
+                          price_level: String(p.price_level ?? 2),
+                          tags: Array.isArray(p.tags) ? p.tags.join(", ") : "",
+                          maps_url: (p as { maps_url?: string | null }).maps_url ?? "",
+                          is_public: (p as { is_public?: boolean }).is_public !== false,
+                        });
+                      }}
+                    >
+                      {t.edit}
                     </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setEditingPlaceId(p.id);
-                      setForm({
-                        name: p.name ?? "",
-                        category: p.category ?? "cafe",
-                        description: p.description ?? "",
-                        area: p.area ?? "",
-                        address: (p as { address?: string | null }).address ?? "",
-                        phone: p.phone ?? "",
-                        price_level: String(p.price_level ?? 2),
-                        tags: Array.isArray(p.tags) ? p.tags.join(", ") : "",
-                        maps_url: (p as { maps_url?: string | null }).maps_url ?? "",
-                        is_public: (p as { is_public?: boolean }).is_public !== false,
-                      });
-                    }}
-                  >
-                    {t.edit}
-                  </Button>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground">{p.area}</p>
-            </article>
+                <p className="text-xs text-muted-foreground">{p.area}</p>
+              </article>
             );
           })
         )}
@@ -448,9 +469,7 @@ function MerchantDashboardPage() {
             <Input
               placeholder={t.localDiscount}
               value={dealForm.discount_label}
-              onChange={(e) =>
-                setDealForm((f) => ({ ...f, discount_label: e.target.value }))
-              }
+              onChange={(e) => setDealForm((f) => ({ ...f, discount_label: e.target.value }))}
             />
             <Input
               type="number"

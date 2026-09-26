@@ -1,4 +1,9 @@
-import { PROVIDER_IDS, defaultModelsFor, providerEnvKey, type ProviderId } from "./ai-provider.server";
+import {
+  PROVIDER_IDS,
+  defaultModelsFor,
+  providerEnvKey,
+  type ProviderId,
+} from "./ai-provider.server";
 
 // Live model catalogues for the admin console, so an admin picks from what
 // the vendor actually serves instead of typing an ID that 404s at runtime.
@@ -121,7 +126,10 @@ async function fetchAnthropic(key: string): Promise<ModelInfo[]> {
   type Row = {
     id: string;
     display_name?: string;
-    capabilities?: { image_input?: { supported?: boolean }; pdf_input?: { supported?: boolean } } | null;
+    capabilities?: {
+      image_input?: { supported?: boolean };
+      pdf_input?: { supported?: boolean };
+    } | null;
   };
   const out: ModelInfo[] = [];
   let afterId: string | undefined;
@@ -151,13 +159,19 @@ async function fetchOpenAI(key: string): Promise<ModelInfo[]> {
   const json = (await getJson(`${providerBaseUrl("openai")}/models`, {
     Authorization: `Bearer ${key}`,
   })) as { data?: Row[] };
-  return (json.data ?? [])
-    // The endpoint lists embeddings, audio, image and moderation models too,
-    // with no type field. "gpt-" / "o<digit>" is the only usable filter for
-    // chat models; anything it misses can still be typed by hand in the UI.
-    .filter((m) => /^(gpt-|o\d)/.test(m.id) && !/embedding|tts|transcribe|whisper|realtime|moderation|image|audio/.test(m.id))
-    .map((m) => ({ id: m.id, label: m.id, imageInput: null, pdfInput: null }))
-    .sort((a, b) => a.id.localeCompare(b.id));
+  return (
+    (json.data ?? [])
+      // The endpoint lists embeddings, audio, image and moderation models too,
+      // with no type field. "gpt-" / "o<digit>" is the only usable filter for
+      // chat models; anything it misses can still be typed by hand in the UI.
+      .filter(
+        (m) =>
+          /^(gpt-|o\d)/.test(m.id) &&
+          !/embedding|tts|transcribe|whisper|realtime|moderation|image|audio/.test(m.id),
+      )
+      .map((m) => ({ id: m.id, label: m.id, imageInput: null, pdfInput: null }))
+      .sort((a, b) => a.id.localeCompare(b.id))
+  );
 }
 
 /**
@@ -176,9 +190,11 @@ export async function listModels(provider: ProviderId): Promise<ModelList> {
   let list: ModelList;
   try {
     const models =
-      provider === "google" ? await fetchGoogle(key)
-      : provider === "anthropic" ? await fetchAnthropic(key)
-      : await fetchOpenAI(key);
+      provider === "google"
+        ? await fetchGoogle(key)
+        : provider === "anthropic"
+          ? await fetchAnthropic(key)
+          : await fetchOpenAI(key);
     list = { provider, source: "live", fetchedAt: new Date().toISOString(), models };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -192,7 +208,9 @@ export async function listModels(provider: ProviderId): Promise<ModelList> {
 
 export async function listAllModels(): Promise<Partial<Record<ProviderId, ModelList>>> {
   const entries = await Promise.all(
-    PROVIDER_IDS.filter((id) => process.env[providerEnvKey(id)]?.trim()).map(async (id) => [id, await listModels(id)] as const),
+    PROVIDER_IDS.filter((id) => process.env[providerEnvKey(id)]?.trim()).map(
+      async (id) => [id, await listModels(id)] as const,
+    ),
   );
   return Object.fromEntries(entries);
 }

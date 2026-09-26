@@ -107,17 +107,39 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
       ["reminders_notified", () => notifyDue(now, overBudget, summary, line)],
       ["digest_lookahead_claimed", () => claimForDigest(line, overBudget)],
       ["line_sent", () => deliverQueued(line, overBudget)],
-      ["ai_events_deleted", () => deleteOlderThan("ai_events", "created_at", agoIso(now, AI_EVENT_RETENTION_DAYS * DAY))],
-      ["failed_docs_deleted", () => deleteDocuments("failed", agoIso(now, FAILED_DOC_RETENTION_DAYS * DAY), summary)],
-      ["pending_docs_deleted", () => deleteDocuments("pending", agoIso(now, PENDING_DOC_RETENTION_HOURS * HOUR), summary)],
+      [
+        "ai_events_deleted",
+        () =>
+          deleteOlderThan("ai_events", "created_at", agoIso(now, AI_EVENT_RETENTION_DAYS * DAY)),
+      ],
+      [
+        "failed_docs_deleted",
+        () => deleteDocuments("failed", agoIso(now, FAILED_DOC_RETENTION_DAYS * DAY), summary),
+      ],
+      [
+        "pending_docs_deleted",
+        () => deleteDocuments("pending", agoIso(now, PENDING_DOC_RETENTION_HOURS * HOUR), summary),
+      ],
       [
         "notification_log_deleted",
-        () => deleteOlderThan("notification_log", "created_at", agoIso(now, NOTIFICATION_LOG_RETENTION_DAYS * DAY)),
+        () =>
+          deleteOlderThan(
+            "notification_log",
+            "created_at",
+            agoIso(now, NOTIFICATION_LOG_RETENTION_DAYS * DAY),
+          ),
       ],
-      ["cron_ticks_deleted", () => deleteOlderThan("cron_ticks", "started_at", agoIso(now, CRON_TICK_RETENTION_DAYS * DAY))],
+      [
+        "cron_ticks_deleted",
+        () =>
+          deleteOlderThan("cron_ticks", "started_at", agoIso(now, CRON_TICK_RETENTION_DAYS * DAY)),
+      ],
       ["orphan_attachments_deleted", () => deleteOrphanAttachments(now, overBudget, summary)],
       // Abandoned LINE link flows: the state is useless once expired.
-      ["line_states_deleted", () => deleteOlderThan("line_link_states", "expires_at", now.toISOString())],
+      [
+        "line_states_deleted",
+        () => deleteOlderThan("line_link_states", "expires_at", now.toISOString()),
+      ],
     ];
     for (const [key, step] of steps) {
       if (overBudget()) {
@@ -144,8 +166,15 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
 type RetentionTable = "ai_events" | "notification_log" | "cron_ticks" | "line_link_states";
 
 /** Plain row retention: delete everything whose timestamp column is before the cutoff. */
-async function deleteOlderThan(table: RetentionTable, column: string, cutoff: string): Promise<number> {
-  const { count, error } = await supabaseAdmin.from(table).delete({ count: "exact" }).lt(column, cutoff);
+async function deleteOlderThan(
+  table: RetentionTable,
+  column: string,
+  cutoff: string,
+): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from(table)
+    .delete({ count: "exact" })
+    .lt(column, cutoff);
   if (error) throw new Error(`${table} retention: ${error.message}`);
   return count ?? 0;
 }
@@ -156,7 +185,11 @@ async function deleteOlderThan(table: RetentionTable, column: string, cutoff: st
  * removed is left alone (and counted in summary.doc_errors) so the next tick
  * tries again; nothing here can create a file without a row.
  */
-async function deleteDocuments(status: "failed" | "pending", cutoff: string, summary: TickSummary): Promise<number> {
+async function deleteDocuments(
+  status: "failed" | "pending",
+  cutoff: string,
+  summary: TickSummary,
+): Promise<number> {
   const { data: rows, error } = await supabaseAdmin
     .from("documents")
     .select("id, storage_path")
@@ -171,7 +204,9 @@ async function deleteDocuments(status: "failed" | "pending", cutoff: string, sum
     if (row.storage_path) {
       // remove() succeeds for a path that no longer exists, which is what we
       // want: a row left behind by an earlier crash still gets cleaned up.
-      const { error: rmErr } = await supabaseAdmin.storage.from("documents").remove([row.storage_path]);
+      const { error: rmErr } = await supabaseAdmin.storage
+        .from("documents")
+        .remove([row.storage_path]);
       if (rmErr) {
         console.error(`[tick] could not remove ${row.storage_path}: ${rmErr.message}`);
         summary["doc_errors"] = Number(summary["doc_errors"] ?? 0) + 1;
@@ -207,7 +242,12 @@ const REMINDER_COLUMNS = "id, user_id, title, due_at, notify_at, priority, recur
  * has claimed yet. Claim each, then write the log row. Returns how many were
  * claimed by this run.
  */
-async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSummary, line: LineContext): Promise<number> {
+async function notifyDue(
+  now: Date,
+  overBudget: () => boolean,
+  summary: TickSummary,
+  line: LineContext,
+): Promise<number> {
   const nowIso = now.toISOString();
   const { data: rows, error } = await supabaseAdmin
     .from("reminders")
@@ -252,7 +292,8 @@ async function notifyDue(now: Date, overBudget: () => boolean, summary: TickSumm
       });
       // 23505 = this occurrence was logged by a run that died after sending;
       // the claim above already prevents a second delivery, so just move on.
-      if (logErr && logErr.code !== "23505") throw new Error(`notification_log insert: ${logErr.message}`);
+      if (logErr && logErr.code !== "23505")
+        throw new Error(`notification_log insert: ${logErr.message}`);
     } else {
       await appendToDigest(r.user_id, r.id, await targetDigestDate(r.user_id, now), reach);
     }
@@ -273,7 +314,12 @@ async function reachable(line: LineContext, userId: string): Promise<boolean> {
   return ensureFriend(line, link);
 }
 
-async function appendToDigest(userId: string, reminderId: string, digestDate: string, reach: boolean): Promise<void> {
+async function appendToDigest(
+  userId: string,
+  reminderId: string,
+  digestDate: string,
+  reach: boolean,
+): Promise<void> {
   const { error: insErr } = await supabaseAdmin.from("notification_log").insert({
     user_id: userId,
     kind: "digest",
@@ -328,7 +374,13 @@ async function rolloverStale(now: Date, overBudget: () => boolean): Promise<numb
     const catchUp = lastOccurrenceAtOrBefore(due, r.recurrence, now);
     const { error: updErr } = await supabaseAdmin
       .from("reminders")
-      .update({ due_at: catchUp.toISOString(), notify_at: null, notified_at: null, notify_attempts: 0, notify_error: null })
+      .update({
+        due_at: catchUp.toISOString(),
+        notify_at: null,
+        notified_at: null,
+        notify_attempts: 0,
+        notify_error: null,
+      })
       .eq("id", r.id)
       .eq("due_at", r.due_at); // no-op if the user touched it meanwhile
     if (updErr) throw new Error(`reminders rollover ${r.id}: ${updErr.message}`);
@@ -380,7 +432,12 @@ async function claimForDigest(line: LineContext, overBudget: () => boolean): Pro
         .is("notified_at", null)
         .select("id");
       if (!won?.length) continue;
-      await appendToDigest(link.user_id, r.id, await targetDigestDate(link.user_id, line.now), true);
+      await appendToDigest(
+        link.user_id,
+        r.id,
+        await targetDigestDate(link.user_id, line.now),
+        true,
+      );
       claimed += 1;
     }
   }
@@ -396,7 +453,11 @@ async function claimForDigest(line: LineContext, overBudget: () => boolean): Pro
  * day's grace (a just-uploaded file may not be linked yet), file first, then
  * row, like the other document cleanups.
  */
-async function deleteOrphanAttachments(now: Date, overBudget: () => boolean, summary: TickSummary): Promise<number> {
+async function deleteOrphanAttachments(
+  now: Date,
+  overBudget: () => boolean,
+  summary: TickSummary,
+): Promise<number> {
   const { data: rows, error } = await supabaseAdmin
     .from("documents")
     .select("id, storage_path")
@@ -427,9 +488,13 @@ async function deleteOrphanAttachments(now: Date, overBudget: () => boolean, sum
     }
     if (referenced) continue;
     if (doc.storage_path) {
-      const { error: rmErr } = await supabaseAdmin.storage.from("documents").remove([doc.storage_path]);
+      const { error: rmErr } = await supabaseAdmin.storage
+        .from("documents")
+        .remove([doc.storage_path]);
       if (rmErr) {
-        console.error(`[tick] could not remove orphan attachment ${doc.storage_path}: ${rmErr.message}`);
+        console.error(
+          `[tick] could not remove orphan attachment ${doc.storage_path}: ${rmErr.message}`,
+        );
         summary["doc_errors"] = Number(summary["doc_errors"] ?? 0) + 1;
         continue;
       }

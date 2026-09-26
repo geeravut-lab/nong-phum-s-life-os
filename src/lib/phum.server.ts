@@ -42,13 +42,8 @@ const DocSchema = z.object({
   needsAction: z
     .boolean()
     .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
-  isWarranty: z
-    .boolean()
-    .describe("True when this is a product warranty / guarantee certificate"),
-  warrantyUntil: z
-    .string()
-    .nullable()
-    .describe("Warranty end date as YYYY-MM-DD or null"),
+  isWarranty: z.boolean().describe("True when this is a product warranty / guarantee certificate"),
+  warrantyUntil: z.string().nullable().describe("Warranty end date as YYYY-MM-DD or null"),
 });
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
@@ -282,12 +277,11 @@ export async function transcribeAudio(input: {
   mimeType: string;
   lang: "th" | "en";
 }): Promise<{ text: string }> {
-  const { apiKeyFor, modelForId, providerEnvKey, resolveModelId } = await import("./ai-provider.server");
+  const { apiKeyFor, modelForId, providerEnvKey, resolveModelId } =
+    await import("./ai-provider.server");
   // Force Google — only provider with capabilities.audio === true
   if (!apiKeyFor("google")) {
-    throw new Error(
-      `Voice input requires Google (audio). Set ${providerEnvKey("google")}.`,
-    );
+    throw new Error(`Voice input requires Google (audio). Set ${providerEnvKey("google")}.`);
   }
 
   // Prefer a flash model that is known to accept audio; admin override for
@@ -323,7 +317,11 @@ export async function transcribeAudio(input: {
 
   const text = (result.text ?? "").trim();
   if (!text) {
-    throw new Error(input.lang === "th" ? "ถอดเสียงไม่ได้ ลองพูดใหม่อีกครั้ง" : "Could not transcribe. Please try again.");
+    throw new Error(
+      input.lang === "th"
+        ? "ถอดเสียงไม่ได้ ลองพูดใหม่อีกครั้ง"
+        : "Could not transcribe. Please try again.",
+    );
   }
   return { text };
 }
