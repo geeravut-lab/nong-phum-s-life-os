@@ -1,55 +1,52 @@
-# Knowledge: สิ่งที่ Grok ปรับใน Life OS (ห้องนี้ → 2026-09-26)
+# Knowledge: สิ่งที่ Grok ปรับใน Life OS (ถึง 2026-09-26)
 
-เอกสารนี้สรุปงานที่ทำในเซสชันพัฒนา Life OS (nong-phum-s-life-os) เพื่อส่งต่อ Claude / dev คนอื่น
+เอกสารส่งต่อ Claude / dev — สรุปงานในเซสชัน Life OS (`nong-phum-s-life-os` / lavieos.netlify.app)
 
-## สแต็กหลัก
+## สแต็ก
 - TanStack Start + React + Vite
 - Supabase (Auth, Postgres, Realtime)
-- Netlify deploy (`npm run build`, functions ใต้ `netlify/functions`)
+- Netlify (`npm run build`, `netlify/functions`)
 - i18n: `src/lib/i18n.dict.ts` (th/en, type `Dict`)
 - Server fn: `createServerFn` + `requireSupabaseAuth`
 
-## การเงิน / Billing
+## Billing / Premium / Family / PAYG
 - ตาราง: `premium_payments`, `ai_usage_monthly`, คอลัมน์ billing บน `platform_settings`
-- **Flow ใหม่ (เหมือนบริจาค):** กดอัปเกรด → แสดง QR **ไม่ insert DB** → กด「แจ้งว่าโอนแล้ว」→ insert `pending` → Admin ยืนยัน/ปฏิเสธ
-- `plan_tier` รองรับ: `premium` | `family` | `payg`
-- `payment_status`: `draft` (legacy) | `pending` | `paid` | `rejected` | …
-- Admin: `/admin/premium` (ไฟล์ `admin_.premium.tsx`, route id `/_authenticated/admin_/premium`)
-- หน้ารองรับ: รายการ「ชำระเงิน Premium / Family / PAYG ของฉัน」เฉพาะ pending/paid/rejected
-- SQL ล้างของเก่า: `DELETE FROM premium_payments WHERE payment_status = 'draft';`
+- **Flow เหมือนบริจาค:** กดอัปเกรด → แสดง QR **ไม่ insert** → 「แจ้งว่าโอนแล้ว」→ insert `pending` → Admin ยืนยัน/ปฏิเสธ
+- `plan_tier`: `premium` | `family` | `payg`
+- `payment_status`: `pending` | `paid` | `rejected` (+ `draft` legacy)
+- Admin UI: `/admin/premium` — ไฟล์ `admin_.premium.tsx`, route `createFileRoute("/_authenticated/admin_/premium")`
+- ชื่อการ์ด/หัวข้อ: **ชำระเงิน Premium / Family / PAYG** (`billPremiumPayCard`)
+- ประวัติ Admin: ชื่อผู้ใช้, วันที่-เวลา, แพ็ก (Premium/Family/PAYG), ช่องทาง/อ้างอิง, ยอด, สถานะ i18n
+- รายการผู้ใช้: `listMyPremiumPayments` กรองเฉพาะ pending/paid/rejected
+- ล้าง draft เก่า: `DELETE FROM premium_payments WHERE payment_status = 'draft';`
+- แสดงแพ็ก: `profiles.plan_tier` + badge sidebar + หน้า `/support`
+- ปุ่มอัปเกรด disabled เมื่อเป็นแพ็กนั้นอยู่แล้ว (Premium ปิดเมื่อ premium/family; Family ปิดเมื่อ family)
 
-## บริจาค (อ้างอิง)
-- Insert เฉพาะตอนผู้ใช้แจ้งโอน (`createDonation` → `pending`) — ไม่มี draft
+## บริจาค
+- Insert เฉพาะตอนแจ้งโอน — ไม่มี draft
 
-## Local / Google Maps
-- `searchGooglePlaces` อ่าน `GOOGLE_MAPS_API_KEY` (server env บน Netlify)
-- ปุ่มแผนที่บนการ์ดสถานที่ใช้ **`maps_url`** ก่อน แล้วค่อย lat/lng
-- ลิงก์สั้น `maps.app.goo.gl` มัก parse lat ไม่ได้ — เก็บ URL แล้วเปิดตรง ๆ
-- แดชบอร์ดร้าน: แก้ไข/ลบโปรโมชัน (`local_deals`)
+## Local / Maps
+- `GOOGLE_MAPS_API_KEY` ฝั่ง server
+- ปุ่มแผนที่: ใช้ `maps_url` ก่อน lat/lng
+- โปรโมชันร้าน: แก้ไข/ลบ
 
-## UI / i18n
-- `adminTitle` = 「ผู้ดูแลระบบ」ไม่ใช่ตั้งค่า AI; `adminSub` ว่าง
-- `attachReceipt` = 「แนบเอกสาร」
-- การ์ดคิว Admin (premium/support/safety/payments) อยู่ใต้หัวข้อ ก่อน「สถานะปัจจุบัน」
+## UI / i18n ที่สำคัญ
+- `adminTitle` = ผู้ดูแลระบบ; `adminSub` ว่าง
+- `attachReceipt` = แนบเอกสาร
+- `billPremiumPayCard` = ชำระเงิน Premium / Family / PAYG
+- `billStatusPaid` / `billStatusRejected` / `billHistoryTitle` ฯลฯ
 
 ## PWA
-- `public/manifest.webmanifest`
-- `public/sw.js` (minimal) + register จาก `__root.tsx`
-- จับ `beforeinstallprompt` ตั้งแต่ early script → `window.__pwaDeferred`
-- เมนู「ติดตั้งเป็นแอป」ใน AppShell (ใต้ตั้งค่า)
+- `public/manifest.webmanifest`, `public/sw.js`
+- Early capture `beforeinstallprompt` ใน `__root.tsx` → `window.__pwaDeferred`
+- เมนู「ติดตั้งเป็นแอป」ใน AppShell
 
-## แผนสมาชิก (Free / Premium / Family)
-- อ่านจาก `profiles.plan_tier` / `plan_expires_at`
-- แสดง badge ที่ sidebar + การ์ดใน `/support`
-- ปุ่มอัปเกรดของแพ็กปัจจุบันถูก disabled
+## Tasks / Agenda
+- สวิตช์ใน `/tasks` = สถานะ done/open
+- วันที่ปฏิทินเดือน: local date key
+- `deleteAgendaItem` มีแล้ว
 
-## งาน / ปฏิทิน
-- สวิตช์ใน `/tasks` ผูกกับสถานะ `done`/`open` (เดิมเป็น share family)
-- `deleteAgendaItem` ใน `agenda.functions.ts`
-- วันที่จุดปฏิทินเดือน: ใช้ local date key ไม่ใช่ UTC slice
-- ลบนัดครอบครัวจากหน้า family (บางส่วน)
-
-## ไฟล์สำคัญที่แตะบ่อย
+## ไฟล์ที่แตะบ่อย
 - `src/lib/billing.functions.ts`
 - `src/routes/_authenticated/support.tsx`
 - `src/routes/_authenticated/admin.tsx`, `admin_.premium.tsx`
@@ -60,15 +57,16 @@
 - `src/lib/agenda.functions.ts`, `agenda.tsx`
 - `src/routes/_authenticated/tasks.tsx`
 - `docs/FEATURE-MAP-AND-BACKLOG.md`
+- `docs/GROK-SESSION-KNOWLEDGE.md`
 
-## ข้อควรระวังตอน build
-- Route file: `admin_.premium.tsx` → `createFileRoute("/_authenticated/admin_/premium")`
-- อย่าใช้ `supportNoPending` ถ้าไม่มีใน `Dict`
-- Index signature: ใช้ `obj["key"]` กับ metadata / env
-- Import `client.server` ต้อง dynamic ในบาง server fn (import-protection)
+## Build tips
+- Route: `admin_.premium.tsx` → `"/_authenticated/admin_/premium"`
+- อย่าใส่ key ใน Dict ที่ไม่มีใน type ทั้ง th/en
+- Index signature: ใช้ `obj["key"]`
+- เปรียบเทียบ `tier` ใน `.map` ของ `as const` — อย่าเทียบกับ literal ที่ type แคบกว่า (เช่น family map อย่าเทียบ `tier === "premium"`)
 
-## งานค้างที่รู้แล้ว
-1. ชื่อผู้รับมอบหมายครบทุกหน้า + แก้ผู้รับในฟอร์ม
-2. จุดแดงกระพริบเมนูปฏิทินรวม (family events/tasks ใหม่)
-3. Modal แก้ไขนัด/งานครอบครัวให้เดียวกับปฏิทินรวม
-4. Google Places เต็มเมื่อ API key + Places API (New) พร้อมบน Netlify Functions
+## งานค้าง
+1. ชื่อผู้รับมอบหมายครบทุกหน้า + แก้ผู้รับ
+2. จุดแดงกระพริบเมนูปฏิทินรวม
+3. Modal แก้ไขนัด/งานครอบครัว = ปฏิทินรวม
+4. Google Places เต็มเมื่อ API พร้อม

@@ -72,10 +72,17 @@ function AdminPremiumPage() {
   });
 
   const profiles = useQuery({
-    queryKey: ["admin-premium-profiles", (list.data ?? []).map((r) => r.user_id).join(",")],
-    enabled: (list.data ?? []).length > 0,
+    queryKey: [
+      "admin-premium-profiles",
+      [...(list.data ?? []), ...(history.data ?? [])].map((r) => r.user_id).join(","),
+    ],
+    enabled: (list.data ?? []).length > 0 || (history.data ?? []).length > 0,
     queryFn: async () => {
-      const ids = [...new Set((list.data ?? []).map((r) => r.user_id))];
+      const ids = [
+        ...new Set(
+          [...(list.data ?? []), ...(history.data ?? [])].map((r) => r.user_id),
+        ),
+      ];
       const { data } = await supabase.from("profiles").select("id, display_name").in("id", ids);
       const map: Record<string, string> = {};
       for (const row of data ?? []) map[row.id] = row.display_name || row.id.slice(0, 8);
@@ -181,19 +188,58 @@ function AdminPremiumPage() {
 
       {(history.data ?? []).length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-          <h2 className="text-sm font-semibold">ประวัติ</h2>
+          <h2 className="text-sm font-semibold">{t.billHistoryTitle ?? "ประวัติ"}</h2>
           <ul className="mt-2 divide-y divide-border text-sm">
-            {(history.data ?? []).map((r) => (
-              <li key={r.id} className="flex flex-wrap justify-between gap-2 py-2">
-                <span>
-                  ฿{formatMoney(Number(r.amount))} ·{" "}
-                  {r.plan_tier === "payg" ? "PAYG" : r.plan_tier}/{r.period}
-                </span>
-                <Badge variant={r.payment_status === "paid" ? "secondary" : "outline"}>
-                  {r.payment_status}
-                </Badge>
-              </li>
-            ))}
+            {(history.data ?? []).map((r) => {
+              const names = profiles.data ?? {};
+              const planLabel =
+                r.plan_tier === "payg"
+                  ? "PAYG"
+                  : r.plan_tier === "family"
+                    ? (t.billFamily ?? "Family")
+                    : "Premium";
+              const periodLabel =
+                r.period === "yearly"
+                  ? (t.billYearly ?? "yearly")
+                  : r.period === "monthly"
+                    ? (t.billMonthly ?? "monthly")
+                    : r.period || "—";
+              const statusLabel =
+                r.payment_status === "paid"
+                  ? (t.billStatusPaid ?? "ชำระแล้ว")
+                  : r.payment_status === "rejected"
+                    ? (t.billStatusRejected ?? "ไม่พบรายการ")
+                    : r.payment_status;
+              return (
+                <li key={r.id} className="space-y-1 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="font-medium">
+                        {names[r.user_id] ?? r.user_id.slice(0, 8)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.billHistWhen ?? "วันที่-เวลา"}:{" "}
+                        {formatDay(new Date(r.created_at), lang, true)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.billHistPlan ?? "แพ็ก"}: {planLabel}
+                        {r.plan_tier !== "payg" ? ` · ${periodLabel}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.billHistRef ?? "ช่องทาง / อ้างอิง"}:{" "}
+                        {r.payer_ref || r.promptpay_id || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.billHistAmount ?? "ยอดเงิน"}: ฿{formatMoney(Number(r.amount))}
+                      </p>
+                    </div>
+                    <Badge variant={r.payment_status === "paid" ? "secondary" : "outline"}>
+                      {statusLabel}
+                    </Badge>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
