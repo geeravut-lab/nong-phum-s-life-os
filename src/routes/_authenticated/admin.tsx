@@ -180,6 +180,15 @@ function AdminPage() {
         ) : null}
       </header>
 
+      {/* Ops queues */}
+
+      <PremiumPayHubCard />
+      <SupportHubCard />
+      <MarketplaceHubCard />
+      <SafetyHubCard />
+      <PaymentsHubCard />
+
+
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -408,15 +417,7 @@ function AdminPage() {
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.billAdminTitle}</h2>
         <AdminBillingPanel />
-      </section>
-
-      <PremiumPayHubCard />
-      <SupportHubCard />
-      <MarketplaceHubCard />
-      <SafetyHubCard />
-      <PaymentsHubCard />
-
-      {/* ---- Events ---- */}
+      </section>      {/* ---- Events ---- */}
       <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="text-sm font-semibold">{t.adminEventsTitle}</h2>
         <p className="mb-3 mt-1 text-xs text-muted-foreground">{t.adminEventsSub}</p>

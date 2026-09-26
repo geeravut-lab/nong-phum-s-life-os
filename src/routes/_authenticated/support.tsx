@@ -67,9 +67,11 @@ function SupportPage() {
   const [premBusy, setPremBusy] = useState(false);
   const [premRef, setPremRef] = useState("");
   const [premQr, setPremQr] = useState<{
-    paymentId: string;
+    paymentId: string | null;
     amount: number;
     qrUrl: string;
+    planTier: "premium" | "family" | "payg";
+    period: "monthly" | "yearly";
   } | null>(null);
 
   const myPremQ = useQuery({
@@ -305,6 +307,8 @@ function SupportPage() {
                           paymentId: res.paymentId,
                           amount: res.amount,
                           qrUrl: res.qrUrl ?? "",
+                          planTier: "payg",
+                          period: "monthly",
                         });
                         setPremRef("");
                       }
@@ -340,8 +344,20 @@ function SupportPage() {
                       try {
                         const res = (await runOrder({
                           data: { planTier: tier, period },
-                        })) as { paymentId: string; amount: number; qrUrl: string };
-                        setPremQr(res);
+                        })) as {
+                          paymentId: string | null;
+                          amount: number;
+                          qrUrl: string;
+                          planTier: "premium" | "family";
+                          period: "monthly" | "yearly";
+                        };
+                        setPremQr({
+                          paymentId: res.paymentId,
+                          amount: res.amount,
+                          qrUrl: res.qrUrl,
+                          planTier: res.planTier ?? tier,
+                          period: res.period ?? period,
+                        });
                         setPremRef("");
                       } catch (e) {
                         toast.error(e instanceof Error ? e.message : t.error);
@@ -374,8 +390,20 @@ function SupportPage() {
                       try {
                         const res = (await runOrder({
                           data: { planTier: tier, period },
-                        })) as { paymentId: string; amount: number; qrUrl: string };
-                        setPremQr(res);
+                        })) as {
+                          paymentId: string | null;
+                          amount: number;
+                          qrUrl: string;
+                          planTier: "premium" | "family";
+                          period: "monthly" | "yearly";
+                        };
+                        setPremQr({
+                          paymentId: res.paymentId,
+                          amount: res.amount,
+                          qrUrl: res.qrUrl,
+                          planTier: res.planTier ?? tier,
+                          period: res.period ?? period,
+                        });
                         setPremRef("");
                       } catch (e) {
                         toast.error(e instanceof Error ? e.message : t.error);

@@ -453,3 +453,31 @@ Return updated fields. Use ISO 8601 with timezone for startsAtIso when changing 
       },
     };
   });
+
+
+export const deleteAgendaItem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        source: z.enum(["task", "family_event", "helpme"]),
+        id: z.string().uuid(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.source === "task") {
+      await supabaseAdmin.from("reminders").delete().eq("id", data.id);
+    } else if (data.source === "family_event") {
+      await supabaseAdmin.from("family_events").delete().eq("id", data.id);
+    }
+    // helpme: soft cancel only
+    else if (data.source === "helpme") {
+      await supabaseAdmin
+        .from("jobs")
+        .update({ status: "cancelled" })
+        .eq("id", data.id)
+        .eq("user_id", context.userId);
+    }
+    return { ok: true as const };
+  });

@@ -16,8 +16,17 @@ import {
   aiEditAgendaItem,
   listUnifiedAgenda,
   updateAgendaItem,
+  deleteAgendaItem,
   type AgendaItem,
 } from "@/lib/agenda.functions";
+
+function localDayKey(d: Date | string): string {
+  const x = typeof d === "string" ? new Date(d) : d;
+  const y = x.getFullYear();
+  const m = String(x.getMonth() + 1).padStart(2, "0");
+  const day = String(x.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export const Route = createFileRoute("/_authenticated/agenda")({
   head: () => ({ meta: routeMeta("agenda") }),
@@ -41,6 +50,7 @@ function AgendaPage() {
   const qc = useQueryClient();
   const runList = useServerFn(listUnifiedAgenda);
   const runUpdate = useServerFn(updateAgendaItem);
+  const runDelete = useServerFn(deleteAgendaItem);
   const runAi = useServerFn(aiEditAgendaItem);
 
   const [view, setView] = useState<ViewMode>("list");

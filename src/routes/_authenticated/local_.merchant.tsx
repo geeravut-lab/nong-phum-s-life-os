@@ -171,31 +171,76 @@ function MerchantDashboardPage() {
   const saveDeal = async () => {
     if (!dealForm.placeId || !dealForm.title.trim()) return;
     setBusy(true);
-    const { error } = await supabase.from("local_deals").insert({
-      place_id: dealForm.placeId,
-      title: dealForm.title.trim(),
-      description: dealForm.description.trim(),
-      discount_label: dealForm.discount_label.trim() || null,
-      budget_max: dealForm.budget_max ? Number(dealForm.budget_max) : null,
-      starts_at: new Date().toISOString(),
-      ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      is_active: true,
-    });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      if (editingDealId) {
+        const { error } = await supabase
+          .from("local_deals")
+          .update({
+            title: dealForm.title.trim(),
+            description: dealForm.description.trim(),
+            discount_label: dealForm.discount_label.trim() || null,
+            budget_max: dealForm.budget_max ? Number(dealForm.budget_max) : null,
+          } as never)
+          .eq("id", editingDealId);
+        if (error) throw error;
+        setEditingDealId(null);
+      } else {
+        const { error } = await supabase.from("local_deals").insert({
+          place_id: dealForm.placeId,
+          title: dealForm.title.trim(),
+          description: dealForm.description.trim(),
+          discount_label: dealForm.discount_label.trim() || null,
+          budget_max: dealForm.budget_max ? Number(dealForm.budget_max) : null,
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          is_active: true,
+        });
+        if (error) throw error;
+      }
+      toast.success(t.localDealSaved);
+      setDealForm({
+        placeId: dealForm.placeId,
+        title: "",
+        description: "",
+        discount_label: "",
+        budget_max: "",
+      });
+      void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
+      void qc.invalidateQueries({ queryKey: ["local-deals"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
     }
-    toast.success(t.localDealSaved);
+  };
+
+  const deleteDeal = async (id: string) => {
+    if (!confirm("ลบโปรโมชันนี้?")) return;
+    const { error } = await supabase.from("local_deals").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else {
+      void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
+      void qc.invalidateQueries({ queryKey: ["local-deals"] });
+      toast.success(t.saved);
+    }
+  };
+
+  const startEditDeal = (d: {
+    id: string;
+    place_id: string;
+    title: string;
+    description: string | null;
+    discount_label: string | null;
+    budget_max: number | null;
+  }) => {
+    setEditingDealId(d.id);
     setDealForm({
-      placeId: dealForm.placeId,
-      title: "",
-      description: "",
-      discount_label: "",
-      budget_max: "",
+      placeId: d.place_id,
+      title: d.title,
+      description: d.description ?? "",
+      discount_label: d.discount_label ?? "",
+      budget_max: d.budget_max != null ? String(d.budget_max) : "",
     });
-    void qc.invalidateQueries({ queryKey: ["my-local-deals"] });
-    void qc.invalidateQueries({ queryKey: ["local-deals"] });
   };
 
   return (
@@ -417,15 +462,48 @@ function MerchantDashboardPage() {
           <Button disabled={busy} onClick={saveDeal}>
             {t.localSaveDeal}
           </Button>
-          <ul className="space-y-1 text-sm">
+          <ul className="mt-3 space-y-2 text-sm">
             {(myDeals.data ?? []).map((d) => (
-              <li key={d.id} className="rounded-lg border border-border px-2 py-1">
-                {d.title}{" "}
-                {d.discount_label && (
-                  <Badge variant="secondary" className="ml-1">
-                    {d.discount_label}
-                  </Badge>
-                )}
+              <li
+                key={d.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+              >
+                <div>
+                  <span className="font-medium">{d.title}</span>{" "}
+                  {d.discount_label && (
+                    <Badge variant="secondary" className="ml-1">
+                      {d.discount_label}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      startEditDeal({
+                        id: d.id,
+                        place_id: d.place_id,
+                        title: d.title,
+                        description: d.description,
+                        discount_label: d.discount_label,
+                        budget_max: d.budget_max,
+                      })
+                    }
+                  >
+                    {t.edit}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    onClick={() => void deleteDeal(d.id)}
+                  >
+                    {t.delete ?? "ลบ"}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>

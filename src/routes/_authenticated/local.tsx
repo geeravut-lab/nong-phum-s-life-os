@@ -360,7 +360,9 @@ function LocalPage() {
           ranked.slice(0, 40).map((p) => {
             const deals = dealsByPlace.get(p.id) ?? [];
             const open = isOpenNow(p.open_hours as Record<string, string>);
-            const map = mapsUrl(p.lat, p.lng, placeName(p));
+            const map =
+              (p as { maps_url?: string | null }).maps_url ||
+              mapsUrl(p.lat, p.lng, placeName(p));
             const dir =
               coords && p.lat != null && p.lng != null
                 ? directionsUrl(coords.lat, coords.lng, p.lat, p.lng)
