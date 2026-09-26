@@ -1,0 +1,9 @@
+# Revisions listed here are skipped by `git blame`.
+#
+# Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only add commits that are provably formatting-only.
+
+# style: apply prettier across the repo
+83abcb74c925163cf67a2a3793462d20c85f1f12
