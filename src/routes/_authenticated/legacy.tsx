@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { CopyButton } from "@/components/CopyButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -753,6 +754,9 @@ function LegacyPage() {
               >
                 {inviteUrl}
               </a>
+              <div className="mt-2">
+                <CopyButton value={inviteUrl} label={t.copy} />
+              </div>
             </div>
           )}
 
@@ -844,7 +848,6 @@ function LegacyPage() {
                         try {
                           const res = await runInvite({ data: { contactId: c.id } });
                           setInviteUrl(res.url);
-                          void navigator.clipboard.writeText(res.url).catch(() => {});
                           toast.success(t.invLinkCreated);
                           void qc.invalidateQueries({ queryKey: ["legacy-contacts"] });
                         } catch (e) {

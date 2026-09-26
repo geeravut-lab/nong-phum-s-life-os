@@ -763,6 +763,9 @@ function LocalPage() {
                           lng: g.lng,
                           address: g.address,
                           venue: g.name,
+                          // Google gave us the id, so Maps can be told exactly
+                          // which shop the name refers to.
+                          placeId: g.googlePlaceId,
                         })
                       }
                     >
