@@ -1,321 +1,115 @@
-# Life OS — Feature Map & Implementation Backlog
+# Life OS — Feature Map & Backlog
 
-เอกสารนี้ map **Functions & Features** จากสเปก 3 ไฟล์ กับเมนู/หน้าในระบบ  
-และใช้ **track** งานที่ทำแล้ว / ค้าง / รอบถัดไป
+อัปเดตล่าสุด: **2026-09-26**
 
-**แหล่งสเปก**
-- `Functions&Features for 7 Systems & LIFE OS.pdf`
-- `Functions&Features ของระบบ ช่วยฉันที ใน Life OS v2.pdf`
-- `Life Legacy (ใน Life OS) Functions&Features v2.pdf`
+อ้างอิงสเปก PDF:
+- Functions&Features for 7 Systems & LIFE OS.pdf
+- Functions&Features ของระบบ ช่วยฉันที ใน Life OS v2.pdf
+- Life Legacy (ใน Life OS) Functions&Features v2.pdf
 
-**สถานะ**
 | สัญลักษณ์ | ความหมาย |
 |-----------|----------|
-| ✅ | ทำแล้ว ใช้ได้เป็นหลัก |
-| 🟡 | ทำบางส่วน / MVP |
-| ❌ | ยังไม่มี หรือโครงอย่างเดียว |
-| 🔄 | กำลังทำในรอบปัจจุบัน |
-
-อัปเดตล่าสุด: 2026-09-25
+| ✅ | ทำแล้ว |
+| 🟡 | บางส่วน / MVP |
+| ❌ | ยังไม่มี |
 
 ---
 
-## 1. เมนู / หน้าในระบบ
+## เมนู / Route
 
-| เมนู | Route | ระบบหลัก |
-|------|--------|----------|
+| เมนู | Route | ระบบ |
+|------|--------|------|
 | วันนี้ | `/today` | AI Life Manager |
-| แชท (น้องภูมิ) | `/chat` | AI Life Manager |
-| เอกสาร | `/docs` | Life Archive |
-| งาน | `/tasks` | AI Life Manager |
-| เงิน | `/money` | AI Life Manager |
+| คุยกับน้องภูมิ | `/chat` | AI |
+| เอกสาร | `/docs` | Archive |
+| เรื่องที่ต้องทำ | `/tasks` | Tasks |
+| ปฏิทินรวม | `/agenda` | Unified Agenda |
+| รายรับ-รายจ่าย | `/money` | Money |
 | ครอบครัว | `/family` | Family Radar |
-| ช่วยฉันที | `/helpme` | Task Marketplace |
-| แดชบอร์ดผู้รับงาน | `/helper-dashboard` | Task Marketplace |
+| ช่วยฉันที | `/helpme` | Marketplace |
+| แดชบอร์ดผู้ช่วย | `/helper-dashboard` | Marketplace |
 | สิทธิฉัน | `/benefits` | Benefits |
-| ช่วยตัดสินใจ | `/decide` | Decision Engine |
-| ของดีใกล้บ้าน | `/local` | Local Intelligence |
-| ร้านค้า | `/local/merchant` | Local Intelligence |
-| ฝากไว้ | `/legacy` | Life Legacy (มีชีวิต) |
-| หลังเหตุการณ์ | `/legacy/after` | Life Legacy (หลังเสียชีวิต) |
-| รับคำเชิญผู้ยืนยัน | `/legacy/invite/$token` | Life Legacy |
-| Memorial | `/memorial/$token` | Life Legacy |
-| สนับสนุน | `/support` | Platform |
-| ตั้งค่า | `/settings` | Platform |
-| ผู้ดูแลระบบ | `/admin` (+ payments / marketplace / safety / support) | Admin |
+| ช่วยตัดสินใจ | `/decide` | Decision |
+| ของดีใกล้บ้าน | `/local` | Local |
+| แดชบอร์ดร้านค้า | `/local/merchant` | Local |
+| ฝากไว้ / หลังเหตุการณ์ | `/legacy` `/legacy/after` | Life Legacy |
+| Memorial | `/memorial/$token` | Legacy |
+| สนับสนุน | `/support` | Billing + Donate |
+| ตั้งค่า | `/settings` | Privacy |
+| ผู้ดูแลระบบ | `/admin` (+ premium/payments/support/safety/marketplace) | Admin |
+| ติดตั้งเป็นแอป | PWA (sidebar) | Platform |
 
 ---
 
-## 2. Feature Map (สรุป)
+## Feature map (ย่อ)
 
-### 2.1 AI Life Manager → `/chat` `/today` `/docs` `/tasks` `/money` `/settings`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| AI Inbox | `/chat` | 🟡 |
-| Document AI (OCR, metadata, warranty) | `/docs` `/chat` | ✅ R3 |
-| Bill & Expense | `/money` | 🟡 |
-| Reminder & Calendar | `/tasks` `/today` | 🟡 |
-| Personal Dashboard | `/today` | 🟡 |
-| AI Daily Brief | `/today` `/chat` | 🟡 |
-| Search & Personal Memory | `/chat` | 🟡 |
-| Recurring Tasks | `/tasks` | 🟡 |
-| Privacy Center / audit | `/settings` | ✅ R5 |
-| Monetization Free/Premium + PromptPay | `/support` `/admin` | ✅ |
-
-### 2.2 ช่วยฉันที → `/helpme` `/helper-dashboard` `/admin/*`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| AI Task Parser | `/helpme` | 🟡 |
-| Task Posting | `/helpme` | ✅ |
-| Provider Matching (35/20/15/10/10/10) | `/helpme` | 🟡 |
-| Quote & Offer / Counter | `/helpme` | 🟡 |
-| Booking & Status | `/helpme` | ✅ |
-| Chat & Evidence | `/helpme` | ✅ |
-| Payment & Escrow | `/helpme` `/admin/payments` | ✅ |
-| Rating & Trust | `/helpme` | ✅ |
-| Safety report/block | `/helpme` `/admin/safety` | ✅ |
-| Provider Dashboard | `/helper-dashboard` | 🟡 |
-| AI Price Guidance | `/helpme` | 🟡 |
-| Admin Commission/Fee | `/admin` | ✅ |
-| Location sharing | — | ❌ |
-| Lead / promoted helper | — | ❌ |
-
-### 2.3 Family Radar → `/family`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| Family Group + members | `/family` | ✅ |
-| Role & Permission ลึก | `/family` | ✅ R4 |
-| Shared Calendar | `/family` | ✅ R4 |
-| Family Tasks มอบหมาย | `/family` `/tasks` | ✅ R4 |
-| Care Check-in | — | ❌ |
-| Routine Tracking | — | ❌ |
-
-### 2.4 สิทธิฉัน → `/benefits`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| Profile & Eligibility | `/benefits` | ✅ |
-| Benefits DB + Engine | `/benefits` | 🟡 |
-| AI Interview | `/benefits` | ✅ |
-| Result + conditions | `/benefits` | ✅ |
-| Application Guide | `/benefits` | 🟡 |
-| Deadline Reminder | `/benefits` `/tasks` | 🟡 |
-| Source & Freshness | `/benefits` | 🟡 |
-| Province/Local | `/benefits` | 🟡 |
-| Save & Compare | `/benefits` | 🟡 |
-| Share to family | — | ❌ |
-
-### 2.5 ของดีใกล้บ้าน → `/local` `/local/merchant`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| Location-aware | `/local` | 🟡 |
-| AI Natural Search | `/local` | ✅ |
-| Personalized recs | `/local` | 🟡 |
-| Open Now | `/local` | ✅ |
-| Business profiles | `/local` | ✅ |
-| Community / promoted | `/local` | 🟡 |
-| Route & multi-stop | `/local` | 🟡 |
-| Local Deals | `/local` | 🟡 |
-| AI Local Guide | `/local` `/chat` | 🟡 |
-| Reviews | `/local` | ✅ |
-| Merchant Dashboard | `/local/merchant` | 🟡 |
-| Merchant monetization | — | ❌ |
-
-### 2.6 AI ช่วยตัดสินใจ → `/decide`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| Wizard / Interview | `/decide` | ✅ |
-| Options / Criteria / Matrix | `/decide` | ✅ |
-| Scenario / Pros-Cons | `/decide` | 🟡 / ✅ |
-| Evidence Mode (ภายนอก) | — | ❌ |
-| Decision Journal | `/decide` | 🟡 |
-| Templates | `/decide` | ✅ |
-
-### 2.7 Life Archive → `/docs`
-
-| Feature | หน้า | สถานะ |
-|---------|------|--------|
-| Secure store | `/docs` | ✅ |
-| OCR / Classification | `/docs` | 🟡 |
-| Metadata / expiry | `/docs` | 🟡 |
-| NL Search | `/docs` `/chat` | 🟡 |
-| Warranty tracker | — | ❌ |
-| Family shared vault | — | ❌ |
-
-### 2.8 Life Legacy
-
-**ตอนมีชีวิต** `/legacy`
-
+### AI / Docs / Tasks / Money
 | Feature | สถานะ |
 |---------|--------|
-| Final Wishes / Trusted / Assets / Will ref / Checklist / Messages / Story / Donation | ✅ |
-| Secure Vault (ข้อความ) | 🟡 |
-| AI Legacy Assistant | ✅ |
-| ดึงข้อมูลจาก Money/Family/Benefits อัตโนมัติ | ✅ R3 |
-| เชิญผู้ยืนยัน + รหัสแผน | ✅ |
+| Document AI + import → Legacy | ✅ R3 |
+| เรื่องที่ต้องทำ + recurring | 🟡 |
+| สวิตช์สถานะงาน sync ปุ่ม | ✅ 2026-09-26 |
+| ปฏิทินรวม (รายการ/วัน/สัปดาห์/เดือน) | ✅ |
+| จุดวันที่ตาม local timezone | ✅ |
+| Free / Premium / Family + PAYG | ✅ |
+| แสดงแพ็กปัจจุบัน (sidebar + สนับสนุน) | ✅ 2026-09-26 |
 
-**หลังเสียชีวิต** `/legacy/after` `/memorial/$token`
-
+### Marketplace (ช่วยฉันที)
 | Feature | สถานะ |
 |---------|--------|
-| Multi-confirm death case | 🟡 |
-| Verifier invite bind | ✅ |
-| **Post-Life Action Plan (24h / 3d / later)** | ✅ R1 |
-| AI Funeral Planner + PromptPay | ✅ |
-| Memorial | ✅ |
-| Digital Wreath | ✅ R2 |
-| ข้อความรายบุคคล + Memorial/กำหนดการ + Wreath PromptPay + VDO ลิงก์ | ✅ R2 · SMS ❌ |
-| LINE แจ้งเปิดเคส | 🟡 |
+| Escrow / PromptPay / Admin payout | ✅ |
+| Chat + evidence + rating | ✅ |
+| Safety report | ✅ |
+| Match score เต็ม | 🟡 |
 
-### 2.9 Platform
-
+### Local
 | Feature | สถานะ |
 |---------|--------|
-| LINE Login / OA | 🟡 |
-| Realtime + จุดแดงเมนู | ✅ |
-| Admin hub | ✅ |
-| i18n TH/EN | ✅ |
-| PDPA / audit เต็ม | 🟡 |
+| Google Places API (เมื่อมี key) | 🟡 |
+| สถานที่ผู้ใช้ + maps_url ปุ่มแผนที่ | ✅ |
+| โปรโมชัน แก้ไข/ลบ | ✅ |
+
+### Family / Agenda
+| Feature | สถานะ |
+|---------|--------|
+| นัดหมาย / มอบหมายงาน | ✅ |
+| ลบจากปฏิทินรวม / ครอบครัว | 🟡 |
+| แสดงชื่อผู้รับมอบหมาย | 🟡→กำลังเติม |
+| จุดแดงเมนูปฏิทินรวม | 🟡 |
+
+### Life Legacy
+| Feature | สถานะ |
+|---------|--------|
+| Vault / wishes / contacts / invite | ✅ |
+| Death case + post-life actions | ✅ |
+| Memorial + digital wreath | ✅ R2 |
+
+### Platform
+| Feature | สถานะ |
+|---------|--------|
+| PWA ติดตั้งเป็นแอป | ✅ (SW + beforeinstallprompt) |
+| Admin ops cards บนสุด | ✅ |
+| Premium insert ตอนแจ้งโอน (ไม่ draft) | ✅ |
 
 ---
 
-## 3. ช่องว่างสำคัญ (ยังขาดหรือบางมาก)
+## Backlog ถัดไป
 
-1. Post-Life Action Plan หลัง `confirmed` (24 ชม. / 3 วัน / ภายหลัง)
-2. Death notification ครบ (SMS, VDO, ข้อความรายบุคคล, แนบกำหนดการ+QR)
-3. Family ลึก: Shared Calendar, Care Check-in, มอบหมายงานในบ้าน
-4. Document AI เต็ม (OCR, วันหมดอายุ, warranty)
-5. Privacy Center / audit log ระดับผลิตภัณฑ์
-6. Monetization (Premium, family plan, promoted listing)
-
----
-
-## 4. Backlog แนะนำ — ทำเป็นรอบ
-
-หลักการ: **ความเร่งด่วนสเปก Legacy + ผลกระทบผู้ใช้ + ต่อจากของที่มีอยู่แล้ว**
-
-### Round 1 — Post-Life Action Plan (ฐาน)
-**เป้าหมาย:** เมื่อเคสถูก `confirmed` ระบบสร้างรายการงานตามช่วงเวลา และให้ผู้เกี่ยวข้องติ๊กทำได้
-
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R1.1 | Migration `post_life_actions` | ✅ |
-| R1.2 | Seed อัตโนมัติเมื่อ `death_cases.status = confirmed` | ✅ |
-| R1.3 | UI รายการงานบน `/legacy/after` (กลุ่ม 24h / 3d / later) | ✅ |
-| R1.4 | Mark done / note โดย linked verifier หรือ admin | ✅ |
-| R1.5 | อัปเดตเอกสารนี้ | ✅ |
-
-### Round 2 — Death communication ขยาย
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R2.1 | Template ข้อความแจ้งรายบุคคล (จาก contacts + plan) | ✅ |
-| R2.2 | แนบลิงก์ Memorial + กำหนดการจาก funeral plan | ✅ |
-| R2.3 | Digital Wreath ชำระเงินจริง (PromptPay) | ✅ |
-| R2.4 | VDO อำลา (ลิงก์ YouTube/URL) บน Memorial | ✅ |
-| R2.5 | SMS gateway (ถ้ามี provider) — optional | ❌ |
-
-### Round 3 — Document AI + Legacy เชื่อมข้อมูล
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R3.1 | OCR / จัดประเภทเอกสารใน `/docs` (+ warranty) | ✅ |
-| R3.2 | Expiration tracker → สร้างเตือนใน `/tasks` | ✅ |
-| R3.3 | “พบข้อมูลใน LIFE OS ให้เพิ่มในแผนฝากไว้” | ✅ |
-| R3.4 | Warranty tracker | ✅ |
-
-### Round 4 — Family Radar ลึก
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R4.1 | Shared Calendar | ✅ |
-| R4.2 | Family task assign + notify | ✅ |
-| R4.3 | Care Check-in | ✅ |
-| R4.4 | Permission รายหมวดข้อมูล | ✅ |
-
-### Round 5 — Trust, Privacy, Monetization
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R5.1 | Privacy Center + audit log | ✅ |
-| R5.2 | Location sharing (ช่วยฉันที) แบบ opt-in | ✅ |
-| R5.3 | Premium / family plan skeleton | ✅ |
-| R5.4 | Promoted listing (Local / Helper) | ✅ skeleton |
-
-### Round 6 — เก็บกวาดคุณภาพ
-| งาน | รายละเอียด | สถานะ |
-|-----|------------|--------|
-| R6.1 | Matching น้ำหนักครบ + counter-offer cron | ❌ |
-| R6.2 | Provider/Merchant analytics | ✅ helper stats |
-| R6.3 | Decision Evidence Mode | ✅ |
-| R6.4 | Share benefits result to family | 🟡 schema |
+1. ชื่อผู้รับมอบหมายครบทุกหน้า + แก้ไขผู้รับ
+2. จุดแดง realtime ปฏิทินรวมเมื่อมีนัด/งานครอบครัวใหม่
+3. แก้ไขนัด/งานครอบครัวในหน้าครอบครัวให้ modal เดียวกับปฏิทินรวม
+4. Google Places เต็มเมื่อ key + Places API (New) พร้อม
+5. Cron ลบ/expire รายการค้าง (ถ้ามี)
 
 ---
 
-## 5. บันทึกการดำเนินการ (Changelog)
+## Changelog ล่าสุด (2026-09-26)
 
-### 2026-09-25 — สร้างเอกสาร + เริ่ม Round 1
-- สร้าง `docs/FEATURE-MAP-AND-BACKLOG.md`
-- จัดลำดับ backlog R1–R6
-- **Round 1 เสร็จ (โค้ด):**
-  - Migration `post_life_actions` + trigger หลัง `confirmed`
-  - `listPostLifeActions` / `updatePostLifeAction`
-  - UI บน `/legacy/after` แยกเฟส 24h / 3d / later + ปุ่มทำแล้ว/ข้าม/เปิดใหม่
-- **รอบถัดไปที่แนะนำ:** Round 2 (Death communication)
-
-
----
-
-## 6. วิธีใช้เอกสารนี้
-
-1. ก่อนเริ่มงาน: ดูตาราง Round ที่เปิดอยู่ เปลี่ยน ❌ → 🔄  
-2. หลัง merge/deploy: เปลี่ยน 🔄 → ✅ และใส่หมายเหตุใน Changelog  
-3. เมื่อเปลี่ยนลำดับความสำคัญ: แก้ข้อ 4 แล้วลงวันที่ใน Changelog  
-
-
-### 2026-09-25 — Round 2
-- ข้อความแจ้งรายบุคคล (`death_notify_messages` + generate/list)
-- ลิงก์ Memorial + กำหนดการจาก funeral plan ในข้อความ
-- Digital Wreath PromptPay QR + mark paid
-- VDO อำลา (ลิงก์) + เปิดเผย memorial สาธารณะ
-- SMS gateway ยังไม่ทำ (optional ภายหลัง)
-
-
-### 2026-09-25 — Round 3
-- Document AI: หมวด warranty + warranty_until + เตือนหมดประกัน
-- ซิงก์วันครบกำหนดเอกสาร → reminders
-- UI ใกล้ครบกำหนดใน `/docs`
-- สแกน Money/Family/Benefits/Docs → เลือกเพิ่มในแผนฝากไว้ (`/legacy`)
-
-
-### 2026-09-25 — Round 4
-- Shared Calendar (`family_events`)
-- มอบหมายงานครอบครัว + app_notifications (`assignee_user_id` บน reminders)
-- Care Check-in (`family_checkins` + แจ้ง need_help/emergency)
-- Permission รายหมวด (`family_permissions` — owner ตั้งค่า)
-
-
-### 2026-09-25 — Round 5
-- Privacy Center + audit log (`privacy_audit_log`)
-- Location share opt-in for Help Me (`profiles.share_location_helpme`)
-- Premium / Family plan skeleton (`user_subscriptions` + trial)
-- Promoted listing flags on helper / local places
-- Agenda: week range Mon–Sun + month-year locale label
-
-
-### 2026-09-25 — Billing + Round 6 partial
-- Free AI quotas + Premium/Family monthly/yearly PromptPay (`premium_payments`, `ai_usage_monthly`)
-- Admin-tunable margin, cost factor, limits, prices
-- Support page: upgrade + QR + usage
-- Decision evidence mode columns + UI
-- user_benefits is_shared / family_id (share path)
-- R6.1 matching already weighted 35/20/15/10/10/10 in marketplace.server
-
-
-### 2026-09-25 — UX polish + R6.2
-- Admin billing section before Support
-- Support: Premium/Family button rows, no cost-basis line, Family/PAYG explain
-- Local: radius filter default 5km, merchant Maps link + is_public
-- Decide journal expand/collapse
-- Helper dashboard analytics cards
+- Premium/Family/PAYG: ไม่สร้าง draft — insert ตอนแจ้งโอน
+- รายการชำระเงินของฉัน: ไม่โชว์ QR/draft
+- แผนที่สถานที่: ใช้ maps_url
+- โปรโมชันร้าน: แก้ไข/ลบ
+- แนบเอกสาร (เดิมใบเสร็จ)
+- PWA menu + service worker
+- แสดงแพ็ก Free/Premium/Family
+- สวิตช์งาน = สถานะ done/open

@@ -95,6 +95,8 @@ function SupportPage() {
     queryFn: async () =>
       (await runBilling()) as {
         isPremium: boolean;
+        planTier?: string;
+        planExpiresAt?: string | null;
         settings: {
           premiumMonthly: number;
           premiumYearly: number;
@@ -260,6 +262,22 @@ function SupportPage() {
       
       {/* Premium — below donation amount flow */}
       <section className="mt-8 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">{t.billYourPlan ?? "แพ็กปัจจุบัน"}:</span>
+          <Badge variant={billingQ.data?.planTier === "free" || !billingQ.data?.isPremium ? "outline" : "secondary"}>
+            {billingQ.data?.planTier === "family"
+              ? (t.billFamily ?? "Family")
+              : billingQ.data?.isPremium
+                ? "Premium"
+                : (t.billFree ?? "Free")}
+          </Badge>
+          {billingQ.data?.planExpiresAt && billingQ.data?.isPremium ? (
+            <span className="text-xs text-muted-foreground">
+              {t.billUntil ?? "ถึง"}{" "}
+              {new Date(billingQ.data.planExpiresAt).toLocaleDateString()}
+            </span>
+          ) : null}
+        </div>
         {billingQ.data?.isPremium ? (
           <p className="text-sm font-semibold text-primary">{t.billYouArePremium}</p>
         ) : (
@@ -333,45 +351,52 @@ function SupportPage() {
                     ["premium", "monthly", billingQ.data?.settings.premiumMonthly ?? 89],
                     ["premium", "yearly", billingQ.data?.settings.premiumYearly ?? 890],
                   ] as const
-                ).map(([tier, period, price]) => (
-                  <Button
-                    key={`${tier}-${period}`}
-                    size="sm"
-                    variant={period === "yearly" ? "default" : "outline"}
-                    disabled={premBusy}
-                    onClick={async () => {
-                      setPremBusy(true);
-                      try {
-                        const res = (await runOrder({
-                          data: { planTier: tier, period },
-                        })) as {
-                          paymentId: string | null;
-                          amount: number;
-                          qrUrl: string;
-                          planTier: "premium" | "family";
-                          period: "monthly" | "yearly";
-                        };
-                        setPremQr({
-                          paymentId: res.paymentId,
-                          amount: res.amount,
-                          qrUrl: res.qrUrl,
-                          planTier: res.planTier ?? tier,
-                          period: res.period ?? period,
-                        });
-                        setPremRef("");
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
-                      } finally {
-                        setPremBusy(false);
-                      }
-                    }}
-                  >
-                    {t.billUpgrade} · {period === "yearly" ? t.billYearly : t.billMonthly} · ฿{price}
-                    {period === "yearly" && billingQ.data?.pricingExplain.yearlySavePct
-                      ? ` (${t.billSave} ${billingQ.data.pricingExplain.yearlySavePct}%)`
-                      : ""}
-                  </Button>
-                ))}
+                ).map(([tier, period, price]) => {
+                  const cur = billingQ.data?.planTier ?? "free";
+                  // Already on premium or family → cannot buy premium again
+                  const disabledBtn = premBusy || cur === "premium" || cur === "family";
+                  return (
+                    <Button
+                      key={`${tier}-${period}`}
+                      size="sm"
+                      variant={period === "yearly" ? "default" : "outline"}
+                      disabled={disabledBtn}
+                      onClick={async () => {
+                        setPremBusy(true);
+                        try {
+                          const res = (await runOrder({
+                            data: { planTier: tier, period },
+                          })) as {
+                            paymentId: string | null;
+                            amount: number;
+                            qrUrl: string;
+                            planTier?: "premium" | "family";
+                            period?: "monthly" | "yearly";
+                          };
+                          setPremQr({
+                            paymentId: res.paymentId,
+                            amount: res.amount,
+                            qrUrl: res.qrUrl,
+                            planTier: res.planTier ?? tier,
+                            period: res.period ?? period,
+                          });
+                          setPremRef("");
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : t.error);
+                        } finally {
+                          setPremBusy(false);
+                        }
+                      }}
+                    >
+                      {t.billPremiumTitle} ·{" "}
+                      {period === "yearly" ? t.billYearly : t.billMonthly} · ฿{price}
+                      {period === "yearly" && billingQ.data?.pricingExplain.yearlySavePct
+                        ? ` (${t.billSave} ${billingQ.data.pricingExplain.yearlySavePct}%)`
+                        : ""}
+                      {disabledBtn && !premBusy ? ` · ${t.billCurrentPlan ?? "ใช้อยู่"}` : ""}
+                    </Button>
+                  );
+                })}
               </div>
               <div className="flex flex-wrap gap-2">
                 {(
@@ -379,50 +404,57 @@ function SupportPage() {
                     ["family", "monthly", billingQ.data?.settings.familyMonthly ?? 149],
                     ["family", "yearly", billingQ.data?.settings.familyYearly ?? 1490],
                   ] as const
-                ).map(([tier, period, price]) => (
-                  <Button
-                    key={`${tier}-${period}`}
-                    size="sm"
-                    variant={period === "yearly" ? "default" : "outline"}
-                    disabled={premBusy}
-                    onClick={async () => {
-                      setPremBusy(true);
-                      try {
-                        const res = (await runOrder({
-                          data: { planTier: tier, period },
-                        })) as {
-                          paymentId: string | null;
-                          amount: number;
-                          qrUrl: string;
-                          planTier: "premium" | "family";
-                          period: "monthly" | "yearly";
-                        };
-                        setPremQr({
-                          paymentId: res.paymentId,
-                          amount: res.amount,
-                          qrUrl: res.qrUrl,
-                          planTier: res.planTier ?? tier,
-                          period: res.period ?? period,
-                        });
-                        setPremRef("");
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : t.error);
-                      } finally {
-                        setPremBusy(false);
-                      }
-                    }}
-                  >
-                    {t.billFamily} · {period === "yearly" ? t.billYearly : t.billMonthly} · ฿{price}
-                    {period === "yearly" && billingQ.data?.settings
-                      ? ` (${t.billSave} ${Math.round(
-                          (1 -
-                            (billingQ.data.settings.familyYearly || 1490) /
-                              ((billingQ.data.settings.familyMonthly || 149) * 12)) *
-                            100,
-                        )}%)`
-                      : ""}
-                  </Button>
-                ))}
+                ).map(([tier, period, price]) => {
+                  const cur = billingQ.data?.planTier ?? "free";
+                  // Already on family → cannot buy family again
+                  const disabledBtn = premBusy || cur === "family";
+                  return (
+                    <Button
+                      key={`${tier}-${period}`}
+                      size="sm"
+                      variant={period === "yearly" ? "default" : "outline"}
+                      disabled={disabledBtn}
+                      onClick={async () => {
+                        setPremBusy(true);
+                        try {
+                          const res = (await runOrder({
+                            data: { planTier: tier, period },
+                          })) as {
+                            paymentId: string | null;
+                            amount: number;
+                            qrUrl: string;
+                            planTier?: "premium" | "family";
+                            period?: "monthly" | "yearly";
+                          };
+                          setPremQr({
+                            paymentId: res.paymentId,
+                            amount: res.amount,
+                            qrUrl: res.qrUrl,
+                            planTier: res.planTier ?? tier,
+                            period: res.period ?? period,
+                          });
+                          setPremRef("");
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : t.error);
+                        } finally {
+                          setPremBusy(false);
+                        }
+                      }}
+                    >
+                      {t.billFamily} · {period === "yearly" ? t.billYearly : t.billMonthly} · ฿
+                      {price}
+                      {period === "yearly" && billingQ.data?.settings
+                        ? ` (${t.billSave} ${Math.round(
+                            (1 -
+                              (billingQ.data.settings.familyYearly || 1490) /
+                                ((billingQ.data.settings.familyMonthly || 149) * 12)) *
+                              100,
+                          )}%)`
+                        : ""}
+                      {disabledBtn && !premBusy ? ` · ${t.billCurrentPlan ?? "ใช้อยู่"}` : ""}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
             {premQr ? (
@@ -454,8 +486,11 @@ function SupportPage() {
                     try {
                       await runConfirmPrem({
                         data: {
-                          paymentId: premQr.paymentId,
+                          paymentId: premQr.paymentId || undefined,
                           payerRef: premRef.trim() || undefined,
+                          planTier: premQr.planTier,
+                          period: premQr.period,
+                          amount: premQr.amount,
                         },
                       });
                       toast.success(t.saved);

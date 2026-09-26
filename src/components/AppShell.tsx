@@ -56,6 +56,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
+  const { user } = useAuthUser();
+
+  const planQ = useQuery({
+    queryKey: ["my-plan-badge", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("plan_tier, plan_expires_at")
+        .eq("id", user!.id)
+        .maybeSingle();
+      return data as { plan_tier: string | null; plan_expires_at: string | null } | null;
+    },
+    staleTime: 60_000,
+  });
+  const planLabel =
+    planQ.data?.plan_tier === "family"
+      ? "Family"
+      : planQ.data?.plan_tier === "premium"
+        ? "Premium"
+        : "Free";
+
 
   const [deferredPrompt, setDeferredPrompt] = useState<{
     prompt: () => Promise<void>;
@@ -66,15 +88,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS Safari
       Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     setIsStandalone(standalone);
+    // Capture any prompt stored early by root bootstrap
+    const early = (window as unknown as { __pwaDeferred?: {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: string }>;
+    } }).__pwaDeferred;
+    if (early) setDeferredPrompt(early);
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as unknown as {
+      const ev = e as unknown as {
         prompt: () => Promise<void>;
         userChoice: Promise<{ outcome: string }>;
-      });
+      };
+      (window as unknown as { __pwaDeferred?: typeof ev }).__pwaDeferred = ev;
+      setDeferredPrompt(ev);
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -118,7 +147,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const adminPendingTotal = adminPending.data ?? 0;
 
-  const { user } = useAuthUser();
+  
   const qc = useQueryClient();
 
   // Re-check admin role after login / user switch (no full page refresh needed)
@@ -200,6 +229,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link to="/today" className="flex items-center gap-2">
             <PhumMark />
             <span className="font-semibold tracking-tight">{t.appName}</span>
+            <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {planLabel}
+            </span>
             {visibleTotal > 0 && (
               <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
             )}

@@ -111,6 +111,13 @@ export const getBillingPublic = createServerFn({ method: "GET" })
       .eq("year_month", ym)
       .maybeSingle();
     const premium = await isPremiumActive(context.userId);
+    const { data: prof } = await (await admin())
+      .from("profiles")
+      .select("plan_tier, plan_expires_at")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const planTier = (prof?.plan_tier as string) || "free";
+    const planExpiresAt = (prof?.plan_expires_at as string | null) ?? null;
     return {
       settings,
       usage: usage ?? {
@@ -122,6 +129,8 @@ export const getBillingPublic = createServerFn({ method: "GET" })
       },
       yearMonth: ym,
       isPremium: premium,
+      planTier: premium ? (planTier === "family" ? "family" : "premium") : "free",
+      planExpiresAt,
       /** Human-readable pricing rationale (TH) */
       pricingExplain: {
         freeSummary: `ฟรี/เดือน: แชท ${settings.freeChat} · เอกสาร ${settings.freeDocument} · ตัดสินใจ ${settings.freeDecision} · เสียง ${settings.freeTranscribe} (รวมไม่เกิน ${settings.freeTotal} ครั้ง)`,
@@ -315,15 +324,27 @@ export const createPremiumOrder = createServerFn({ method: "POST" })
           ? settings.familyMonthly
           : settings.familyYearly;
 
-    // Donation-style: do NOT insert until user clicks "แจ้งว่าโอนแล้ว"
-    const amt = Number(amount);
+    const supabaseAdmin = await admin();
+    const { data: row, error } = await supabaseAdmin
+      .from("premium_payments")
+      .insert({
+        user_id: context.userId,
+        plan_tier: data.planTier,
+        period: data.period,
+        amount,
+        payment_status: "draft",
+        promptpay_id: settings.promptpayId,
+      })
+      .select("id, amount, promptpay_id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const amt = Number(row.amount);
     return {
-      paymentId: null as string | null,
+      paymentId: row.id as string,
       amount: amt,
-      promptpayId: settings.promptpayId,
-      planTier: data.planTier,
-      period: data.period,
-      qrUrl: `https://promptpay.io/${settings.promptpayId}/${amt.toFixed(2)}`,
+      promptpayId: row.promptpay_id as string,
+      qrUrl: `https://promptpay.io/${row.promptpay_id}/${amt.toFixed(2)}`,
     };
   });
 
@@ -332,41 +353,18 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
       .object({
-        paymentId: z.string().uuid().optional().nullable(),
+        paymentId: z.string().uuid(),
         payerRef: z.string().max(80).optional(),
-        planTier: z.enum(["premium", "family", "payg"]).optional(),
-        period: z.enum(["monthly", "yearly"]).optional(),
-        amount: z.number().positive().optional(),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const supabaseAdmin = await admin();
-    const settings = await loadBillingSettings();
-
-    // Donation-style: insert pending row when reporting transfer (no prior draft)
-    if (!data.paymentId) {
-      if (!data.planTier || !data.period || data.amount == null) {
-        throw new Error("missing payment fields");
-      }
-      if (!settings.promptpayId) throw new Error("ยังไม่ได้ตั้ง PromptPay");
-      const { error } = await supabaseAdmin.from("premium_payments").insert({
-        user_id: context.userId,
-        plan_tier: data.planTier,
-        period: data.period,
-        amount: data.amount,
-        payment_status: "pending",
-        promptpay_id: settings.promptpayId,
-        payer_ref: data.payerRef ?? null,
-      });
-      if (error) throw new Error(error.message);
-      return { ok: true as const, status: "pending" as const };
-    }
-
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
       _user_id: context.userId,
       _role: "admin",
     });
+
     const { data: pay, error } = await supabaseAdmin
       .from("premium_payments")
       .select("*")
@@ -374,6 +372,7 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       .single();
     if (error || !pay) throw new Error(error?.message ?? "not found");
     if (pay.user_id !== context.userId && !isAdmin) throw new Error("Forbidden");
+    // User reports transfer — draft → pending for admin
     if (pay.payment_status === "paid") return { ok: true as const, status: "paid" as const };
     if (pay.payment_status === "rejected") throw new Error("รายการนี้ถูกปฏิเสธแล้ว");
 
@@ -491,13 +490,25 @@ export const createPaygOrder = createServerFn({ method: "POST" })
     if (amountBaht <= 0) {
       return { amount: 0, paymentId: null as string | null, message: "no_overage" as const };
     }
+    const { data: row, error } = await supabaseAdmin
+      .from("premium_payments")
+      .insert({
+        user_id: context.userId,
+        plan_tier: "payg",
+        period: "monthly",
+        amount: amountBaht,
+        payment_status: "draft",
+        promptpay_id: settings.promptpayId,
+      } as never)
+      .select("id, amount, promptpay_id")
+      .single();
+    if (error) throw new Error(error.message);
+    const amt = Number(row.amount);
     return {
-      paymentId: null as string | null,
-      amount: amountBaht,
-      promptpayId: settings.promptpayId,
-      planTier: "payg" as const,
-      period: "monthly" as const,
-      qrUrl: `https://promptpay.io/${settings.promptpayId}/${amountBaht.toFixed(2)}`,
+      paymentId: row.id as string,
+      amount: amt,
+      promptpayId: row.promptpay_id as string,
+      qrUrl: `https://promptpay.io/${row.promptpay_id}/${amt.toFixed(2)}`,
       message: "ok" as const,
     };
   });

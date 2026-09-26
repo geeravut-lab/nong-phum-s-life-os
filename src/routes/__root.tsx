@@ -112,6 +112,11 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaDeferred=e;});if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}}catch(e){}})();`,
+          }}
+        />
         {children}
         <Scripts />
       </body>
