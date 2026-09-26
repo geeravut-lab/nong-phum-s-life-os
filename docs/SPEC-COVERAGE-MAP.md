@@ -274,23 +274,23 @@ Privacy policy consent records 🟡
 
 ### รายละเอียดย่อยที่ยังขาด
 
-| สเปก                                                    | สถานะ | หมายเหตุ                                               |
-| ------------------------------------------------------- | ----- | ------------------------------------------------------ |
-| Death Notification + Multi-confirmation                 | ✅    | `death.functions.ts` · `legacy-notify.functions.ts`    |
-| Trusted Contact Verification                            | ✅    |                                                        |
-| **ส่ง SMS**                                             | ❌    | สเปกระบุชัด ปัจจุบันส่งผ่าน LINE + in-app เท่านั้น     |
-| **ส่ง VDO อำลา**                                        | ❌    | ไม่มีเส้นทางอัปโหลด/ส่งวิดีโอ                          |
-| AI Funeral Planner (Package A/B/C)                      | ✅    | `funeral.functions.ts`                                 |
-| ผ่อนจ่าย 12/24/36 เดือน                                 | ✅    | `installment` มีในโค้ด                                 |
-| Digital Wreath (พวงหรีด/เงินช่วยงาน)                    | ✅    | `/memorial/$token`                                     |
-| **Eco Memorial (ปลูกต้นไม้แทนพวงหรีด)**                 | ❌    | สเปกระบุเป็นตัวเลือกให้ผู้ร่วมงาน                      |
-| Asset Inventory (เงินฝาก/หุ้น/ประกัน ฯลฯ)               | ✅    |                                                        |
-| **หน่วยงานที่จ่ายผลประโยชน์เมื่อเสียชีวิต**             | 🟡    | สเปกทำ `****` กำกับว่า **สำคัญมาก** ต้องตรวจว่าครบ     |
-| Digital Asset Legacy (domain/social/ฯลฯ)                | 🟡    |                                                        |
-| AI Legacy Assistant (ภูมิถามทีละเรื่อง)                 | 🟡    | คุยผ่าน `/chat` ได้ แต่ไม่มี flow สร้าง My Legacy Plan |
-| Important Documents Map                                 | 🟡    |                                                        |
-| Insurance & Benefit Finder เชื่อม LIFE OS               | 🟡    |                                                        |
-| **Context-aware "ภูมิพบข้อมูลที่นำมาใส่ได้ เพิ่มไหม?"** | ❌    | สเปกเน้นว่าเป็นคุณค่าหลักของการ integrate              |
+| สเปก                                                    | สถานะ | หมายเหตุ                                                     |
+| ------------------------------------------------------- | ----- | ------------------------------------------------------------ |
+| Death Notification + Multi-confirmation                 | ✅    | `death.functions.ts` · `legacy-notify.functions.ts`          |
+| Trusted Contact Verification                            | ✅    |                                                              |
+| ~~ส่ง SMS~~ (ยกเลิกแล้ว)                                | —     | **เจ้าของโปรเจกต์ยกเลิก 2026-09-26** ใช้ LINE OA แทนทั้งระบบ |
+| **ส่ง VDO อำลา**                                        | ❌    | ไม่มีเส้นทางอัปโหลด/ส่งวิดีโอ                                |
+| AI Funeral Planner (Package A/B/C)                      | ✅    | `funeral.functions.ts`                                       |
+| ผ่อนจ่าย 12/24/36 เดือน                                 | ✅    | `installment` มีในโค้ด                                       |
+| Digital Wreath (พวงหรีด/เงินช่วยงาน)                    | ✅    | `/memorial/$token`                                           |
+| **Eco Memorial (ปลูกต้นไม้แทนพวงหรีด)**                 | ❌    | สเปกระบุเป็นตัวเลือกให้ผู้ร่วมงาน                            |
+| Asset Inventory (เงินฝาก/หุ้น/ประกัน ฯลฯ)               | ✅    |                                                              |
+| **หน่วยงานที่จ่ายผลประโยชน์เมื่อเสียชีวิต**             | 🟡    | สเปกทำ `****` กำกับว่า **สำคัญมาก** ต้องตรวจว่าครบ           |
+| Digital Asset Legacy (domain/social/ฯลฯ)                | 🟡    |                                                              |
+| AI Legacy Assistant (ภูมิถามทีละเรื่อง)                 | 🟡    | คุยผ่าน `/chat` ได้ แต่ไม่มี flow สร้าง My Legacy Plan       |
+| Important Documents Map                                 | 🟡    |                                                              |
+| Insurance & Benefit Finder เชื่อม LIFE OS               | 🟡    |                                                              |
+| **Context-aware "ภูมิพบข้อมูลที่นำมาใส่ได้ เพิ่มไหม?"** | ❌    | สเปกเน้นว่าเป็นคุณค่าหลักของการ integrate                    |
 
 ---
 
@@ -310,7 +310,7 @@ Privacy policy consent records 🟡
    _(ทำโดยเก็บ "สำเนาและตำแหน่งของฉบับจริง" เท่านั้น ไม่ใช่ระบบทำพินัยกรรม — ดูหลักการใน
    `PHASE-0-MIGRATION.md`)_
 8. **Decision Journal** — ตัวสร้างการใช้ซ้ำของโมดูล Decision
-9. **SMS + VDO อำลา ใน Death Notification** — สเปกระบุชัด ปัจจุบันมีแต่ LINE/in-app
+9. **VDO อำลา ใน Death Notification** — ยังไม่มีเส้นทางอัปโหลด/ส่งวิดีโอ (SMS ถูกยกเลิกแล้ว ใช้ LINE OA แทน)
 10. **Analytics + Feature flags** — ไม่กระทบผู้ใช้ แต่กระทบการตัดสินใจของเจ้าของระบบ
 
 ### สิ่งที่ครบเกินคาด
