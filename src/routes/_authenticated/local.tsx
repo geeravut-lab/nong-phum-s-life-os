@@ -37,6 +37,7 @@ import {
 } from "@/lib/local.shared";
 import { directionsUrl, isOpenNow, mapsUrl } from "@/lib/local-hours";
 import { formatDay } from "@/lib/format";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 
 export const Route = createFileRoute("/_authenticated/local")({
   head: () => ({ meta: routeMeta("local") }),
@@ -77,6 +78,7 @@ function LocalPage() {
   // What the detail sheet is showing. A card is a summary by necessity - the
   // description, the full window and the price only fit once one is opened.
   const [detail, setDetail] = useState<DetailView | null>(null);
+  const flags = useFeatureFlags();
 
   /** "26 Sep 2026, 18:00 – 21:00", collapsing the date when it does not change. */
   const fmtWindow = (startsAt: string | null, endsAt: string | null): string | null => {
@@ -254,6 +256,12 @@ function LocalPage() {
    * inside the results block, so it only showed when it was not needed.
    */
   const loadGooglePlaces = async (opts: { lat?: number; lng?: number; query?: string }) => {
+    // Billed per call, so an admin can switch it off without a deploy.
+    if (!flags.enabled("google_places")) {
+      setGooglePlaces([]);
+      setGoogleMsg(null);
+      return;
+    }
     try {
       const res = (await runGoogle({
         data: {

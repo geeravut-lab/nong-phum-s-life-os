@@ -6,6 +6,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BarChart3 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { FEATURE_FLAGS } from "@/lib/flags";
+import { setFeatureFlag } from "@/lib/admin.functions";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -187,6 +190,7 @@ function AdminPage() {
       <PaymentsHubCard />
       <FuneralHubCard />
       <UsageHubCard />
+      <FeatureFlagsCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -619,6 +623,53 @@ function LineQuotaCard() {
           </p>
         </div>
       )}
+    </section>
+  );
+}
+
+function FeatureFlagsCard() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const save = useServerFn(setFeatureFlag);
+  const q = useQuery({
+    queryKey: ["feature-flags-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("feature_flags")
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.feature_flags ?? {}) as Record<string, boolean>;
+    },
+  });
+
+  const toggle = async (flag: (typeof FEATURE_FLAGS)[number], enabled: boolean) => {
+    try {
+      await save({ data: { flag, enabled } });
+      toast.success(t.saved);
+      void qc.invalidateQueries({ queryKey: ["feature-flags-admin"] });
+      void qc.invalidateQueries({ queryKey: ["feature-flags"] });
+    } catch (e) {
+      toast.error(errorText(e, t));
+    }
+  };
+
+  return (
+    <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <h2 className="text-sm font-semibold">{t.flagsTitle}</h2>
+      <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.flagsSub}</p>
+      <ul className="space-y-2">
+        {FEATURE_FLAGS.map((flag) => {
+          // Absent means on, so only an explicit false is off.
+          const on = q.data?.[flag] !== false;
+          return (
+            <li key={flag} className="flex items-center justify-between gap-3 text-sm">
+              <span>{t[`flag_${flag}`]}</span>
+              <Switch checked={on} onCheckedChange={(v) => void toggle(flag, v === true)} />
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

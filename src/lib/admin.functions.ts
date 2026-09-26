@@ -1,3 +1,4 @@
+import { FEATURE_FLAGS } from "@/lib/flags";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin } from "@/integrations/supabase/auth-middleware";
@@ -383,4 +384,40 @@ export const updateSafetyReport = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw error;
     return { ok: true as const };
+  });
+
+/**
+ * Feature flags. Read by every page through useFeatureFlags; written here.
+ *
+ * A flag is only ever stored when it is off, so the stored object stays the list
+ * of exceptions rather than a copy of the feature set, and a flag nobody has
+ * touched cannot end up off by accident.
+ */
+export const setFeatureFlag = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        flag: z.enum(FEATURE_FLAGS),
+        enabled: z.boolean(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase
+      .from("platform_settings")
+      .select("feature_flags")
+      .eq("id", true)
+      .maybeSingle();
+
+    const flags = { ...((row?.feature_flags ?? {}) as Record<string, boolean>) };
+    if (data.enabled) delete flags[data.flag];
+    else flags[data.flag] = false;
+
+    const { error } = await context.supabase
+      .from("platform_settings")
+      .update({ feature_flags: flags })
+      .eq("id", true);
+    if (error) throw error;
+    return { ok: true as const, flags };
   });
