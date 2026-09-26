@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DeleteAccountCard } from "@/components/DeleteAccountCard";
+import { ExportDataCard } from "@/components/ExportDataCard";
 import { LineLinkCard } from "@/components/LineLinkCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n, type Lang } from "@/lib/i18n";
@@ -268,6 +269,7 @@ function SettingsPage() {
           </div>
         </section>
 
+        <ExportDataCard />
         <DeleteAccountCard />
       </div>
     </AppShell>

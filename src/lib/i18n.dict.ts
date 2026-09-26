@@ -914,6 +914,12 @@ const th = {
 
   navAgenda: "ปฏิทินรวม",
   navSearch: "ค้นหาของฉัน",
+  exportTitle: "ขอสำเนาข้อมูลของฉัน",
+  exportText:
+    "ดาวน์โหลดข้อมูลทั้งหมดที่ระบบเก็บเกี่ยวกับคุณเป็นไฟล์ JSON หนึ่งไฟล์ ไฟล์แนบจะมาเป็นลิงก์ดาวน์โหลดอายุ 1 ชั่วโมง",
+  exportButton: "ดาวน์โหลดข้อมูลของฉัน",
+  exportPreparing: "กำลังรวบรวมข้อมูล…",
+  exportDone: "ดาวน์โหลดแล้ว",
   searchTitle: "ค้นหาทุกอย่างของฉัน",
   searchSub: "เอกสาร · งาน · เงิน · สิทธิ · สถานที่ · ทรัพย์สินที่ฝากไว้",
   searchPlaceholder: "พิมพ์สิ่งที่อยากรู้ เช่น ประกันรถ หรือ ค่าไฟ",
@@ -1990,6 +1996,12 @@ const en = {
 
   navAgenda: "Agenda",
   navSearch: "Search",
+  exportTitle: "Get a copy of my data",
+  exportText:
+    "Download everything the system holds about you as a single JSON file. Attachments come as download links valid for one hour.",
+  exportButton: "Download my data",
+  exportPreparing: "Collecting your data…",
+  exportDone: "Downloaded",
   searchTitle: "Search my life",
   searchSub: "Documents · tasks · money · benefits · places · legacy assets",
   searchPlaceholder: "Type what you are looking for, e.g. car insurance or electricity",
