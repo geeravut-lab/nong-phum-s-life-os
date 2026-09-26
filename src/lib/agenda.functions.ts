@@ -75,8 +75,7 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .limit(200);
 
     for (const r of reminders ?? []) {
-      const starts = (r.due_at as string | null) || r.id; // undated still list
-      if (r.due_at && (r.due_at < fromIso || r.due_at > toIso)) continue;
+      if (r.due_at && (r.due_at < fromIso || r.due_at > toIso)) continue; // undated still list
       const open = r.status === "open" || r.status === "pending";
       items.push({
         id: r.id as string,
@@ -157,14 +156,6 @@ export const listUnifiedAgenda = createServerFn({ method: "POST" })
       .select("id")
       .eq("user_id", uid)
       .maybeSingle();
-
-    const jobsQuery = supabaseAdmin
-      .from("jobs")
-      .select("id, title, scheduled_at, status, user_id, assigned_helper_id, location_text")
-      .not("scheduled_at", "is", null)
-      .gte("scheduled_at", fromIso)
-      .lte("scheduled_at", toIso)
-      .limit(80);
 
     const { data: jobsOwn } = await supabaseAdmin
       .from("jobs")

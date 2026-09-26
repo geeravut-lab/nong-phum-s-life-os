@@ -318,7 +318,7 @@ function LegacyPage() {
   const seedChecklist = async () => {
     if (!user) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc("legacy_seed_checklist", {
+    const { error } = await supabase.rpc("legacy_seed_checklist", {
       p_user_id: user.id,
     });
     setBusy(false);

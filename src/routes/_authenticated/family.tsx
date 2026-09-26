@@ -15,7 +15,6 @@ import { joinFamilyByCode } from "@/lib/lifeos.functions";
 import {
   assignFamilyTask,
   createFamilyEvent,
-  deleteFamilyEvent,
   listFamilyCheckins,
   listFamilyEvents,
   listFamilyPermissions,
@@ -37,7 +36,6 @@ function FamilyPage() {
   const join = useServerFn(joinFamilyByCode);
   const runListEvents = useServerFn(listFamilyEvents);
   const runCreateEvent = useServerFn(createFamilyEvent);
-  const runDeleteEvent = useServerFn(deleteFamilyEvent);
   const runPostCheckin = useServerFn(postFamilyCheckin);
   const runListCheckins = useServerFn(listFamilyCheckins);
   const runAssign = useServerFn(assignFamilyTask);

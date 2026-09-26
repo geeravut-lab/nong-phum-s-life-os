@@ -463,7 +463,7 @@ export const listMyVerifierCases = createServerFn({ method: "GET" })
 export const listPostLifeActions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ caseId: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const admin = supabaseAdmin;
     const { data: c, error } = await admin
       .from("death_cases")

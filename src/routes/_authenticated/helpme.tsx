@@ -1,5 +1,5 @@
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute, useSearch, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -246,20 +246,6 @@ function RequesterTab() {
     }
     toast.success(t.bookingConfirmed);
     qc.invalidateQueries({ queryKey: ["my-jobs"] });
-  };
-
-  const withdrawOffer = async (offerId: string) => {
-    const { error } = await supabase
-      .from("job_offers")
-      .update({ status: "withdrawn" })
-      .eq("id", offerId);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(t.offerWithdrawn);
-    qc.invalidateQueries({ queryKey: ["my-jobs"] });
-    qc.invalidateQueries({ queryKey: ["open-jobs"] });
   };
 
   const setStatus = async (jobId: string, status: string) => {
