@@ -445,9 +445,44 @@ export const deleteAgendaItem = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const uid = context.userId;
+
+    // Every branch runs through supabaseAdmin, which bypasses RLS, so the
+    // ownership check has to happen here. updateAgendaItem already does this;
+    // delete did not, which let any signed-in caller remove another user's
+    // reminder or family event by passing its id.
     if (data.source === "task") {
-      await supabaseAdmin.from("reminders").delete().eq("id", data.id);
+      const { data: r, error } = await supabaseAdmin
+        .from("reminders")
+        .select("id, user_id")
+        .eq("id", data.id)
+        .single();
+      if (error || !r) throw new Error(error?.message ?? "not found");
+      // Deleting is destructive, so only the owner may do it - a family
+      // member who can edit a shared reminder still cannot delete it.
+      if (r.user_id !== uid) throw new Error("Forbidden");
+      await supabaseAdmin.from("reminders").delete().eq("id", data.id).eq("user_id", uid);
     } else if (data.source === "family_event") {
+      const { data: ev, error } = await supabaseAdmin
+        .from("family_events")
+        .select("id, family_id, created_by")
+        .eq("id", data.id)
+        .single();
+      if (error || !ev) throw new Error(error?.message ?? "not found");
+      const { data: member } = await supabaseAdmin
+        .from("family_members")
+        .select("id")
+        .eq("family_id", ev.family_id as string)
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (!member) throw new Error("Not a family member");
+      const { data: fam } = await supabaseAdmin
+        .from("families")
+        .select("owner_id")
+        .eq("id", ev.family_id as string)
+        .single();
+      // Same rule as deleteFamilyEvent: the creator or the family owner.
+      if (ev.created_by !== uid && fam?.owner_id !== uid) throw new Error("Forbidden");
       await supabaseAdmin.from("family_events").delete().eq("id", data.id);
     }
     // helpme: soft cancel only
@@ -456,7 +491,7 @@ export const deleteAgendaItem = createServerFn({ method: "POST" })
         .from("jobs")
         .update({ status: "cancelled" })
         .eq("id", data.id)
-        .eq("user_id", context.userId);
+        .eq("user_id", uid);
     }
     return { ok: true as const };
   });

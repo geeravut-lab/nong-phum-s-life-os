@@ -3,8 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Loader2, LogOut, Users } from "lucide-react";
+import { Copy, Loader2, LogOut, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthUser } from "@/hooks/useAuthUser";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ import { joinFamilyByCode } from "@/lib/lifeos.functions";
 import {
   assignFamilyTask,
   createFamilyEvent,
+  deleteFamilyEvent,
   listFamilyCheckins,
   listFamilyEvents,
   listFamilyPermissions,
@@ -33,9 +35,11 @@ export const Route = createFileRoute("/_authenticated/family")({
 function FamilyPage() {
   const { t, lang } = useI18n();
   const qc = useQueryClient();
+  const { user } = useAuthUser();
   const join = useServerFn(joinFamilyByCode);
   const runListEvents = useServerFn(listFamilyEvents);
   const runCreateEvent = useServerFn(createFamilyEvent);
+  const runDeleteEvent = useServerFn(deleteFamilyEvent);
   const runPostCheckin = useServerFn(postFamilyCheckin);
   const runListCheckins = useServerFn(listFamilyCheckins);
   const runAssign = useServerFn(assignFamilyTask);
@@ -178,6 +182,7 @@ function FamilyPage() {
           title: string;
           starts_at: string;
           notes: string;
+          created_by: string;
         }>;
       };
       return res.events ?? [];
@@ -221,6 +226,26 @@ function FamilyPage() {
 
   const family = membership?.families as
     { id: string; name: string; invite_code: string; owner_id: string } | null | undefined;
+
+  // deleteFamilyEvent allows the creator or the family owner; mirror that here
+  // so members are not shown a button the server will refuse.
+  const canDeleteEvent = (createdBy: string) =>
+    !!user && (user.id === createdBy || user.id === family?.owner_id);
+
+  const removeEvent = async (eventId: string) => {
+    if (!window.confirm(t.agendaDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDeleteEvent({ data: { eventId } });
+      toast.success(t.agendaDeleted);
+      void qc.invalidateQueries({ queryKey: ["family-events", familyId] });
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -411,8 +436,22 @@ function FamilyPage() {
                     className="flex justify-between gap-2 rounded-lg border border-border p-2"
                   >
                     <span className="font-medium">{ev.title}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDay(new Date(ev.starts_at), lang)}
+                    <span className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDay(new Date(ev.starts_at), lang)}
+                      </span>
+                      {canDeleteEvent(ev.created_by) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          aria-label={t.delete}
+                          title={t.delete}
+                          onClick={() => void removeEvent(ev.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      )}
                     </span>
                   </li>
                 ))}

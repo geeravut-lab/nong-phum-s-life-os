@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, List, Loader2, Pencil, Sparkles } from "lucide-react";
+import { CalendarDays, List, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   aiEditAgendaItem,
   listUnifiedAgenda,
   updateAgendaItem,
+  deleteAgendaItem,
   type AgendaItem,
 } from "@/lib/agenda.functions";
 
@@ -54,6 +55,7 @@ function AgendaPage() {
   const qc = useQueryClient();
   const runList = useServerFn(listUnifiedAgenda);
   const runUpdate = useServerFn(updateAgendaItem);
+  const runDelete = useServerFn(deleteAgendaItem);
   const runAi = useServerFn(aiEditAgendaItem);
 
   const [view, setView] = useState<ViewMode>("list");
@@ -126,6 +128,28 @@ function AgendaPage() {
       warranty: t.r3Warranty ?? "Warranty",
     };
     return map[s] ?? s;
+  };
+
+  // deleteAgendaItem only accepts these three; money and warranty rows are
+  // derived views with nothing of their own to remove.
+  const DELETABLE = ["task", "family_event", "helpme"] as const;
+  const canDelete = (it: AgendaItem) =>
+    it.editable && (DELETABLE as readonly string[]).includes(it.source);
+
+  const remove = async (it: AgendaItem) => {
+    if (!window.confirm(t.agendaDeleteConfirm)) return;
+    setBusy(true);
+    try {
+      await runDelete({
+        data: { source: it.source as (typeof DELETABLE)[number], id: it.id },
+      });
+      toast.success(t.agendaDeleted);
+      void qc.invalidateQueries({ queryKey: ["unified-agenda"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t.error);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const openEdit = (it: AgendaItem) => {
@@ -315,6 +339,18 @@ function AgendaPage() {
                   {it.editable && (
                     <Button size="sm" variant="outline" onClick={() => openEdit(it)}>
                       <Pencil className="size-3.5" />
+                    </Button>
+                  )}
+                  {canDelete(it) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      aria-label={t.delete}
+                      title={t.delete}
+                      onClick={() => void remove(it)}
+                    >
+                      <Trash2 className="size-3.5" />
                     </Button>
                   )}
                   <Link to={it.href} className="text-center text-[10px] text-primary underline">
