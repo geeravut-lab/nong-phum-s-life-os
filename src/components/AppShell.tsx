@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, FileText,
   HandHelping,
@@ -13,7 +14,9 @@ import { CalendarDays, FileText,
   Settings,
   ShieldEllipsis,
   Users,
-  Wallet, } from "lucide-react";
+  Wallet,
+  Download,
+} from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +56,51 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
+
+  const [deferredPrompt, setDeferredPrompt] = useState<{
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: string }>;
+  } | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      // iOS Safari
+      Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+    setIsStandalone(standalone);
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as unknown as {
+        prompt: () => Promise<void>;
+        userChoice: Promise<{ outcome: string }>;
+      });
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const onInstallApp = async () => {
+    if (deferredPrompt) {
+      await deferredPrompt.prompt();
+      try {
+        await deferredPrompt.userChoice;
+      } catch {
+        /* ignore */
+      }
+      setDeferredPrompt(null);
+      return;
+    }
+    const ua = navigator.userAgent || "";
+    const isIos = /iPad|iPhone|iPod/.test(ua);
+    if (isIos) {
+      toast.message(t.installAppIos);
+    } else {
+      toast.message(t.installAppUnavailable);
+    }
+  };
+
+
 
   const adminPending = useQuery({
     queryKey: ["admin-pending-total"],
@@ -192,6 +240,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Settings className="size-4 shrink-0" />
             <span className="truncate">{t.navSettings}</span>
           </Link>
+          {!isStandalone ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={() => void onInstallApp()}
+            >
+              <Download className="size-4 shrink-0" />
+              <span className="truncate">{t.installApp}</span>
+            </Button>
+          ) : null}
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
             {t.signOut}
           </Button>
@@ -290,6 +349,20 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Settings className="size-4 shrink-0" />
                 <span className="truncate">{t.navSettings}</span>
               </Link>
+              {!isStandalone ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    void onInstallApp();
+                  }}
+                >
+                  <Download className="size-4 shrink-0" />
+                  <span className="truncate">{t.installApp}</span>
+                </Button>
+              ) : null}
               <Button
                 variant="ghost"
                 size="sm"

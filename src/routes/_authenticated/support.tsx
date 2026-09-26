@@ -257,7 +257,7 @@ function SupportPage() {
 
       
       {/* Premium — below donation amount flow */}
-      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <section className="mt-8 mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         {billingQ.data?.isPremium ? (
           <p className="text-sm font-semibold text-primary">{t.billYouArePremium}</p>
         ) : (
@@ -471,8 +471,8 @@ function SupportPage() {
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(d.created_at).toLocaleString()}
-                    {d.payer_ref ? ` · ref ${d.payer_ref}` : ""}
-                    {d.payment_status === "draft" ? " · QR" : ""}
+                    {d.payer_ref ? ` · ${t.supportRefShort} ${d.payer_ref}` : ""}
+                    
                   </p>
                 </div>
                 <Badge
@@ -490,9 +490,7 @@ function SupportPage() {
                       ? t.donationConfirmed
                       : d.payment_status === "rejected"
                         ? t.donationRejected
-                        : d.payment_status === "draft"
-                          ? "QR"
-                          : d.payment_status}
+                        : d.payment_status}
                 </Badge>
               </li>
             ))}

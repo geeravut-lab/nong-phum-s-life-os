@@ -78,6 +78,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       ...routeMeta("root"),
       { name: "author", content: "น้องภูมิ" },
+      { name: "theme-color", content: "#0f766e" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       // Absolute, not relative: link-preview crawlers do not resolve relative
       // og:image paths, so a "/og-image.png" here would simply show no preview.
       { property: "og:image", content: "https://lavieos.netlify.app/og-image.png" },
@@ -92,6 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
       { rel: "icon", href: "/favicon-16.png", type: "image/png", sizes: "16x16" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,

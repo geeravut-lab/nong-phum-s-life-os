@@ -1,0 +1,15 @@
+{
+  "name": "น้องภูมิ — Life OS",
+  "short_name": "น้องภูมิ",
+  "description": "ผู้ช่วยชีวิตออนไลน์",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f7f5",
+  "theme_color": "#0f766e",
+  "lang": "th",
+  "icons": [
+    { "src": "/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/logo-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

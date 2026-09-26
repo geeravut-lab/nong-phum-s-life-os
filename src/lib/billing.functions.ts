@@ -514,7 +514,7 @@ export const listMyPremiumPayments = createServerFn({ method: "GET" })
       .from("premium_payments")
       .select("id, plan_tier, period, amount, payment_status, payer_ref, created_at, paid_at")
       .eq("user_id", context.userId)
-      .in("payment_status", ["draft", "pending", "paid", "rejected", "cancelled", "expired"])
+      .in("payment_status", ["pending", "paid", "rejected"])
       .order("created_at", { ascending: false })
       .limit(30);
     if (error) throw new Error(error.message);
