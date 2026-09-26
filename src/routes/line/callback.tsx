@@ -131,7 +131,7 @@ function LineCallbackPage() {
   );
 }
 
-export function lineErrorText(code: string, t: ReturnType<typeof useI18n>["t"]): string {
+function lineErrorText(code: string, t: ReturnType<typeof useI18n>["t"]): string {
   switch (code) {
     case "line_denied":
       return t.lineErrDenied;
