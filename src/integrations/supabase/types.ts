@@ -310,6 +310,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      benefit_shares: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          message: string;
+          revoked_at: string | null;
+          share_token: string;
+          snapshot: Json;
+          user_id: string;
+          view_count: number;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string;
+          revoked_at?: string | null;
+          share_token: string;
+          snapshot?: Json;
+          user_id: string;
+          view_count?: number;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          message?: string;
+          revoked_at?: string | null;
+          share_token?: string;
+          snapshot?: Json;
+          user_id?: string;
+          view_count?: number;
+        };
+        Relationships: [];
+      };
       benefits: {
         Row: {
           category: string;

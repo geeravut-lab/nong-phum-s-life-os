@@ -29,6 +29,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedTodayRouteImport } from './routes/_authenticated/today'
+import { Route as BenefitsShareTokenRouteImport } from './routes/benefits-share.$token'
 import { Route as LineCallbackRouteImport } from './routes/line/callback'
 import { Route as MemorialTokenRouteImport } from './routes/memorial.$token'
 import { Route as SsoCallbackRouteImport } from './routes/sso/callback'
@@ -141,6 +142,11 @@ const AuthenticatedTodayRoute = AuthenticatedTodayRouteImport.update({
   path: '/today',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const BenefitsShareTokenRoute = BenefitsShareTokenRouteImport.update({
+  id: '/benefits-share/$token',
+  path: '/benefits-share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LineCallbackRoute = LineCallbackRouteImport.update({
   id: '/line/callback',
   path: '/line/callback',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -257,6 +264,7 @@ export interface FileRoutesByTo {
   '/support': typeof AuthenticatedSupportRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
+  '/benefits-share/$token': typeof BenefitsShareTokenRoute
   '/line/callback': typeof LineCallbackRoute
   '/memorial/$token': typeof MemorialTokenRoute
   '/sso/callback': typeof SsoCallbackRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tasks'
     | '/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -357,6 +367,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/tasks'
     | '/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/_authenticated/support'
     | '/_authenticated/tasks'
     | '/_authenticated/today'
+    | '/benefits-share/$token'
     | '/line/callback'
     | '/memorial/$token'
     | '/sso/callback'
@@ -407,6 +419,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BenefitsShareTokenRoute: typeof BenefitsShareTokenRoute
   LineCallbackRoute: typeof LineCallbackRoute
   MemorialTokenRoute: typeof MemorialTokenRoute
   SsoCallbackRoute: typeof SsoCallbackRoute
@@ -554,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTodayRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/benefits-share/$token': {
+      id: '/benefits-share/$token'
+      path: '/benefits-share/$token'
+      fullPath: '/benefits-share/$token'
+      preLoaderRoute: typeof BenefitsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/line/callback': {
       id: '/line/callback'
       path: '/line/callback'
@@ -697,6 +717,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  BenefitsShareTokenRoute: BenefitsShareTokenRoute,
   LineCallbackRoute: LineCallbackRoute,
   MemorialTokenRoute: MemorialTokenRoute,
   SsoCallbackRoute: SsoCallbackRoute,
