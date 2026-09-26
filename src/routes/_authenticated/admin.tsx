@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BarChart3 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -183,6 +184,7 @@ function AdminPage() {
       <MarketplaceHubCard />
       <SafetyHubCard />
       <PaymentsHubCard />
+      <UsageHubCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -616,6 +618,22 @@ function LineQuotaCard() {
         </div>
       )}
     </section>
+  );
+}
+
+function UsageHubCard() {
+  const { t } = useI18n();
+  return (
+    <Link
+      to="/admin/usage"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.adminUsageCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.adminUsageCardSub}</p>
+      </div>
+      <BarChart3 className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
   );
 }
 

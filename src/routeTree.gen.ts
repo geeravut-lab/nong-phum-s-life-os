@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authenticated/admin_.premium'
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
+import { Route as AuthenticatedAdminUsageRouteImport } from './routes/_authenticated/admin_.usage'
 import { Route as AuthenticatedLegacyAfterRouteImport } from './routes/_authenticated/legacy_.after'
 import { Route as AuthenticatedLocalMerchantRouteImport } from './routes/_authenticated/local_.merchant'
 import { Route as AuthenticatedLegacyInviteTokenRouteImport } from './routes/_authenticated/legacy_.invite.$token'
@@ -192,6 +193,11 @@ const AuthenticatedAdminSupportRoute =
     path: '/admin/support',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminUsageRoute = AuthenticatedAdminUsageRouteImport.update({
+  id: '/admin_/usage',
+  path: '/admin/usage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedLegacyAfterRoute =
   AuthenticatedLegacyAfterRouteImport.update({
     id: '/legacy_/after',
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/usage': typeof AuthenticatedAdminUsageRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -273,6 +280,7 @@ export interface FileRoutesByTo {
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
+  '/admin/usage': typeof AuthenticatedAdminUsageRoute
   '/legacy/after': typeof AuthenticatedLegacyAfterRoute
   '/local/merchant': typeof AuthenticatedLocalMerchantRoute
   '/legacy/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/premium': typeof AuthenticatedAdminPremiumRoute
   '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
+  '/_authenticated/admin_/usage': typeof AuthenticatedAdminUsageRoute
   '/_authenticated/legacy_/after': typeof AuthenticatedLegacyAfterRoute
   '/_authenticated/local_/merchant': typeof AuthenticatedLocalMerchantRoute
   '/_authenticated/legacy_/invite/$token': typeof AuthenticatedLegacyInviteTokenRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
+    | '/admin/usage'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/admin/premium'
     | '/admin/safety'
     | '/admin/support'
+    | '/admin/usage'
     | '/legacy/after'
     | '/local/merchant'
     | '/legacy/invite/$token'
@@ -410,6 +421,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/premium'
     | '/_authenticated/admin_/safety'
     | '/_authenticated/admin_/support'
+    | '/_authenticated/admin_/usage'
     | '/_authenticated/legacy_/after'
     | '/_authenticated/local_/merchant'
     | '/_authenticated/legacy_/invite/$token'
@@ -630,6 +642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/usage': {
+      id: '/_authenticated/admin_/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AuthenticatedAdminUsageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/legacy_/after': {
       id: '/_authenticated/legacy_/after'
       path: '/legacy/after'
@@ -677,6 +696,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminPremiumRoute: typeof AuthenticatedAdminPremiumRoute
   AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
+  AuthenticatedAdminUsageRoute: typeof AuthenticatedAdminUsageRoute
   AuthenticatedLegacyAfterRoute: typeof AuthenticatedLegacyAfterRoute
   AuthenticatedLocalMerchantRoute: typeof AuthenticatedLocalMerchantRoute
   AuthenticatedLegacyInviteTokenRoute: typeof AuthenticatedLegacyInviteTokenRoute
@@ -705,6 +725,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminPremiumRoute: AuthenticatedAdminPremiumRoute,
   AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
+  AuthenticatedAdminUsageRoute: AuthenticatedAdminUsageRoute,
   AuthenticatedLegacyAfterRoute: AuthenticatedLegacyAfterRoute,
   AuthenticatedLocalMerchantRoute: AuthenticatedLocalMerchantRoute,
   AuthenticatedLegacyInviteTokenRoute: AuthenticatedLegacyInviteTokenRoute,

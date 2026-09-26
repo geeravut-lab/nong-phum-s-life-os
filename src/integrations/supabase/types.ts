@@ -35,6 +35,33 @@ export type Database = {
   };
   public: {
     Tables: {
+      usage_daily: {
+        Row: {
+          id: string;
+          user_id: string;
+          day: string;
+          path: string;
+          views: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          day?: string;
+          path: string;
+          views?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          day?: string;
+          path?: string;
+          views?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       app_notifications: {
         Row: {
           body: string;
@@ -2757,6 +2784,16 @@ export type Database = {
       is_family_member: {
         Args: { _family_id: string; _user_id: string };
         Returns: boolean;
+      };
+      bump_usage: { Args: { p_path: string }; Returns: undefined };
+      usage_active_users: { Args: { p_days: number }; Returns: number };
+      usage_top_paths: {
+        Args: { p_days: number; p_limit: number };
+        Returns: Array<{ path: string; views: number; users: number }>;
+      };
+      usage_daily_totals: {
+        Args: { p_days: number };
+        Returns: Array<{ day: string; views: number; users: number }>;
       };
     };
     Enums: {

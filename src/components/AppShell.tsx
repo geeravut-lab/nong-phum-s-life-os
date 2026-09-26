@@ -31,6 +31,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { markNotificationsReadForPath, useInboxBadges } from "@/hooks/useInboxBadges";
+import { useTrackUsage } from "@/hooks/useTrackUsage";
 
 /**
  * A scrolling list that says when there is more above or below it.
@@ -118,6 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const { data: isAdmin } = useIsAdmin();
   const { user } = useAuthUser();
+  useTrackUsage();
 
   const planQ = useQuery({
     queryKey: ["my-plan-badge", user?.id],
