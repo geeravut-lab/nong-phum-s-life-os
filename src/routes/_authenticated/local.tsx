@@ -294,13 +294,31 @@ function LocalPage() {
   }, [visiblePlaces, lang]);
 
   /**
-   * A promotion belongs to a shop, so it is only on offer while the shop is.
-   * Unticking "share" used to leave the promotion on the page announcing the
-   * shop by name, which is the same leak by another route.
+   * The shops this page is currently offering, which is what an event or a
+   * promotion has to hang off to be worth showing.
+   *
+   * Two rules, both of which used to apply to the shop list alone: a shop that
+   * is not shared is not here, and while "open now" is on, neither is a shop
+   * that is shut. Leaving the second one out meant the shop list correctly
+   * dropped a closed shop and the two rows above it went on advertising it -
+   * its weekend market and its 5% off - which is an invitation to drive to a
+   * locked door.
+   *
+   * Unknown hours stay in, exactly as in the shop list: "nobody filled the
+   * form in" is not "closed".
    */
+  const offeringPlaceIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const p of visiblePlaces) {
+      if (openOnly && isOpenNow(p.open_hours as Record<string, string>) === false) continue;
+      ids.add(p.id);
+    }
+    return ids;
+  }, [visiblePlaces, openOnly]);
+
   const visibleDeals = useMemo(
-    () => (dealsQ.data ?? []).filter((d) => placeNameById.has(d.place_id)),
-    [dealsQ.data, placeNameById],
+    () => (dealsQ.data ?? []).filter((d) => offeringPlaceIds.has(d.place_id)),
+    [dealsQ.data, offeringPlaceIds],
   );
 
   const dealsByPlace = useMemo(() => {
@@ -427,6 +445,17 @@ function LocalPage() {
       return res.events ?? [];
     },
   });
+
+  /**
+   * An event with no shop of its own - a street market, a temple fair - has no
+   * opening hours to be shut by, so it is judged only on its own start and end
+   * time, which the server already did.
+   */
+  const visibleEvents = useMemo(() => {
+    const rows = eventsQ.data ?? [];
+    if (!openOnly) return rows;
+    return rows.filter((e) => isOpenNow(e.placeOpenHours) !== false);
+  }, [eventsQ.data, openOnly]);
 
   const inPlan = (id: string) => plan.some((p) => p.id === id);
 
@@ -610,11 +639,11 @@ function LocalPage() {
         <h2 className="text-sm font-semibold">{t.evtTitle}</h2>
         {eventsQ.isLoading ? (
           <Skeleton className="h-20 w-full" />
-        ) : (eventsQ.data ?? []).length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t.evtNone}</p>
         ) : (
           <ul className="space-y-2">
-            {(eventsQ.data ?? []).map((e) => (
+            {visibleEvents.map((e) => (
               <li key={e.id} className="rounded-xl border border-border bg-card p-3 text-sm">
                 {/* The body is the button: a card can only show a summary, and
                     the action buttons below it need their own clicks. */}
