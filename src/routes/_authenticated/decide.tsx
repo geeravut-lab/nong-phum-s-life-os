@@ -15,8 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
-import { analyzeDecision } from "@/lib/decision.functions";
-import { DECISION_TEMPLATES, scoreOption, type DecisionBoard } from "@/lib/decision.shared";
+import { analyzeDecision, runDecisionScenario } from "@/lib/decision.functions";
+import {
+  DECISION_TEMPLATES,
+  scoreOption,
+  type DecisionBoard,
+  type DecisionScenario,
+} from "@/lib/decision.shared";
 
 export const Route = createFileRoute("/_authenticated/decide")({
   head: () => ({ meta: routeMeta("decide") }),
@@ -41,12 +46,33 @@ function DecidePage() {
   const { user } = useAuthUser();
   const qc = useQueryClient();
   const runAnalyze = useServerFn(analyzeDecision);
+  const runScenarioFn = useServerFn(runDecisionScenario);
 
   const [expandedJournalId, setExpandedJournalId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [template, setTemplate] = useState<string | null>(null);
   const [context, setContext] = useState<Record<string, string>>({});
   const [board, setBoard] = useState<DecisionBoard | null>(null);
+  const [scenarioText, setScenarioText] = useState<Record<string, string>>({});
+  const [scenarioResult, setScenarioResult] = useState<Record<string, DecisionScenario>>({});
+  const [scenarioBusy, setScenarioBusy] = useState(false);
+
+  const runScenario = async (decisionId: string) => {
+    const change = (scenarioText[decisionId] ?? "").trim();
+    if (change.length < 3) return;
+    setScenarioBusy(true);
+    try {
+      const res = (await runScenarioFn({
+        data: { decisionId, change, lang: lang === "en" ? "en" : "th" },
+      })) as DecisionScenario;
+      setScenarioResult((cur) => ({ ...cur, [decisionId]: res }));
+      void qc.invalidateQueries({ queryKey: ["decision-journal"] });
+    } catch (e) {
+      toast.error(errorText(e, t));
+    } finally {
+      setScenarioBusy(false);
+    }
+  };
   const [activeId, setActiveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -482,6 +508,57 @@ function DecidePage() {
                       )}
                       {/* template optional */}
                       <p className="text-[10px]">{new Date(d.created_at).toLocaleString()}</p>
+
+                      {/* What-if. The board answers "which option and why" at
+                          one moment; this answers whether that survives the
+                          thing the user is now worried about. */}
+                      <div className="mt-2 space-y-2 border-t border-border pt-2">
+                        <p className="font-medium text-foreground">{t.scenarioTitle}</p>
+                        <p>{t.scenarioHint}</p>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Input
+                            placeholder={t.scenarioPlaceholder}
+                            value={scenarioText[d.id] ?? ""}
+                            onChange={(e) =>
+                              setScenarioText((cur) => ({ ...cur, [d.id]: e.target.value }))
+                            }
+                          />
+                          <Button
+                            size="sm"
+                            disabled={scenarioBusy || (scenarioText[d.id] ?? "").trim().length < 3}
+                            onClick={() => void runScenario(d.id)}
+                          >
+                            {t.scenarioRun}
+                          </Button>
+                        </div>
+                        {scenarioResult[d.id] ? (
+                          <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-2">
+                            <p className="font-medium text-foreground">
+                              {scenarioResult[d.id]!.recommendationChanged
+                                ? t.scenarioChanged
+                                : t.scenarioUnchanged}
+                              {" — "}
+                              {scenarioResult[d.id]!.newRecommendation.label} (
+                              {scenarioResult[d.id]!.newRecommendation.confidence}%)
+                            </p>
+                            <p>{scenarioResult[d.id]!.summary}</p>
+                            <p>
+                              <span className="font-medium text-foreground">
+                                {t.scenarioFlip}:{" "}
+                              </span>
+                              {scenarioResult[d.id]!.flipPoint}
+                            </p>
+                            <p className="font-medium text-foreground">{t.scenarioImpacts}</p>
+                            <ul className="list-disc pl-4">
+                              {scenarioResult[d.id]!.optionImpacts.map((o) => (
+                                <li key={o.optionId}>
+                                  {o.label}: {o.impact} — {o.note}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
                       <Button
                         size="sm"
                         variant="ghost"

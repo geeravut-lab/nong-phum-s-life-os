@@ -73,3 +73,50 @@ export function scoreOption(
   if (totalW <= 0) return 0;
   return Math.round((weighted / totalW) * 100);
 }
+
+/**
+ * A what-if run against an existing board.
+ *
+ * The useful answer is not a new board - it is whether the recommendation
+ * survives the change, and if not, where the line is. flipPoint is the part
+ * people act on: "it stops being worth it above 6.5%".
+ */
+export const ScenarioSchema = z.object({
+  summary: z.string(),
+  affectedCriteria: z
+    .array(
+      z.object({
+        label: z.string(),
+        direction: z.enum(["up", "down", "same"]),
+        why: z.string(),
+      }),
+    )
+    .max(6),
+  optionImpacts: z
+    .array(
+      z.object({
+        optionId: z.string(),
+        label: z.string(),
+        impact: z.enum(["better", "worse", "same"]),
+        note: z.string(),
+      }),
+    )
+    .max(5),
+  recommendationChanged: z.boolean(),
+  newRecommendation: z.object({
+    optionId: z.string(),
+    label: z.string(),
+    confidence: z.number().min(0).max(100),
+    reasoning: z.string(),
+  }),
+  /** The threshold at which the answer would change, in the user's terms. */
+  flipPoint: z.string(),
+});
+
+export type DecisionScenario = z.infer<typeof ScenarioSchema>;
+
+export type StoredScenario = {
+  question: string;
+  at: string;
+  result: DecisionScenario;
+};

@@ -1384,6 +1384,7 @@ export type Database = {
       };
       decisions: {
         Row: {
+          scenarios: Json;
           evidence_mode: boolean;
           evidence_notes: string;
 
@@ -1402,6 +1403,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          scenarios?: Json;
           board?: Json;
           chosen_option_id?: string | null;
           context?: Json;
@@ -1417,6 +1419,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          scenarios?: Json;
           board?: Json;
           chosen_option_id?: string | null;
           context?: Json;

@@ -2,7 +2,12 @@ import { generateObject } from "ai";
 import { persona } from "./ai-gateway.server";
 import { withProviderFallback } from "./ai-provider.server";
 import { langName as langNameFor } from "./i18n.dict";
-import { BoardSchema, type DecisionBoard } from "./decision.shared";
+import {
+  BoardSchema,
+  ScenarioSchema,
+  type DecisionBoard,
+  type DecisionScenario,
+} from "./decision.shared";
 
 export type { DecisionBoard };
 export { DECISION_TEMPLATES, scoreOption } from "./decision.shared";
@@ -37,6 +42,48 @@ Rules:
 
 User context answers:
 ${ctxBlock}`,
+    }),
+  );
+
+  return object;
+}
+
+/**
+ * Run a what-if against a board that already exists.
+ *
+ * Deliberately given the original board rather than the original question: the
+ * point is whether *this* recommendation survives the change, so the model has
+ * to reason about the same options and criteria the user already saw, not
+ * invent a fresh set that cannot be compared with it.
+ */
+export async function buildDecisionScenario(input: {
+  question: string;
+  board: DecisionBoard;
+  change: string;
+  lang: "th" | "en";
+}): Promise<DecisionScenario> {
+  const langName = langNameFor(input.lang);
+
+  const { object } = await withProviderFallback("reasoning", (model) =>
+    generateObject({
+      model,
+      schema: ScenarioSchema,
+      system: `${persona(input.lang)}
+You are testing an EXISTING decision board against a change in circumstances.
+Rules:
+- Reason about the options and criteria you are given. Never invent new options.
+- Say plainly whether the recommendation changes, and give the threshold at
+  which it would change (flipPoint) in the user's own terms - a number where
+  there is one.
+- Be honest when the change does not matter: recommendationChanged=false and a
+  flipPoint saying how far it would have to go.
+- Free text in ${langName}.`,
+      prompt: `Decision question: ${input.question}
+
+Existing board:
+${JSON.stringify({ criteria: input.board.criteria, options: input.board.options, recommendation: input.board.recommendation })}
+
+What if: ${input.change}`,
     }),
   );
 

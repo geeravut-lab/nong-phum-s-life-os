@@ -133,6 +133,19 @@ export type HelperMatch = {
   hourlyRate: number | null;
   distanceKm: number | null;
   score: number;
+  /**
+   * Where the score came from, out of each factor's maximum. A ranked list
+   * with no explanation reads as favouritism; this is what makes "why is this
+   * one first" answerable.
+   */
+  breakdown: {
+    skills: number;
+    distance: number;
+    availability: number;
+    price: number;
+    rating: number;
+    experience: number;
+  };
 };
 
 /**
@@ -200,13 +213,17 @@ export async function matchHelpersForJob(
     const ratingScore = h.rating > 0 ? Math.min(1, h.rating / 5) : 0.6;
     const expScore = Math.min(1, h.jobs_done / 50);
 
-    const score =
-      skillScore * 35 +
-      distScore * 20 +
-      availScore * 15 +
-      priceScore * 10 +
-      ratingScore * 10 +
-      expScore * 10;
+    // Weights straight from spec v2 page 2: skills 35, distance 20,
+    // availability 15, price 10, rating 10, experience 10.
+    const breakdown = {
+      skills: skillScore * 35,
+      distance: distScore * 20,
+      availability: availScore * 15,
+      price: priceScore * 10,
+      rating: ratingScore * 10,
+      experience: expScore * 10,
+    };
+    const score = Object.values(breakdown).reduce((n, v) => n + v, 0);
 
     return {
       helperId: h.id,
@@ -219,6 +236,14 @@ export async function matchHelpersForJob(
       hourlyRate: h.hourly_rate,
       distanceKm: distanceKm == null ? null : Math.round(distanceKm * 10) / 10,
       score: Math.round(score),
+      breakdown: {
+        skills: Math.round(breakdown.skills),
+        distance: Math.round(breakdown.distance),
+        availability: Math.round(breakdown.availability),
+        price: Math.round(breakdown.price),
+        rating: Math.round(breakdown.rating),
+        experience: Math.round(breakdown.experience),
+      },
     };
   });
 
