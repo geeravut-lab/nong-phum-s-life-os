@@ -89,13 +89,23 @@ function ChatPage() {
       if (applied.length > 0) {
         // One line per record, so asking for two things and getting one is
         // visible rather than something the reply has to be re-read to catch.
-        const label = (kind: (typeof applied)[number]["kind"]) =>
-          kind === "reminder"
-            ? t.routedToTasks
-            : kind === "expense"
-              ? t.routedToExpense
-              : t.routedToIncome;
-        toast.success(`${t.phumSaved} — ${applied.map((a) => label(a.kind)).join(" · ")}`);
+        // The verb matters as much as the place: "saved" on a row that was
+        // actually removed is the kind of thing people stop trusting.
+        for (const a of applied) {
+          const where =
+            a.kind === "reminder"
+              ? a.verb === "saved"
+                ? t.routedToTasks
+                : t.routedToTasksRow
+              : a.verb === "saved"
+                ? a.kind === "expense"
+                  ? t.routedToExpense
+                  : t.routedToIncome
+                : t.routedToMoneyRow;
+          const verb =
+            a.verb === "saved" ? t.phumSaved : a.verb === "updated" ? t.phumUpdated : t.phumDeleted;
+          toast.success(`${verb} — ${where}${a.label ? ` · ${a.label}` : ""}`);
+        }
         qc.invalidateQueries();
       }
     } catch (err) {

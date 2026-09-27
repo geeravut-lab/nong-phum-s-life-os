@@ -13,10 +13,19 @@ export type PhumActionPayload = {
   receivedOn?: string | null;
   /** HH:mm, only when the user said a time of day. */
   atTime?: string | null;
+  /** The row to change or remove, for the update_* and delete_* types. */
+  targetId?: string | null;
+  /** Reminders only. */
+  status?: string | null;
   query?: string | null;
 };
 
-export type AppliedAction = { kind: "reminder" | "expense" | "income"; label: string };
+export type AppliedAction = {
+  kind: "reminder" | "expense" | "income";
+  /** What happened to it, so the caller can say "saved" or "removed". */
+  verb: "saved" | "updated" | "deleted";
+  label: string;
+};
 
 const today = () => todayInBangkok();
 
@@ -72,7 +81,7 @@ export async function applyPhumAction(
       recurrence: action.recurrence ?? "none",
     });
     if (error) throw error;
-    return { kind: "reminder", label: action.title };
+    return { kind: "reminder", verb: "saved", label: action.title };
   }
 
   if (action.type === "add_expense" && action.amount != null) {
@@ -94,7 +103,7 @@ export async function applyPhumAction(
       ({ error } = await supabase.from("expenses").insert(base));
     }
     if (error) throw error;
-    return { kind: "expense", label: `${action.title ?? "-"} · ${action.amount}` };
+    return { kind: "expense", verb: "saved", label: `${action.title ?? "-"} · ${action.amount}` };
   }
 
   if (action.type === "add_income" && action.amount != null) {
@@ -113,7 +122,110 @@ export async function applyPhumAction(
       ({ error } = await supabase.from("incomes").insert(base));
     }
     if (error) throw error;
-    return { kind: "income", label: `${action.title ?? "-"} · ${action.amount}` };
+    return { kind: "income", verb: "saved", label: `${action.title ?? "-"} · ${action.amount}` };
+  }
+
+  // --- changing and removing what is already there ---------------------------
+  //
+  // Every write is scoped to the caller as well as to the id. The row policy
+  // already does that, but a targetId is the one field here that comes
+  // straight from a model reading a list, so it is worth not depending on a
+  // single gate.
+
+  if (action.type === "delete_reminder" && action.targetId) {
+    const { error } = await supabase
+      .from("reminders")
+      .delete()
+      .eq("id", action.targetId)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return { kind: "reminder", verb: "deleted", label: action.title ?? "" };
+  }
+
+  if (action.type === "update_reminder" && action.targetId) {
+    // Only what the user actually changed. A null means "leave it", not
+    // "clear it" - the model is told to send nulls for everything else.
+    const patch: {
+      title?: string;
+      due_at?: string;
+      priority?: string;
+      recurrence?: string;
+      status?: string;
+    } = {};
+    if (action.title) patch.title = action.title;
+    if (action.dueAt) patch.due_at = new Date(action.dueAt).toISOString();
+    if (action.priority) patch.priority = action.priority;
+    if (action.recurrence) patch.recurrence = action.recurrence;
+    if (action.status) patch.status = action.status;
+    if (Object.keys(patch).length === 0) return null;
+    const { error } = await supabase
+      .from("reminders")
+      .update(patch)
+      .eq("id", action.targetId)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return { kind: "reminder", verb: "updated", label: action.title ?? "" };
+  }
+
+  if (action.type === "delete_expense" && action.targetId) {
+    const { error } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("id", action.targetId)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return { kind: "expense", verb: "deleted", label: action.title ?? "" };
+  }
+
+  if (action.type === "delete_income" && action.targetId) {
+    const { error } = await supabase
+      .from("incomes")
+      .delete()
+      .eq("id", action.targetId)
+      .eq("user_id", userId);
+    if (error) throw error;
+    return { kind: "income", verb: "deleted", label: action.title ?? "" };
+  }
+
+  if ((action.type === "update_expense" || action.type === "update_income") && action.targetId) {
+    const isExpense = action.type === "update_expense";
+    const day = action.spentOn ?? action.receivedOn ?? null;
+
+    const patch: { title?: string; amount?: number; category?: string } = {};
+    if (action.title) patch.title = action.title;
+    if (action.amount != null) patch.amount = action.amount;
+    if (action.category) patch.category = action.category;
+    if (Object.keys(patch).length === 0 && !day && !action.atTime) return null;
+
+    // A new day or a new clock time both move the timestamp, and each fills
+    // the half the user did not give with the current one.
+    const stamp = day || action.atTime ? bangkokDateTime(day, action.atTime) : null;
+
+    const run = (withTime: boolean) => {
+      const q = isExpense
+        ? supabase.from("expenses").update({
+            ...patch,
+            ...(day ? { spent_on: day } : {}),
+            ...(withTime && stamp ? { spent_at: stamp } : {}),
+          })
+        : supabase.from("incomes").update({
+            ...patch,
+            ...(day ? { received_on: day } : {}),
+            ...(withTime && stamp ? { received_at: stamp } : {}),
+          });
+      return q.eq("id", action.targetId as string).eq("user_id", userId);
+    };
+
+    let { error } = await run(true);
+    if (missingColumn(error, isExpense ? "spent_at" : "received_at")) {
+      ({ error } = await run(false));
+    }
+    if (error) throw error;
+    return {
+      kind: isExpense ? "expense" : "income",
+      verb: "updated",
+      label: action.title ?? "",
+    };
   }
 
   return null;

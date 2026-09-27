@@ -1,10 +1,11 @@
 import { MonthlyBudgetCard } from "@/components/MonthlyBudgetCard";
-import { DateInput } from "@/components/ui/datetime-input";
+import { MoneyEditDialog, type EditableMoneyRow } from "@/components/MoneyEditDialog";
+import { DateInput, TimeInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PhumQuickBar } from "@/components/PhumQuickBar";
@@ -26,7 +27,15 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
 import { formatDay, formatMoney, toDateInput } from "@/lib/format";
-import { APP_UTC_OFFSET, bangkokDateTime } from "@/lib/time";
+import { APP_TIME_ZONE, APP_UTC_OFFSET, bangkokDateTime } from "@/lib/time";
+
+const hm = new Intl.DateTimeFormat("en-GB", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+const nowHm = () => hm.format(new Date());
 
 export const Route = createFileRoute("/_authenticated/money")({
   head: () => ({ meta: routeMeta("money") }),
@@ -42,6 +51,10 @@ function MoneyPage() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("other");
   const [date, setDate] = useState(toDateInput(new Date()));
+  // The form used to ask for a day and quietly stamp "now" as the time, which
+  // is right for an entry typed as it happens and wrong for one typed later.
+  const [time, setTime] = useState(nowHm());
+  const [editing, setEditing] = useState<EditableMoneyRow | null>(null);
 
   const { data: expenses } = useQuery({
     queryKey: ["expenses"],
@@ -116,22 +129,20 @@ function MoneyPage() {
       amount: Number(amount || 0),
       category,
     };
-    // The form asks for a day, not a clock, so the time is now - the same rule
-    // the chat uses when someone names a date and no time. The retry is for the
-    // window between this deploying and the migration running: PostgREST
-    // refuses the whole insert over one unknown column, and losing the expense
-    // is a worse outcome than losing the time of day.
+    // The retry is for the window between this deploying and the migration
+    // running: PostgREST refuses the whole insert over one unknown column, and
+    // losing the expense is a worse outcome than losing the time of day.
     const insert = (withTime: boolean) =>
       tab === "expense"
         ? supabase.from("expenses").insert({
             ...base,
             spent_on: date,
-            ...(withTime ? { spent_at: bangkokDateTime(date, null) } : {}),
+            ...(withTime ? { spent_at: bangkokDateTime(date, time) } : {}),
           })
         : supabase.from("incomes").insert({
             ...base,
             received_on: date,
-            ...(withTime ? { received_at: bangkokDateTime(date, null) } : {}),
+            ...(withTime ? { received_at: bangkokDateTime(date, time) } : {}),
           });
     let { error } = await insert(true);
     if (error?.code === "PGRST204" || error?.code === "42703") {
@@ -241,12 +252,11 @@ function MoneyPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="ex-date">{tab === "expense" ? t.spentOn : t.receivedOn}</Label>
-                <DateInput
-                  id="ex-date"
-
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+                <DateInput id="ex-date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ex-time">{t.atTimeLabel}</Label>
+                <TimeInput id="ex-time" value={time} onChange={(e) => setTime(e.target.value)} />
               </div>
             </div>
             <Button type="submit">{t.add}</Button>
@@ -278,9 +288,30 @@ function MoneyPage() {
                       />
                     </div>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold">
-                    {formatMoney(r.amount)} {t.baht}
-                  </p>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <p className="text-sm font-semibold">
+                      {formatMoney(r.amount)} {t.baht}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t.edit}
+                      title={t.edit}
+                      onClick={() =>
+                        setEditing({
+                          id: r.id,
+                          kind: tab === "expense" ? "expense" : "income",
+                          title: r.title,
+                          amount: r.amount,
+                          category: r.category,
+                          date: r.date,
+                          at: r.at,
+                        })
+                      }
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -291,6 +322,15 @@ function MoneyPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete lives inside the editor rather than as a second icon on every
+          row: removing money you recorded is not a thing to put one stray tap
+          away on a list you scroll. */}
+      <MoneyEditDialog
+        row={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => qc.invalidateQueries()}
+      />
     </AppShell>
   );
 }
