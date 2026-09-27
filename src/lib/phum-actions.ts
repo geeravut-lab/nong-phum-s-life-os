@@ -15,13 +15,17 @@ export type PhumActionPayload = {
   atTime?: string | null;
   /** The row to change or remove, for the update_* and delete_* types. */
   targetId?: string | null;
+  /** The family member an action is about. */
+  memberId?: string | null;
+  everyDays?: number | null;
+  graceDays?: number | null;
   /** Reminders only. */
   status?: string | null;
   query?: string | null;
 };
 
 export type AppliedAction = {
-  kind: "reminder" | "expense" | "income";
+  kind: "reminder" | "expense" | "income" | "family";
   /** What happened to it, so the caller can say "saved" or "removed". */
   verb: "saved" | "updated" | "deleted";
   label: string;
@@ -123,6 +127,73 @@ export async function applyPhumAction(
     }
     if (error) throw error;
     return { kind: "income", verb: "saved", label: `${action.title ?? "-"} · ${action.amount}` };
+  }
+
+  // --- the family page, by asking --------------------------------------------
+  //
+  // These go through the server functions rather than writing the tables
+  // directly: that is where membership is checked, where the assignee is told,
+  // and where the family calendar and the routine tracker agree on what a row
+  // means. The family id is looked up here rather than taken from the model -
+  // it is not something a sentence should be able to choose.
+
+  if (
+    action.type === "family_assign_task" ||
+    action.type === "family_add_event" ||
+    action.type === "family_add_routine"
+  ) {
+    const { data: membership } = await supabase
+      .from("family_members")
+      .select("family_id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+    const familyId = (membership?.family_id as string | undefined) ?? undefined;
+    // The prompt tells the model to say so rather than return the action, but
+    // a family can also be left between the message and the write.
+    if (!familyId) throw new Error("no_family");
+
+    const title = action.title?.trim();
+    if (!title) return null;
+
+    if (action.type === "family_assign_task") {
+      const { assignFamilyTask } = await import("./family.functions");
+      await assignFamilyTask({
+        data: {
+          familyId,
+          title,
+          ...(action.dueAt ? { dueAt: bangkokIsoFromLoose(action.dueAt) } : {}),
+          ...(action.memberId ? { assigneeUserId: action.memberId } : {}),
+        },
+      });
+      return { kind: "family", verb: "saved", label: title };
+    }
+
+    if (action.type === "family_add_event") {
+      const { createFamilyEvent } = await import("./family.functions");
+      await createFamilyEvent({
+        data: {
+          familyId,
+          title,
+          startsAt: bangkokIsoFromLoose(action.dueAt ?? new Date().toISOString()),
+        },
+      });
+      return { kind: "family", verb: "saved", label: title };
+    }
+
+    const { upsertFamilyRoutine } = await import("./routines.functions");
+    await upsertFamilyRoutine({
+      data: {
+        familyId,
+        // Tracking somebody needs a somebody; with nobody named, the person
+        // asking is the one being tracked.
+        subjectUserId: action.memberId ?? userId,
+        title,
+        intervalDays: Math.min(90, Math.max(1, action.everyDays ?? 1)),
+        graceDays: Math.min(30, Math.max(0, action.graceDays ?? 1)),
+      },
+    });
+    return { kind: "family", verb: "saved", label: title };
   }
 
   // --- changing and removing what is already there ---------------------------

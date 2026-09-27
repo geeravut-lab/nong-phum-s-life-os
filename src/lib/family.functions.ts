@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { notifyUsers } from "./notify.server";
 
 /**
  * Notify every member of a family except the actor, and optionally one more
@@ -25,19 +26,20 @@ async function notifyFamily(
     .select("user_id")
     .eq("family_id", familyId)
     .neq("user_id", actorUserId);
-  const rows = (members ?? [])
+  // Through notifyUsers rather than a direct insert: that is where a
+  // notification also becomes a LINE message and a webhook delivery, and where
+  // a failed write gets reported instead of being dropped.
+  const ids = (members ?? [])
     .map((m) => m.user_id as string)
-    .filter((uid) => uid !== n.exceptUserId)
-    .map((uid) => ({
-      user_id: uid,
-      kind: n.kind,
-      title: n.title,
-      body: n.body,
-      href: n.href,
-      ref_table: n.refTable,
-      ref_id: n.refId,
-    }));
-  if (rows.length > 0) await supabaseAdmin.from("app_notifications").insert(rows);
+    .filter((uid) => uid !== n.exceptUserId);
+  await notifyUsers(ids, {
+    kind: n.kind,
+    title: n.title,
+    body: n.body,
+    href: n.href,
+    refTable: n.refTable,
+    refId: n.refId,
+  });
 }
 
 async function requireFamilyMember(userId: string, familyId: string) {
@@ -181,17 +183,17 @@ export const postFamilyCheckin = createServerFn({ method: "POST" })
         data.status === "emergency"
           ? "ฉุกเฉิน — ต้องการความช่วยเหลือ"
           : "สมาชิกต้องการความช่วยเหลือ";
-      for (const m of members ?? []) {
-        await supabaseAdmin.from("app_notifications").insert({
-          user_id: m.user_id,
+      await notifyUsers(
+        (members ?? []).map((m) => m.user_id as string),
+        {
           kind: "family_checkin",
           title,
           body: data.note || title,
           href: "/family",
-          ref_table: "family_checkins",
-          ref_id: row.id,
-        });
-      }
+          refTable: "family_checkins",
+          refId: row.id,
+        },
+      );
     }
     return row;
   });
@@ -248,14 +250,13 @@ export const assignFamilyTask = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     if (data.assigneeUserId && data.assigneeUserId !== context.userId) {
-      await supabaseAdmin.from("app_notifications").insert({
-        user_id: data.assigneeUserId,
+      await notifyUsers([data.assigneeUserId], {
         kind: "family_task",
         title: "งานครอบครัวที่มอบหมายให้คุณ",
-        body: data.title,
+        body: data.title as string,
         href: "/tasks",
-        ref_table: "reminders",
-        ref_id: row.id,
+        refTable: "reminders",
+        refId: row.id as string,
       });
     }
 

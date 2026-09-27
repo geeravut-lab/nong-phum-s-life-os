@@ -93,15 +93,17 @@ function ChatPage() {
         // actually removed is the kind of thing people stop trusting.
         for (const a of applied) {
           const where =
-            a.kind === "reminder"
-              ? a.verb === "saved"
-                ? t.routedToTasks
-                : t.routedToTasksRow
-              : a.verb === "saved"
-                ? a.kind === "expense"
-                  ? t.routedToExpense
-                  : t.routedToIncome
-                : t.routedToMoneyRow;
+            a.kind === "family"
+              ? t.routedToFamily
+              : a.kind === "reminder"
+                ? a.verb === "saved"
+                  ? t.routedToTasks
+                  : t.routedToTasksRow
+                : a.verb === "saved"
+                  ? a.kind === "expense"
+                    ? t.routedToExpense
+                    : t.routedToIncome
+                  : t.routedToMoneyRow;
           const verb =
             a.verb === "saved" ? t.phumSaved : a.verb === "updated" ? t.phumUpdated : t.phumDeleted;
           toast.success(`${verb} — ${where}${a.label ? ` · ${a.label}` : ""}`);

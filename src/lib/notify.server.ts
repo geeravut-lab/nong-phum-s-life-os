@@ -42,24 +42,34 @@ export async function notifyUsers(
   );
   if (ids.length === 0) return 0;
 
-  const { error } = await supabaseAdmin.from("app_notifications").insert(
-    ids.map((uid) => ({
-      user_id: uid,
-      kind: n.kind,
-      title: n.title,
-      body: n.body,
-      href: n.href,
-      ref_table: n.refTable ?? null,
-      ref_id: n.refId ?? null,
-      params: n.params ?? {},
-    })),
-  );
+  const { data: written, error } = await supabaseAdmin
+    .from("app_notifications")
+    .insert(
+      ids.map((uid) => ({
+        user_id: uid,
+        kind: n.kind,
+        title: n.title,
+        body: n.body,
+        href: n.href,
+        ref_table: n.refTable ?? null,
+        ref_id: n.refId ?? null,
+        params: n.params ?? {},
+      })),
+    )
+    .select("id, user_id");
   // A failed notification must never fail the action that triggered it: the
   // payment still went through, the message was still sent.
   if (error) {
     console.error("[notify] insert failed:", error.message);
     return 0;
   }
+
+  // Queue the same thing for LINE. Reachability is not decided here: the tick
+  // holds the channel token and the friend cache, and deciding it in a request
+  // handler would mean a LINE API call inside every action that notifies
+  // anyone. Rows for a user with no link are marked skipped when they are
+  // reached, which also leaves a record of why nothing was sent.
+  await queueForLine(written ?? [], n);
 
   // Anyone who has pointed a webhook at this gets the same event. Imported
   // lazily so the notification path does not pull in the sender when nobody
@@ -68,6 +78,41 @@ export async function notifyUsers(
   await deliverWebhooks(ids, n);
 
   return ids.length;
+}
+
+/**
+ * One LINE queue row per notification written.
+ *
+ * The text is copied rather than joined back to app_notifications: the queue
+ * row has to survive the retention sweep that clears old notifications, and a
+ * message already sent should say what it said at the time.
+ *
+ * Failing to queue must not fail the notification either - the dot in the app
+ * is the part that always works, LINE is the part that depends on a channel
+ * token, a quota and a friendship.
+ */
+async function queueForLine(
+  written: Array<{ id: string; user_id: string }>,
+  n: Notice,
+): Promise<void> {
+  if (written.length === 0) return;
+  const { error } = await supabaseAdmin.from("notification_log").insert(
+    written.map((row) => ({
+      user_id: row.user_id,
+      kind: "app",
+      app_notification_id: row.id,
+      title: n.title,
+      body: n.body,
+      href: n.href,
+      channel: "line",
+      status: "queued",
+    })),
+  );
+  // 23505 = already queued for this notification, which is the unique index
+  // doing its job on a retried action.
+  if (error && error.code !== "23505") {
+    console.error("[notify] line queue failed:", error.message);
+  }
 }
 
 /** Notify every admin - used for things a human has to action, like a slip to check. */
