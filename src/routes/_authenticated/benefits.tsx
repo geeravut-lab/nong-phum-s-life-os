@@ -4,12 +4,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Loader2, Sparkles, Bell, CalendarClock } from "lucide-react";
+import { Download, ExternalLink, Loader2, Sparkles, Bell, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { createBenefitShare } from "@/lib/benefit-share.functions";
 import { CopyButton } from "@/components/CopyButton";
+import { downloadCsv } from "@/lib/csv";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -295,6 +296,29 @@ function BenefitsPage() {
     not: { label: t.benNot, className: "bg-muted text-muted-foreground" },
   };
 
+  // The matched list, in the order the page shows it, with the reason each
+  // one matched - which is the part a person wants to keep or forward.
+  const exportCsv = () => {
+    if (matches.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    downloadCsv(
+      "lifeos-benefits",
+      [t.csvTitle, t.benProvider, t.csvStatus, t.csvCategory, t.benHowTo, t.benLink, t.note],
+      matches.map(({ benefit, level, reasons }) => [
+        benefitTitle(benefit, lang),
+        benefit.provider,
+        level === "eligible" ? t.benEligible : level === "maybe" ? t.benMaybe : t.benNot,
+        statusOf(benefit.id) ?? "",
+        benefit.how_to,
+        benefit.link ?? "",
+        reasons[0] ? localizedReason(lang, reasons[0]) : "",
+      ]),
+    );
+    toast.success(t.exportedRows.replace("{n}", String(matches.length)));
+  };
+
   const statusLabel: Record<Status, string> = {
     interested: t.benStatusInterested,
     in_progress: t.benStatusInProgress,
@@ -303,9 +327,15 @@ function BenefitsPage() {
 
   return (
     <AppShell>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.benTitle}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t.benSub}</p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.benTitle}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t.benSub}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportCsv}>
+          <Download className="mr-1.5 size-4" />
+          {t.exportCsv}
+        </Button>
       </header>
 
       {/* AI Interview */}

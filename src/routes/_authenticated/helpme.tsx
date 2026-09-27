@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, MapPin, Sparkles, Star } from "lucide-react";
+import { Download, Loader2, MapPin, Sparkles, Star } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { notifyJobOffer } from "@/lib/marketplace-notify.functions";
 import { useI18n } from "@/lib/i18n";
+import { downloadCsv } from "@/lib/csv";
+import { formatDay } from "@/lib/format";
 import {
   draftJob,
   matchHelpers,
@@ -133,6 +135,41 @@ function RequesterTab() {
     },
     enabled: !!user,
   });
+
+  const exportCsv = () => {
+    const rows = jobs ?? [];
+    if (rows.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    downloadCsv(
+      "lifeos-helpme-jobs",
+      [
+        t.csvTitle,
+        t.csvStatus,
+        t.helperArea,
+        t.csvDate,
+        t.jobBudget,
+        t.csvAmount,
+        t.csvKind,
+        t.csvCreatedAt,
+      ],
+      rows.map((j) => {
+        const offers = (j.job_offers as Array<{ status: string }> | null) ?? [];
+        return [
+          j.title,
+          j.status,
+          j.location_text ?? "",
+          j.scheduled_at ? formatDay(new Date(j.scheduled_at), lang, true) : "",
+          [j.budget_min, j.budget_max].filter((x) => x != null).join(" - "),
+          j.agreed_price ?? "",
+          `${offers.length}`,
+          j.created_at ? formatDay(new Date(j.created_at), lang, true) : "",
+        ];
+      }),
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
 
   const makeDraft = async () => {
     if (!text.trim()) return;
@@ -447,7 +484,13 @@ function RequesterTab() {
       )}
 
       <section className="space-y-3">
-        <h2 className="font-semibold">{t.myJobs}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold">{t.myJobs}</h2>
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            <Download className="mr-1.5 size-4" />
+            {t.exportCsv}
+          </Button>
+        </div>
         {(jobs ?? []).length === 0 && <p className="text-sm text-muted-foreground">{t.noJobs}</p>}
         {(jobs ?? []).map((job) => {
           const offers = (job.job_offers ?? []) as Array<{
@@ -864,6 +907,25 @@ function HelperTab() {
     qc.invalidateQueries({ queryKey: ["my-offers"] });
   };
 
+  const exportCsv = () => {
+    const rows = myOffers ?? [];
+    if (rows.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    downloadCsv(
+      "lifeos-helpme-offers",
+      [t.csvTitle, t.offerPrice, t.csvStatus, t.offerMessage],
+      rows.map((o) => [
+        (o.jobs as { title?: string } | null)?.title ?? "",
+        o.price ?? "",
+        o.status,
+        o.message ?? "",
+      ]),
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
+
   const [intro, setIntro] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<{
@@ -1159,7 +1221,13 @@ function HelperTab() {
 
       {(myOffers ?? []).filter((o) => o.status === "pending").length > 0 && (
         <section className="space-y-3">
-          <h2 className="font-semibold">{t.myPendingOffers}</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">{t.myPendingOffers}</h2>
+            <Button variant="outline" size="sm" onClick={exportCsv}>
+              <Download className="mr-1.5 size-4" />
+              {t.exportCsv}
+            </Button>
+          </div>
           {(myOffers ?? [])
             .filter((o) => o.status === "pending")
             .map((o) => (

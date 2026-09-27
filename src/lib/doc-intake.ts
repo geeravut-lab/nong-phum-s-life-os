@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { categoryLabels, type Lang } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n.dict";
-import { bangkokDateAtHour, todayInBangkok } from "@/lib/time";
+import { bangkokDateAtHour, bangkokDateTime, todayInBangkok } from "@/lib/time";
 
 export type DocAnalysisResult = {
   title: string;
@@ -31,6 +31,34 @@ export type DocAnalysisResult = {
 type AnalyzeFn = (args: {
   data: { base64: string; mimeType: string; fileName: string; lang: Lang };
 }) => Promise<DocAnalysisResult>;
+
+/**
+ * SHA-256 of a file's bytes, lowercase hex.
+ *
+ * What identifies an upload. The name does not: a phone saving the same scan
+ * twice produces Notes_001932.pdf and Notes_001933.pdf, and two different
+ * receipts can share a name.
+ */
+export async function fileHash(blob: Blob): Promise<string | null> {
+  try {
+    const buf = await blob.arrayBuffer();
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    // Not available over plain http, and not worth failing an upload over.
+    return null;
+  }
+}
+
+/** A document of this user's with the same bytes, already filed. */
+export type DuplicateUpload = { id: string; title: string; createdAt: string };
+
+export class DuplicateDocumentError extends Error {
+  constructor(public readonly existing: DuplicateUpload) {
+    super("app:document_duplicate");
+    this.name = "DuplicateDocumentError";
+  }
+}
 
 export function fileToBase64(file: Blob) {
   return new Promise<string>((resolve, reject) => {
@@ -86,6 +114,37 @@ export function routingNotes(
 }
 
 const CATEGORY_KEYS = new Set(Object.keys(categoryLabels));
+
+/**
+ * Money rows from a document, stamped with a time as well as a day.
+ *
+ * The rule everywhere else in the app is that a time nobody stated is the
+ * time of saving - which is what the chat does. Rows filed from a document
+ * skipped it and carried a day alone, so their cards showed no time while
+ * every other card did. The document says which day; the clock says when it
+ * was filed, and that is the honest answer to "when was this recorded".
+ *
+ * The retry without the column is for the window between a deploy and its
+ * migration: losing the entry is worse than losing the time of day.
+ */
+async function insertWithTime(
+  table: "expenses" | "incomes",
+  rows: Array<Record<string, unknown>>,
+  dayColumn: "spent_on" | "received_on",
+  timeColumn: "spent_at" | "received_at",
+): Promise<boolean> {
+  const withTime = rows.map((r) => ({
+    ...r,
+    [timeColumn]: bangkokDateTime(String(r[dayColumn] ?? ""), null),
+  }));
+  const first = await supabase.from(table).insert(withTime as never);
+  if (!first.error) return true;
+  if (first.error.code === "PGRST204" || first.error.code === "42703") {
+    const second = await supabase.from(table).insert(rows as never);
+    return !second.error;
+  }
+  return false;
+}
 
 /**
  * A date for money that has already moved.
@@ -167,6 +226,37 @@ export async function intakeDocument(
   const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
   const mimeType = file.type || "application/pdf";
 
+  // Before anything is written: the same bytes filed before means the money
+  // rows already exist, and filing them again is what silently doubled the
+  // totals. The caller decides what to say; nothing here is created.
+  const hash = await fileHash(file);
+  if (hash) {
+    // content_hash arrives by migration and is not in the generated types
+    // yet, so this one filter is applied untyped.
+    const q = supabase
+      .from("documents")
+      .select("id, title, created_at")
+      .eq("user_id", userId)
+      .eq("status", "ready") as unknown as {
+      eq: (
+        column: string,
+        value: string,
+      ) => {
+        limit: (n: number) => {
+          maybeSingle: () => Promise<{ data: Record<string, unknown> | null }>;
+        };
+      };
+    };
+    const { data: same } = await q.eq("content_hash", hash).limit(1).maybeSingle();
+    if (same) {
+      throw new DuplicateDocumentError({
+        id: String(same["id"]),
+        title: String(same["title"] ?? file.name),
+        createdAt: String(same["created_at"] ?? ""),
+      });
+    }
+  }
+
   const { data: doc, error: insErr } = await supabase
     .from("documents")
     .insert({
@@ -176,19 +266,51 @@ export async function intakeDocument(
       kind: "analyzed",
       storage_path: path,
       mime_type: mimeType,
-    })
+      ...(hash ? { content_hash: hash } : {}),
+    } as never)
     .select("id")
     .single();
-  if (insErr) throw insErr;
+  if (insErr) {
+    // PGRST204 / 42703: the column arrives by migration and the site deploys
+    // first. Losing the upload would be worse than losing the check.
+    if (insErr.code === "PGRST204" || insErr.code === "42703") {
+      const retry = await supabase
+        .from("documents")
+        .insert({
+          user_id: userId,
+          title: file.name,
+          status: "pending",
+          kind: "analyzed",
+          storage_path: path,
+          mime_type: mimeType,
+        })
+        .select("id")
+        .single();
+      if (retry.error) throw retry.error;
+      return finishUpload(retry.data.id as string, file, path, mimeType, analyze, lang, userId);
+    }
+    throw insErr;
+  }
 
+  return finishUpload(doc.id as string, file, path, mimeType, analyze, lang, userId);
+}
+
+async function finishUpload(
+  documentId: string,
+  file: File,
+  path: string,
+  mimeType: string,
+  analyze: AnalyzeFn,
+  lang: Lang,
+  userId: string,
+): Promise<IntakeResult> {
   const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
   if (upErr) {
     // No file made it to the bucket, so the row has nothing to point at.
-    await supabase.from("documents").delete().eq("id", doc.id);
+    await supabase.from("documents").delete().eq("id", documentId);
     throw upErr;
   }
-
-  return analyzeAndFinalize(doc.id, file, mimeType, file.name, analyze, lang, userId);
+  return analyzeAndFinalize(documentId, file, mimeType, file.name, analyze, lang, userId);
 }
 
 /**
@@ -275,65 +397,93 @@ async function analyzeAndFinalize(
   const routed: IntakeResult["routed"] = [];
   const lineCounts = { expense: 0, income: 0 };
 
+  // Retrying a document that already produced money rows would produce them
+  // again - the retry path re-runs this whole function. The hash check ahead
+  // of the upload catches a re-sent file; this catches everything else,
+  // because the rows a document created are findable from the document.
+  const [{ count: hasExpenses }, { count: hasIncomes }] = await Promise.all([
+    supabase
+      .from("expenses")
+      .select("id", { count: "exact", head: true })
+      .eq("source_document_id", documentId),
+    supabase
+      .from("incomes")
+      .select("id", { count: "exact", head: true })
+      .eq("source_document_id", documentId),
+  ]);
+  const alreadyFiled = (hasExpenses ?? 0) > 0 || (hasIncomes ?? 0) > 0;
+
   // A statement lists many payments. Posting its total as one row loses every
   // line the user wrote down, which is the reason they keep the statement at
   // all - so when the AI found individual lines, those are what get filed and
   // the summary row is skipped.
-  const lines = normaliseLines(result, today);
+  const lines = alreadyFiled ? [] : normaliseLines(result, today);
   if (lines.length > 0) {
     const expenses = lines.filter((l) => l.kind === "expense");
     const incomes = lines.filter((l) => l.kind === "income");
     if (expenses.length > 0) {
-      const { error } = await supabase.from("expenses").insert(
-        expenses.map((l) => ({
-          user_id: userId,
-          title: l.title,
-          amount: l.amount,
-          category: l.category || result.category,
-          spent_on: l.on ?? moneyDate(result.docDate, today) ?? today,
-          source_document_id: documentId,
-        })),
-      );
-      if (!error) {
+      const rows = expenses.map((l) => ({
+        user_id: userId,
+        title: l.title,
+        amount: l.amount,
+        category: l.category || result.category,
+        spent_on: l.on ?? moneyDate(result.docDate, today) ?? today,
+        source_document_id: documentId,
+      }));
+      const ok = await insertWithTime("expenses", rows, "spent_on", "spent_at");
+      if (ok) {
         routed.push("expense");
         lineCounts.expense = expenses.length;
       }
     }
     if (incomes.length > 0) {
-      const { error } = await supabase.from("incomes").insert(
-        incomes.map((l) => ({
-          user_id: userId,
-          title: l.title,
-          amount: l.amount,
-          category: l.category || result.category,
-          received_on: l.on ?? moneyDate(result.docDate, today) ?? today,
-          source_document_id: documentId,
-        })),
-      );
-      if (!error) {
+      const rows = incomes.map((l) => ({
+        user_id: userId,
+        title: l.title,
+        amount: l.amount,
+        category: l.category || result.category,
+        received_on: l.on ?? moneyDate(result.docDate, today) ?? today,
+        source_document_id: documentId,
+      }));
+      const ok = await insertWithTime("incomes", rows, "received_on", "received_at");
+      if (ok) {
         routed.push("income");
         lineCounts.income = incomes.length;
       }
     }
-  } else if (result.isIncome && result.amount) {
-    await supabase.from("incomes").insert({
-      user_id: userId,
-      title: result.title,
-      amount: result.amount,
-      category: result.category,
-      received_on: moneyDate(result.docDate, today) ?? today,
-      source_document_id: documentId,
-    });
+  } else if (!alreadyFiled && result.isIncome && result.amount) {
+    await insertWithTime(
+      "incomes",
+      [
+        {
+          user_id: userId,
+          title: result.title,
+          amount: result.amount,
+          category: result.category,
+          received_on: moneyDate(result.docDate, today) ?? today,
+          source_document_id: documentId,
+        },
+      ],
+      "received_on",
+      "received_at",
+    );
     routed.push("income");
-  } else if (result.isExpense && result.amount) {
-    await supabase.from("expenses").insert({
-      user_id: userId,
-      title: result.title,
-      amount: result.amount,
-      category: result.category,
-      spent_on: moneyDate(result.docDate, today) ?? today,
-      source_document_id: documentId,
-    });
+  } else if (!alreadyFiled && result.isExpense && result.amount) {
+    await insertWithTime(
+      "expenses",
+      [
+        {
+          user_id: userId,
+          title: result.title,
+          amount: result.amount,
+          category: result.category,
+          spent_on: moneyDate(result.docDate, today) ?? today,
+          source_document_id: documentId,
+        },
+      ],
+      "spent_on",
+      "spent_at",
+    );
     routed.push("expense");
   }
 
