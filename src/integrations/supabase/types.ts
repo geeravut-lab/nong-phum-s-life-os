@@ -2729,6 +2729,7 @@ export type Database = {
       platform_settings: {
         Row: {
           feature_flags: Json;
+          manual_url: string;
           premium_monthly_cap: number;
           cancel_fee_pct: number;
           commission_rate: number;
@@ -2743,6 +2744,7 @@ export type Database = {
         };
         Insert: {
           feature_flags?: Json;
+          manual_url?: string;
           premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;
@@ -2756,6 +2758,7 @@ export type Database = {
         };
         Update: {
           feature_flags?: Json;
+          manual_url?: string;
           premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;

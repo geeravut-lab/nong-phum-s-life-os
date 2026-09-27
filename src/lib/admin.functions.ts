@@ -427,6 +427,37 @@ export const setFeatureFlag = createServerFn({ method: "POST" })
     return { ok: true as const, flags };
   });
 
+/**
+ * The link to the user manual.
+ *
+ * Stored rather than bundled because the manual is a PDF that lives wherever
+ * the owner keeps it. Only https is accepted: an http link would be blocked as
+ * mixed content by the browser anyway, and a javascript: or data: URL in a
+ * menu every user clicks is not something to leave to chance. An empty string
+ * clears it, which hides the menu entry.
+ */
+export const setManualUrl = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        url: z
+          .string()
+          .trim()
+          .max(1000)
+          .refine((v) => v === "" || /^https:\/\//i.test(v), "https_only"),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("platform_settings")
+      .update({ manual_url: data.url })
+      .eq("id", true);
+    if (error) throw error;
+    return { ok: true as const, url: data.url };
+  });
+
 /** The automation rules, for the admin list. */
 export const listAutomationRules = createServerFn({ method: "GET" })
   .middleware([requireAdmin])
