@@ -1,5 +1,7 @@
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { getPublicPricing } from "@/lib/pricing.functions";
 import {
   ArrowRight,
   Bell,
@@ -52,7 +54,40 @@ function Landing() {
   ];
 
   const flows = [t.lpFlow1, t.lpFlow2, t.lpFlow3, t.lpFlow4];
-  const prices = [t.lpPriceFree, t.lpPricePayg, t.lpPricePremium, t.lpPriceFamily];
+
+  // The quotas and the prices are whatever an admin has them set to right now.
+  // They used to be written into the sentences, so a price change on the
+  // admin page left the page that sells the product quoting the old one.
+  const { data: pricing } = useQuery({
+    queryKey: ["public-pricing"],
+    queryFn: () => getPublicPricing(),
+    staleTime: 5 * 60_000,
+  });
+  const fill = (s: string) =>
+    pricing
+      ? s
+          .replace("{total}", String(pricing.freeTotal))
+          .replace("{chat}", String(pricing.freeChat))
+          .replace("{doc}", String(pricing.freeDocument))
+          .replace("{decide}", String(pricing.freeDecision))
+          .replace("{voice}", String(pricing.freeTranscribe))
+          .replace("{satang}", String(pricing.paygSatang))
+          .replace("{pm}", pricing.premiumMonthly.toLocaleString())
+          .replace("{py}", pricing.premiumYearly.toLocaleString())
+          .replace("{fm}", pricing.familyMonthly.toLocaleString())
+          .replace("{fy}", pricing.familyYearly.toLocaleString())
+      : "";
+  // Nothing is shown until the real numbers arrive: a price that changes under
+  // the reader is worse than one that appears a moment later. Pay-as-you-go is
+  // left out entirely when an admin has it switched off.
+  const prices = pricing
+    ? [
+        t.lpPriceFree,
+        ...(pricing.paygEnabled ? [t.lpPricePayg] : []),
+        t.lpPricePremium,
+        t.lpPriceFamily,
+      ].map(fill)
+    : [];
   const start = user ? t.openApp : t.heroCta;
 
   return (

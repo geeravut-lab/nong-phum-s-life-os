@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ function TasksPage() {
   const qc = useQueryClient();
   const runMemberLabels = useServerFn(listFamilyMemberLabels);
   const [editTask, setEditTask] = useState<EditableTask | null>(null);
+  const [taskTab, setTaskTab] = useState<"open" | "done">("open");
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -93,6 +95,13 @@ function TasksPage() {
       return data ?? [];
     },
   });
+
+  // Two lists rather than one, because a finished errand sitting among the
+  // live ones is what makes a to-do list stop being read. Ticking a row moves
+  // it across; reopening moves it back.
+  const openTasks = (tasks ?? []).filter((r) => r.status !== "done");
+  const doneTasks = (tasks ?? []).filter((r) => r.status === "done");
+  const shown = taskTab === "open" ? openTasks : doneTasks;
 
   const linkedIds = (tasks ?? []).map((r) => r.source_document_id);
   const { data: linkedDocs } = useQuery({
@@ -241,13 +250,30 @@ function TasksPage() {
 
       {/* One line explaining the toggle, shown only when the user is in a
           family - otherwise no switch is rendered and the hint is noise. */}
-      {family && tasks?.length ? (
+      {family && shown.length ? (
         <p className="mb-2 text-xs text-muted-foreground">{t.sharedHint}</p>
       ) : null}
 
-      {tasks?.length ? (
+      <Tabs
+        value={taskTab}
+        onValueChange={(v) => setTaskTab(v as "open" | "done")}
+        className="mb-4 w-full"
+      >
+        <TabsList className="grid w-full max-w-xs grid-cols-2">
+          <TabsTrigger value="open">
+            {t.tasksTabOpen}
+            {openTasks.length > 0 ? ` (${openTasks.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="done">
+            {t.tasksTabDone}
+            {doneTasks.length > 0 ? ` (${doneTasks.length})` : ""}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {shown.length ? (
         <ul className="space-y-2">
-          {tasks.map((r) => (
+          {shown.map((r) => (
             <li
               key={r.id}
               className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft"
@@ -325,7 +351,7 @@ function TasksPage() {
         </ul>
       ) : (
         <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          {t.tasksEmpty}
+          {taskTab === "open" ? t.tasksEmpty : t.tasksDoneEmpty}
         </p>
       )}
       <TaskEditDialog

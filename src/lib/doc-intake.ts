@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Lang } from "@/lib/i18n";
+import type { Dict } from "@/lib/i18n.dict";
 import { bangkokDateAtHour, todayInBangkok } from "@/lib/time";
 
 export type DocAnalysisResult = {
@@ -17,6 +18,13 @@ export type DocAnalysisResult = {
   needsAction: boolean;
   isWarranty?: boolean;
   warrantyUntil?: string | null;
+  lineItems?: Array<{
+    title: string;
+    amount: number;
+    kind: "expense" | "income";
+    on: string | null;
+    category: string;
+  }>;
 };
 
 type AnalyzeFn = (args: {
@@ -35,7 +43,46 @@ export function fileToBase64(file: Blob) {
 export type IntakeResult = {
   analysis: DocAnalysisResult;
   routed: Array<"expense" | "income" | "reminder">;
+  /** How many individual rows a multi-line document produced, 0 for a single-amount one. */
+  lines: { expense: number; income: number };
 };
+
+/**
+ * The "here is what I did with it" line, built once.
+ *
+ * Three pages reported this and each built the list by hand, so the line-count
+ * wording would have had to be added in three places and kept in step there.
+ */
+export function routingNotes(
+  result: Pick<IntakeResult, "routed" | "lines">,
+  t: Pick<
+    Dict,
+    | "savedToDocs"
+    | "routedToExpense"
+    | "routedToIncome"
+    | "routedToTasks"
+    | "routedExpenseLines"
+    | "routedIncomeLines"
+  >,
+): string[] {
+  const notes = [t.savedToDocs];
+  if (result.routed.includes("expense")) {
+    notes.push(
+      result.lines.expense > 1
+        ? t.routedExpenseLines.replace("{n}", String(result.lines.expense))
+        : t.routedToExpense,
+    );
+  }
+  if (result.routed.includes("income")) {
+    notes.push(
+      result.lines.income > 1
+        ? t.routedIncomeLines.replace("{n}", String(result.lines.income))
+        : t.routedToIncome,
+    );
+  }
+  if (result.routed.includes("reminder")) notes.push(t.routedToTasks);
+  return notes;
+}
 
 /** Thrown when the AI step fails; the row stays as status='failed' with its file so the user can retry or delete. */
 export class DocumentAnalysisError extends Error {
@@ -176,8 +223,49 @@ async function analyzeAndFinalize(
 
   const today = todayInBangkok();
   const routed: IntakeResult["routed"] = [];
+  const lines_ = { expense: 0, income: 0 };
 
-  if (result.isIncome && result.amount) {
+  // A statement lists many payments. Posting its total as one row loses every
+  // line the user wrote down, which is the reason they keep the statement at
+  // all - so when the AI found individual lines, those are what get filed and
+  // the summary row is skipped.
+  const lines = (result.lineItems ?? []).filter((l) => Number(l.amount) > 0);
+  if (lines.length > 0) {
+    const expenses = lines.filter((l) => l.kind === "expense");
+    const incomes = lines.filter((l) => l.kind === "income");
+    if (expenses.length > 0) {
+      const { error } = await supabase.from("expenses").insert(
+        expenses.map((l) => ({
+          user_id: userId,
+          title: l.title,
+          amount: l.amount,
+          category: l.category || result.category,
+          spent_on: l.on ?? result.docDate ?? today,
+          source_document_id: documentId,
+        })),
+      );
+      if (!error) {
+        routed.push("expense");
+        lines_.expense = expenses.length;
+      }
+    }
+    if (incomes.length > 0) {
+      const { error } = await supabase.from("incomes").insert(
+        incomes.map((l) => ({
+          user_id: userId,
+          title: l.title,
+          amount: l.amount,
+          category: l.category || result.category,
+          received_on: l.on ?? result.docDate ?? today,
+          source_document_id: documentId,
+        })),
+      );
+      if (!error) {
+        routed.push("income");
+        lines_.income = incomes.length;
+      }
+    }
+  } else if (result.isIncome && result.amount) {
     await supabase.from("incomes").insert({
       user_id: userId,
       title: result.title,
@@ -227,5 +315,5 @@ async function analyzeAndFinalize(
     routed.push("reminder");
   }
 
-  return { analysis: result, routed };
+  return { analysis: result, routed, lines: lines_ };
 }
