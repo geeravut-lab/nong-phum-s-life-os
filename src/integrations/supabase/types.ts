@@ -35,6 +35,42 @@ export type Database = {
   };
   public: {
     Tables: {
+      ai_token_usage: {
+        Row: {
+          id: string;
+          day: string;
+          task: string;
+          provider: string;
+          model: string;
+          calls: number;
+          input_tokens: number;
+          output_tokens: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          day: string;
+          task: string;
+          provider: string;
+          model: string;
+          calls?: number;
+          input_tokens?: number;
+          output_tokens?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          day?: string;
+          task?: string;
+          provider?: string;
+          model?: string;
+          calls?: number;
+          input_tokens?: number;
+          output_tokens?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       usage_daily: {
         Row: {
           id: string;
@@ -2579,6 +2615,7 @@ export type Database = {
       platform_settings: {
         Row: {
           feature_flags: Json;
+          premium_monthly_cap: number;
           cancel_fee_pct: number;
           commission_rate: number;
           created_at: string;
@@ -2592,6 +2629,7 @@ export type Database = {
         };
         Insert: {
           feature_flags?: Json;
+          premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;
@@ -2604,6 +2642,7 @@ export type Database = {
         };
         Update: {
           feature_flags?: Json;
+          premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;

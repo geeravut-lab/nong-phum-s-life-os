@@ -31,6 +31,8 @@ export type BillingSettings = {
   paygUnitSatang: number;
   paygGraceDays: number;
   familyMaxMembers: number;
+  /** Fair-use ceiling on AI calls per month for paid plans. 0 = unlimited. */
+  premiumMonthlyCap: number;
   promptpayId: string | null;
 };
 
@@ -50,6 +52,7 @@ const DEFAULTS: BillingSettings = {
   paygUnitSatang: 50,
   paygGraceDays: 7,
   familyMaxMembers: 5,
+  premiumMonthlyCap: 0,
   promptpayId: null,
 };
 
@@ -76,6 +79,7 @@ async function loadBillingSettings(): Promise<BillingSettings> {
     paygUnitSatang: n("payg_unit_price_satang", DEFAULTS.paygUnitSatang),
     paygGraceDays: n("payg_grace_days", DEFAULTS.paygGraceDays),
     familyMaxMembers: n("family_max_members", DEFAULTS.familyMaxMembers),
+    premiumMonthlyCap: n("premium_monthly_cap", DEFAULTS.premiumMonthlyCap),
     promptpayId:
       (d["billing_promptpay_id"] as string) ||
       (d["helpme_promptpay_id"] as string) ||
@@ -84,13 +88,7 @@ async function loadBillingSettings(): Promise<BillingSettings> {
   };
 }
 
-async function isPremiumActive(userId: string): Promise<boolean> {
-  const supabaseAdmin = await admin();
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("plan_tier, plan_expires_at")
-    .eq("id", userId)
-    .maybeSingle();
+function planIsLive(profile: { plan_tier?: unknown; plan_expires_at?: unknown } | null): boolean {
   if (!profile) return false;
   const tier = profile.plan_tier as string;
   if (tier !== "premium" && tier !== "family") return false;
@@ -98,6 +96,59 @@ async function isPremiumActive(userId: string): Promise<boolean> {
     return false;
   }
   return true;
+}
+
+/**
+ * Is this user on a paid plan, by their own purchase or by their family's.
+ *
+ * A Family plan used to grant nothing to the family: this read one profile row,
+ * and confirming a payment set plan_tier on the buyer alone, so ฿149 bought
+ * exactly what ฿89 buys. A member of a family whose owner holds an unexpired
+ * family plan now counts as premium, up to family_max_members seats.
+ *
+ * The seats are given out by join order rather than, say, by who asked first
+ * today - otherwise the same member could be inside the limit one minute and
+ * outside it the next, and nobody could explain why their AI stopped working.
+ */
+async function isPremiumActive(userId: string): Promise<boolean> {
+  const supabaseAdmin = await admin();
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("plan_tier, plan_expires_at")
+    .eq("id", userId)
+    .maybeSingle();
+  if (planIsLive(profile)) return true;
+
+  // Not paid personally - are they a seat on someone's family plan?
+  const { data: membership } = await supabaseAdmin
+    .from("family_members")
+    .select("family_id, created_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!membership?.family_id) return false;
+
+  const { data: family } = await supabaseAdmin
+    .from("families")
+    .select("owner_id")
+    .eq("id", membership.family_id as string)
+    .maybeSingle();
+  if (!family?.owner_id) return false;
+
+  const { data: ownerProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("plan_tier, plan_expires_at")
+    .eq("id", family.owner_id as string)
+    .maybeSingle();
+  if (!planIsLive(ownerProfile) || ownerProfile?.plan_tier !== "family") return false;
+
+  const settings = await loadBillingSettings();
+  const { data: seats } = await supabaseAdmin
+    .from("family_members")
+    .select("user_id")
+    .eq("family_id", membership.family_id as string)
+    .order("created_at", { ascending: true })
+    .limit(Math.max(1, settings.familyMaxMembers));
+  return (seats ?? []).some((m) => m.user_id === userId);
 }
 
 export const getBillingPublic = createServerFn({ method: "GET" })
@@ -183,6 +234,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
         paygUnitSatang: z.number().int().min(0).max(10000).optional(),
         paygGraceDays: z.number().int().min(1).max(90).optional(),
         familyMaxMembers: z.number().int().min(2).max(50).optional(),
+        premiumMonthlyCap: z.number().int().min(0).max(100000).optional(),
         promptpayId: z.string().max(40).optional(),
       })
       .parse(input),
@@ -211,6 +263,7 @@ export const updateBillingAdmin = createServerFn({ method: "POST" })
     if (data.paygUnitSatang !== undefined) patch["payg_unit_price_satang"] = data.paygUnitSatang;
     if (data.paygGraceDays !== undefined) patch["payg_grace_days"] = data.paygGraceDays;
     if (data.familyMaxMembers !== undefined) patch["family_max_members"] = data.familyMaxMembers;
+    if (data.premiumMonthlyCap !== undefined) patch["premium_monthly_cap"] = data.premiumMonthlyCap;
     if (data.promptpayId !== undefined) patch["billing_promptpay_id"] = data.promptpayId;
 
     const { error } = await supabaseAdmin
@@ -230,10 +283,8 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
     z.object({ task: z.enum(["chat", "document", "decision", "transcribe"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    if (await isPremiumActive(context.userId)) {
-      return { allowed: true as const, reason: "premium" as const, remaining: null };
-    }
     const settings = await loadBillingSettings();
+    const premium = await isPremiumActive(context.userId);
     const ym = yearMonthBangkok();
     const supabaseAdmin = await admin();
 
@@ -268,6 +319,38 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
     const usedTask = Number((row as Record<string, unknown>)[col[data.task]] ?? 0);
     const usedTotal = Number((row as Record<string, unknown>)["total_count"] ?? 0);
 
+    const bump = async () => {
+      await supabaseAdmin
+        .from("ai_usage_monthly")
+        .update({
+          total_count: usedTotal + 1,
+          [col[data.task]]: usedTask + 1,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id", (row as { id: string }).id);
+    };
+
+    // Paid plans are counted but not limited by the free quota. They used to
+    // return before the counter, which left no usage data at all for exactly
+    // the people who pay - so there was nothing to price the plan against.
+    if (premium) {
+      const cap = settings.premiumMonthlyCap;
+      if (cap > 0 && usedTotal >= cap) {
+        return {
+          allowed: false as const,
+          reason: "fair_use" as const,
+          remaining: 0,
+          message: "app:quota_fair_use",
+        };
+      }
+      await bump();
+      return {
+        allowed: true as const,
+        reason: "premium" as const,
+        remaining: cap > 0 ? cap - usedTotal - 1 : null,
+      };
+    }
+
     if (usedTask >= limits[data.task] || usedTotal >= settings.freeTotal) {
       if (settings.paygEnabled) {
         return {
@@ -287,14 +370,7 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
       };
     }
 
-    const patch: Record<string, number> = {
-      total_count: usedTotal + 1,
-      [col[data.task]]: usedTask + 1,
-    };
-    await supabaseAdmin
-      .from("ai_usage_monthly")
-      .update({ ...patch, updated_at: new Date().toISOString() } as never)
-      .eq("id", (row as { id: string }).id);
+    await bump();
 
     return {
       allowed: true as const,

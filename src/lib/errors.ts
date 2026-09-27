@@ -20,6 +20,7 @@ export const APP_ERROR_CODES = [
   "promote_needs_premium",
   "quota_payg_required",
   "quota_exhausted",
+  "quota_fair_use",
   "google_key_missing",
 ] as const;
 
