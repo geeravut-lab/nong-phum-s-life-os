@@ -22,6 +22,8 @@ export const APP_ERROR_CODES = [
   "quota_exhausted",
   "quota_fair_use",
   "google_key_missing",
+  "webhook_bad_url",
+  "webhook_limit",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];

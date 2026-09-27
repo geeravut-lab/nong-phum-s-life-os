@@ -35,6 +35,45 @@ export type Database = {
   };
   public: {
     Tables: {
+      webhook_endpoints: {
+        Row: {
+          id: string;
+          user_id: string;
+          url: string;
+          secret: string;
+          events: string[];
+          is_active: boolean;
+          last_status: number | null;
+          last_at: string | null;
+          failure_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          url: string;
+          secret?: string;
+          events?: string[];
+          is_active?: boolean;
+          last_status?: number | null;
+          last_at?: string | null;
+          failure_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          url?: string;
+          secret?: string;
+          events?: string[];
+          is_active?: boolean;
+          last_status?: number | null;
+          last_at?: string | null;
+          failure_count?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       ai_token_usage: {
         Row: {
           id: string;

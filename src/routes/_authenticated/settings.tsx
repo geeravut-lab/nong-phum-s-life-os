@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { WebhooksCard } from "@/components/WebhooksCard";
 import { DeleteAccountCard } from "@/components/DeleteAccountCard";
 import { ExportDataCard } from "@/components/ExportDataCard";
 import { LineLinkCard } from "@/components/LineLinkCard";
@@ -271,6 +272,7 @@ function SettingsPage() {
         </section>
 
         <ExportDataCard />
+        <WebhooksCard />
         <DeleteAccountCard />
       </div>
     </AppShell>

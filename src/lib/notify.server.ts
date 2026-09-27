@@ -60,6 +60,13 @@ export async function notifyUsers(
     console.error("[notify] insert failed:", error.message);
     return 0;
   }
+
+  // Anyone who has pointed a webhook at this gets the same event. Imported
+  // lazily so the notification path does not pull in the sender when nobody
+  // has one configured.
+  const { deliverWebhooks } = await import("./webhooks.server");
+  await deliverWebhooks(ids, n);
+
   return ids.length;
 }
 
