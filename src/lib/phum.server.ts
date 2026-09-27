@@ -49,17 +49,20 @@ const DocSchema = z.object({
   // document but many money records. Filing it as a single total left the user
   // with one row of 4,820 where they had written down eleven, and no way to
   // check any of them later.
+  // Deliberately plain: strings rather than enums inside the array, and no
+  // maxItems. Gemini's structured output rejected the richer version outright
+  // ("Request contains an invalid argument") and every upload failed with it.
+  // The values are normalised against CATEGORIES on the way in instead.
   lineItems: z
     .array(
       z.object({
         title: z.string().describe("What this single line is for, as written"),
         amount: z.number().describe("Amount of this one line in THB, always positive"),
-        kind: z.enum(["expense", "income"]).describe("Money out or money in"),
+        kind: z.string().describe('Either "expense" for money out or "income" for money in'),
         on: z.string().nullable().describe("The date of this line as YYYY-MM-DD, or null"),
-        category: z.enum(CATEGORIES),
+        category: z.string().describe(`One of: ${CATEGORIES.join(", ")}. Use "other" when unsure.`),
       }),
     )
-    .max(60)
     .describe(
       "Every individual money line, when the document lists more than one - a bank statement, an expense ledger, a page of handwritten entries, a receipt with several payments. Leave it empty for a document with a single amount (one bill, one payslip, one receipt).",
     ),
