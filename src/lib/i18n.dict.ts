@@ -366,6 +366,9 @@ const th = {
   routedToMoneyRow: "รายการในรายรับ-รายจ่าย",
   attachFile: "แนบรูป/PDF",
   routedToTasks: "เพิ่มในเรื่องที่ต้องทำแล้ว",
+  moneyTrendTitle: "เทียบเดือนต่อเดือน",
+  moneyTrendHint:
+    "กดที่เดือนไหนเพื่อดูเฉพาะรายการของเดือนนั้น · ตัวเลขใต้แท่งคือคงเหลือของเดือนนั้น",
   moneyRangeThisMonth: "เดือนนี้",
   moneyRangeLastMonth: "เดือนที่แล้ว",
   moneyRangeAll: "ทั้งหมด",
@@ -986,6 +989,7 @@ const th = {
   dealEndLabel: "โปรสิ้นสุดวันเวลา (ไม่ใส่ก็ได้)",
   deleteItemMore: (n: number) =>
     `ข้อมูลในมรดกแห่งชีวิต การตัดสินใจ แผนงานศพ ร้าน/กิจกรรมที่คุณลงไว้ และรีวิว ${n} รายการ`,
+  err_document_duplicate: "ไฟล์นี้เคยอัปโหลดและบันทึกไว้แล้ว ระบบจึงไม่ลงรายการเงินซ้ำให้",
   err_reminder_not_found: "ไม่พบรายการนี้แล้ว อาจถูกลบไปก่อนหน้านี้",
   err_reminder_forbidden: "งานนี้ไม่ใช่ของคุณและไม่ได้มอบหมายให้คุณ จึงปิดงานแทนไม่ได้",
   err_agenda_locked: "รายการนี้แก้ไขไม่ได้แล้ว",
@@ -1168,6 +1172,13 @@ const th = {
   budgetSubOff: "ตั้งไว้เพื่อดูยอดคงเหลือ · ตอนนี้ผู้ดูแลระบบปิดการเตือนงบไว้",
   budgetPlaceholder: "เช่น 20000",
   exportCsv: "นำออก CSV",
+  filters: "ตัวกรอง",
+  filterAll: "ทั้งหมด",
+  filterClear: "ล้างตัวกรอง",
+  filterDueFrom: "กำหนดตั้งแต่",
+  filterDueTo: "ถึง",
+  /** {n} คือจำนวนรายการที่เหลือหลังกรอง */
+  filterMatched: "ตรงกับตัวกรอง {n} รายการ",
   /** {n} คือจำนวนแถวที่อยู่ในไฟล์ */
   exportedRows: "นำออกแล้ว {n} รายการ",
   exportNothing: "ไม่มีรายการให้นำออกในมุมมองนี้",
@@ -1871,6 +1882,9 @@ const en = {
   routedToMoneyRow: "a money entry",
   attachFile: "Attach image/PDF",
   routedToTasks: "Added to To-do",
+  moneyTrendTitle: "Month by month",
+  moneyTrendHint:
+    "Tap a month to see only its entries · the figure under each pair is that month's balance",
   moneyRangeThisMonth: "This month",
   moneyRangeLastMonth: "Last month",
   moneyRangeAll: "All time",
@@ -2490,6 +2504,8 @@ const en = {
   dealEndLabel: "Promotion ends (optional)",
   deleteItemMore: (n: number) =>
     `${n} more records: Life Legacy, decisions, funeral plan, your places/events and reviews`,
+  err_document_duplicate:
+    "This exact file is already in the vault, so its entries were not filed again.",
   err_reminder_not_found: "That entry is gone — it may have been deleted.",
   err_reminder_forbidden: "This task is neither yours nor assigned to you, so you cannot close it.",
   err_agenda_locked: "This item can no longer be edited",
@@ -2670,6 +2686,12 @@ const en = {
   budgetSubOff: "Set it to see what is left · budget warnings are switched off by the admin",
   budgetPlaceholder: "e.g. 20000",
   exportCsv: "Export CSV",
+  filters: "Filters",
+  filterAll: "All",
+  filterClear: "Clear filters",
+  filterDueFrom: "Due from",
+  filterDueTo: "to",
+  filterMatched: "{n} match the filters",
   exportedRows: "Exported {n} rows",
   exportNothing: "Nothing to export in this view",
   csvStatus: "Status",

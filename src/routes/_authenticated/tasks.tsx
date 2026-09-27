@@ -1,4 +1,4 @@
-import { DateTimeInput } from "@/components/ui/datetime-input";
+import { DateInput, DateTimeInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +44,14 @@ function TasksPage() {
   const runMemberLabels = useServerFn(listFamilyMemberLabels);
   const [editTask, setEditTask] = useState<EditableTask | null>(null);
   const [taskTab, setTaskTab] = useState<"open" | "done">("open");
+  // Two tabs was all the page had. On a list of seventeen, "what did I give
+  // to whom" and "what is urgent this week" are the two questions people
+  // actually arrive with.
+  const [fAssignee, setFAssignee] = useState("");
+  const [fPriority, setFPriority] = useState("");
+  const [fFrom, setFFrom] = useState("");
+  const [fTo, setFTo] = useState("");
+  const filtersOn = !!(fAssignee || fPriority || fFrom || fTo);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -101,8 +109,27 @@ function TasksPage() {
   // Two lists rather than one, because a finished errand sitting among the
   // live ones is what makes a to-do list stop being read. Ticking a row moves
   // it across; reopening moves it back.
-  const openTasks = (tasks ?? []).filter((r) => r.status !== "done");
-  const doneTasks = (tasks ?? []).filter((r) => r.status === "done");
+  const matches = (r: {
+    assignee_user_id: string | null;
+    priority: string;
+    due_at: string | null;
+  }) => {
+    if (fAssignee === "none" ? r.assignee_user_id : fAssignee && r.assignee_user_id !== fAssignee)
+      return false;
+    if (fPriority && r.priority !== fPriority) return false;
+    // A task with no due date is not in any date range. Filtering by date is
+    // asking "what is due between these days", and it has no answer.
+    if (fFrom || fTo) {
+      if (!r.due_at) return false;
+      const day = new Date(r.due_at).toISOString().slice(0, 10);
+      if (fFrom && day < fFrom) return false;
+      if (fTo && day > fTo) return false;
+    }
+    return true;
+  };
+
+  const openTasks = (tasks ?? []).filter((r) => r.status !== "done" && matches(r));
+  const doneTasks = (tasks ?? []).filter((r) => r.status === "done" && matches(r));
   const shown = taskTab === "open" ? openTasks : doneTasks;
 
   // Exactly the tab being looked at, not every task the account holds.
@@ -293,6 +320,64 @@ function TasksPage() {
         <p className="mb-2 text-xs text-muted-foreground">{t.sharedHint}</p>
       ) : null}
 
+      <div className="mb-3 flex flex-wrap items-end gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">{t.r4Assignee}</Label>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={fAssignee}
+            onChange={(e) => setFAssignee(e.target.value)}
+          >
+            <option value="">{t.filterAll}</option>
+            <option value="none">{t.r4Anyone}</option>
+            {(memberLabels ?? []).map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">{t.priority}</Label>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={fPriority}
+            onChange={(e) => setFPriority(e.target.value)}
+          >
+            <option value="">{t.filterAll}</option>
+            <option value="high">{t.high}</option>
+            <option value="normal">{t.normal}</option>
+            <option value="low">{t.low}</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground" htmlFor="tf-from">
+            {t.filterDueFrom}
+          </Label>
+          <DateInput id="tf-from" value={fFrom} onChange={(e) => setFFrom(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground" htmlFor="tf-to">
+            {t.filterDueTo}
+          </Label>
+          <DateInput id="tf-to" value={fTo} onChange={(e) => setFTo(e.target.value)} />
+        </div>
+        {filtersOn ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setFAssignee("");
+              setFPriority("");
+              setFFrom("");
+              setFTo("");
+            }}
+          >
+            {t.filterClear}
+          </Button>
+        ) : null}
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <Tabs
           value={taskTab}
@@ -315,6 +400,12 @@ function TasksPage() {
           {t.exportCsv}
         </Button>
       </div>
+
+      {filtersOn ? (
+        <p className="mb-2 text-xs text-muted-foreground">
+          {t.filterMatched.replace("{n}", String(shown.length))}
+        </p>
+      ) : null}
 
       {shown.length ? (
         <ul className="space-y-2">

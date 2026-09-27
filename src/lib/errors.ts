@@ -30,6 +30,7 @@ export const APP_ERROR_CODES = [
   "trip_plan_limit",
   "reminder_not_found",
   "reminder_forbidden",
+  "document_duplicate",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];

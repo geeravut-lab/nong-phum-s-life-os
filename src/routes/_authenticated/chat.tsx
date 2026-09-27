@@ -11,10 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { errorText } from "@/lib/errors";
 import { analyzeDocument, chatWithPhum, transcribeAudio } from "@/lib/lifeos.functions";
 import { applyPhumActions } from "@/lib/phum-actions";
 import { BenefitCards } from "@/components/BenefitCards";
-import { intakeDocument, routingNotes } from "@/lib/doc-intake";
+import { DuplicateDocumentError, intakeDocument, routingNotes } from "@/lib/doc-intake";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: routeMeta("chat") }),
@@ -188,7 +189,15 @@ function ChatPage() {
       toast.success(t.phumSaved);
       qc.invalidateQueries();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.error);
+      // A re-upload is not a failure: the file is already filed and its money
+      // rows already exist. Say that rather than showing an error code.
+      if (err instanceof DuplicateDocumentError) {
+        toast.info(errorText(err, t));
+        const { data: userData } = await supabase.auth.getUser();
+        await post(userData.user!.id, "assistant", `${errorText(err, t)}\n— ${err.existing.title}`);
+      } else {
+        toast.error(errorText(err, t));
+      }
     } finally {
       setFileBusy(false);
     }

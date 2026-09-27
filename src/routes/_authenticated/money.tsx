@@ -1,4 +1,5 @@
 import { MonthlyBudgetCard } from "@/components/MonthlyBudgetCard";
+import { MoneyTrend } from "@/components/MoneyTrend";
 import { MoneyEditDialog, type EditableMoneyRow } from "@/components/MoneyEditDialog";
 import { DateInput, TimeInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
@@ -292,6 +293,26 @@ function MoneyPage() {
           </div>
         </div>
       )}
+
+      {/* Every row the account has, not the filtered slice: a trend of the
+          month you are already looking at is one bar. */}
+      <MoneyTrend
+        expenses={(expenses ?? []).map((r) => ({
+          day: String((r as { spent_on: string }).spent_on),
+          amount: Number(r.amount ?? 0),
+        }))}
+        incomes={(incomes ?? []).map((r) => ({
+          day: String((r as { received_on: string }).received_on),
+          amount: Number(r.amount ?? 0),
+        }))}
+        onPickMonth={(m) => {
+          const [y, mo] = m.split("-").map(Number) as [number, number];
+          const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+          setCustomFrom(`${m}-01`);
+          setCustomTo(`${m}-${String(last).padStart(2, "0")}`);
+          setRange("custom");
+        }}
+      />
 
       <Card className="mb-5 shadow-soft">
         <CardContent className="pt-6">

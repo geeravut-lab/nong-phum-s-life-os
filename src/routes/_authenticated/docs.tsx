@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
-import { Bell, ExternalLink, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Bell, Download, ExternalLink, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,13 @@ import { analyzeDocument } from "@/lib/lifeos.functions";
 import { syncDocumentExpirations } from "@/lib/docs-legacy.functions";
 import {
   DocumentAnalysisError,
+  DuplicateDocumentError,
   intakeDocument,
   retryDocument,
   routingNotes,
 } from "@/lib/doc-intake";
-import { formatMoney } from "@/lib/format";
+import { formatDay, formatMoney } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import { bangkokDateAtHour } from "@/lib/time";
 import { daysUntilFailedDocRemoved } from "@/lib/retention";
 
@@ -58,6 +60,42 @@ function DocsPage() {
       return data ?? [];
     },
   });
+
+  const exportCsv = () => {
+    const rows = docs ?? [];
+    if (rows.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    downloadCsv(
+      "lifeos-documents",
+      [
+        t.csvTitle,
+        t.csvCategory,
+        t.csvStatus,
+        t.csvDate,
+        t.dueAt,
+        t.csvAmount,
+        t.counterparty,
+        t.csvShared,
+        t.csvCreatedAt,
+        t.note,
+      ],
+      rows.map((d) => [
+        d.title,
+        catLabel(String(d.category ?? ""), lang),
+        d.status,
+        d.doc_date ?? "",
+        d.due_date ?? d.warranty_until ?? "",
+        d.amount ?? "",
+        d.counterparty ?? "",
+        d.is_shared ? "✓" : "",
+        d.created_at ? formatDay(new Date(d.created_at), lang, true) : "",
+        d.summary ?? "",
+      ]),
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
 
   const expiringDocs = (docs ?? [])
     .map((d) => {
@@ -119,7 +157,12 @@ function DocsPage() {
     } catch (err) {
       // A failed analysis leaves the row as status="failed"; refresh so it shows up with a retry button.
       if (err instanceof DocumentAnalysisError) qc.invalidateQueries({ queryKey: ["documents"] });
-      toast.error(err instanceof Error ? err.message : t.error);
+      // The same file again is not an error - it is already here.
+      if (err instanceof DuplicateDocumentError) {
+        toast.info(`${errorText(err, t)} — ${err.existing.title}`);
+      } else {
+        toast.error(errorText(err, t));
+      }
     } finally {
       setBusy(false);
     }
@@ -183,10 +226,16 @@ function DocsPage() {
           <h1 className="text-xl font-semibold tracking-tight">{t.docsTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t.docsSub}</p>
         </div>
-        <Button onClick={() => fileInput.current?.click()} disabled={busy}>
-          <Upload className="mr-1.5 size-4" />
-          {busy ? t.analyzing : t.upload}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={exportCsv}>
+            <Download className="mr-1.5 size-4" />
+            {t.exportCsv}
+          </Button>
+          <Button onClick={() => fileInput.current?.click()} disabled={busy}>
+            <Upload className="mr-1.5 size-4" />
+            {busy ? t.analyzing : t.upload}
+          </Button>
+        </div>
         <input
           ref={fileInput}
           type="file"
