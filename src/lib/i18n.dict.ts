@@ -1005,6 +1005,73 @@ const th = {
   ecoKindWreath: "พวงหรีดดิจิทัล",
   ecoKindTree: "ปลูกต้นไม้",
   ecoTreeBadge: "ต้นไม้",
+  navManual: "คู่มือการใช้งาน",
+  manualTitle: "ลิงก์คู่มือการใช้งาน",
+  manualSub:
+    "วางลิงก์ไฟล์คู่มือ (PDF) ที่เก็บไว้บนคลาวด์ · ต้องขึ้นต้นด้วย https:// · เว้นว่าง = ซ่อนเมนูคู่มือ",
+  manualPlaceholder: "https://www.dropbox.com/scl/fi/.../manual.pdf?rlkey=...&raw=1",
+  manualHint:
+    "Dropbox: เปลี่ยนท้ายลิงก์จาก ?dl=0 เป็น ?raw=1 เพื่อให้เปิดดู PDF ได้เลยโดยไม่ต้องผ่านหน้ายืนยัน (?dl=1 จะเป็นการดาวน์โหลดแทน)",
+  manualSaved: "บันทึกลิงก์คู่มือแล้ว",
+  err_https_only: "ลิงก์ต้องขึ้นต้นด้วย https://",
+  // Landing page (before sign-in). Its own strings on purpose: it used to
+  // borrow in-app labels and placeholders, so half the copy read like a form
+  // hint and the list of features stopped at the six modules that existed
+  // when it was written.
+  lpFeaturesSub: "ทุกอย่างอยู่ในที่เดียว และทำงานต่อกันเอง",
+  lpChat: "คุยกับน้องภูมิ",
+  lpChatText:
+    "พิมพ์เป็นภาษาคน แล้วน้องภูมิลงมือบันทึกให้จริง หนึ่งข้อความสั่งได้หลายเรื่อง เช่น จดค่าใช้จ่ายพร้อมตั้งเตือนในครั้งเดียว · สั่งด้วยเสียงก็ได้",
+  lpDocs: "คลังเอกสาร",
+  lpDocsText:
+    "ถ่ายรูปหรืออัปโหลด PDF แล้ว AI อ่าน สรุป จัดหมวด และดึงยอดเงินให้เอง ค้นได้ถึงเนื้อในเอกสาร ไม่ใช่แค่ชื่อไฟล์",
+  lpTasks: "เรื่องที่ต้องทำ",
+  lpTasksText:
+    "งานและการเตือนความจำ ตั้งซ้ำรายเดือน/รายปีได้ มอบหมายให้คนในครอบครัวได้ และเตือนเมื่อใกล้ถึงกำหนด",
+  lpAgenda: "ปฏิทินรวม",
+  lpAgendaText:
+    "งาน นัดหมายครอบครัว วันหมดอายุเอกสาร และนัดกับผู้ช่วย มารวมในปฏิทินเดียว ดูได้ทั้งรายการ วัน สัปดาห์ เดือน",
+  lpMoney: "รายรับ-รายจ่าย",
+  lpMoneyText:
+    "บันทึกเงินเข้า-ออก AI จัดหมวดให้ ตั้งงบต่อเดือน แนบใบเสร็จ และเตือนเมื่อใช้ถึงเกณฑ์",
+  lpSearch: "ค้นหาทุกอย่างของฉัน",
+  lpSearchText: "ช่องเดียวค้นข้ามเอกสาร งาน เงิน สิทธิ สถานที่ และทรัพย์สินที่ฝากไว้",
+  lpFamily: "ครอบครัว",
+  lpFamilyText:
+    "แชร์เฉพาะที่คุณกดแชร์ · ปฏิทินครอบครัว มอบหมายงาน ติดตามกิจวัตรของผู้สูงอายุ และตั้งสิทธิ์ได้รายคน",
+  lpHelpMe: "ช่วยฉันที",
+  lpHelpMeText:
+    "เล่าปัญหา AI แปลงเป็นงานและจับคู่ผู้ช่วยใกล้บ้าน มีพักเงินไว้กลาง แชทในงาน แนบหลักฐาน และให้คะแนน",
+  lpBenefits: "สิทธิฉัน",
+  lpBenefitsText:
+    "ตรวจว่าน่าจะได้สวัสดิการรัฐอะไรบ้าง พร้อมวิธีขอรับ ลิงก์ทางการ เดดไลน์ และติดตามสถานะของแต่ละสิทธิ",
+  lpDecide: "ช่วยตัดสินใจ",
+  lpDecideText:
+    "ไม่ใช่ chatbot — สร้าง Decision Board เทียบทางเลือก ถามกลับเมื่อข้อมูลไม่พอ และเก็บเป็นสมุดบันทึกการตัดสินใจ",
+  lpLocal: "ของดีใกล้บ้าน",
+  lpLocalText:
+    "ค้นร้านและกิจกรรมด้วยภาษาคน กรองเฉพาะที่เปิดอยู่ จัดเส้นทางหลายจุดและบันทึกแผนเที่ยว · เจ้าของร้านลงร้านเองได้",
+  lpLegacy: "มรดกแห่งชีวิต",
+  lpLegacyText:
+    "เก็บความต้องการ คนที่ไว้ใจ ทรัพย์สิน และที่อยู่ของพินัยกรรมฉบับจริง · มีส่วนหลังเหตุการณ์ หน้าอาลัย และ AI ช่วยวางแผนงานศพ",
+  lpInbox: "การแจ้งเตือน",
+  lpInboxText: "รวมทุกเรื่องที่เกิดกับบัญชีไว้ที่เดียว และส่งถึง LINE ได้เมื่อเชื่อมบัญชีไว้",
+  lpConnectTitle: "ทำที่หนึ่ง ไปโผล่อีกที่เอง",
+  lpConnectSub: "นี่คือสิ่งที่ทำให้ Life OS ไม่ใช่แค่หลายแอปมารวมกัน",
+  lpFlow1:
+    "พูดในแชทว่า “จดค่าข้าว 80 บาท แล้วเตือนต่อประกันรถ 12 พ.ย.” → ได้รายการในรายรับ-รายจ่าย และงานในปฏิทิน พร้อมกัน",
+  lpFlow2: "อัปโหลดกรมธรรม์ → AI สรุปให้ และตั้งเตือนวันหมดอายุเข้าปฏิทินได้ในปุ่มเดียว",
+  lpFlow3: "ติ๊กแชร์งานให้ครอบครัว → คนที่บ้านเห็นทันที · ไม่ติ๊ก = ไม่มีใครเห็น",
+  lpFlow4: "บันทึกสถานะสิทธิที่กำลังยื่น → ค้นเจอจากช่องค้นหาเดียวกับเอกสารและรายจ่าย",
+  lpPrivacyTitle: "ข้อมูลเป็นของคุณ",
+  lpPrivacyText:
+    "ไม่มีอะไรถูกแชร์โดยอัตโนมัติ ทุกการแชร์ต้องกดเอง · ขอสำเนาข้อมูลทั้งหมดเป็นไฟล์เดียว และลบบัญชีพร้อมข้อมูลทุกอย่างได้ทุกเมื่อ",
+  lpPriceTitle: "เริ่มใช้ฟรี",
+  lpPriceFree: "ฟรี — AI 60 ครั้ง/เดือน (แชท 40 · เอกสาร 12 · ตัดสินใจ 8 · เสียง 15)",
+  lpPricePayg: "เกินโควต้าคิด 50 สตางค์/ครั้ง จ่ายเท่าที่ใช้",
+  lpPricePremium: "Premium ฿89/เดือน หรือ ฿890/ปี — ใช้ AI ไม่ติดโควต้า",
+  lpPriceFamily: "Family ฿149/เดือน หรือ ฿1,490/ปี — ทั้งบ้านใช้ร่วมกัน",
+  lpInstall: "ติดตั้งเป็นแอปบนมือถือได้ ไม่ต้องผ่านสโตร์",
   flagsTitle: "สวิตช์ฟีเจอร์",
   flagsSub: "ปิดฟีเจอร์ได้ทันทีโดยไม่ต้อง deploy ใหม่",
   flag_google_places: "ค้นสถานที่จาก Google (มีค่าใช้จ่ายต่อครั้ง)",
@@ -2392,6 +2459,72 @@ const en = {
   ecoKindWreath: "Digital wreath",
   ecoKindTree: "Plant a tree",
   ecoTreeBadge: "Tree",
+  navManual: "User manual",
+  manualTitle: "User manual link",
+  manualSub:
+    "Paste the link to the manual PDF in your cloud storage. Must start with https:// — leave empty to hide the menu entry.",
+  manualPlaceholder: "https://www.dropbox.com/scl/fi/.../manual.pdf?rlkey=...&raw=1",
+  manualHint:
+    "Dropbox: change the trailing ?dl=0 to ?raw=1 so the PDF opens straight away with no confirmation page (?dl=1 downloads it instead).",
+  manualSaved: "Manual link saved",
+  err_https_only: "The link must start with https://",
+  lpFeaturesSub: "One place for all of it, and the parts talk to each other",
+  lpChat: "Talk to Nong Phum",
+  lpChatText:
+    "Write in plain language and it actually files things for you. One message can do several: log a cost and set a reminder in the same breath. Voice works too.",
+  lpDocs: "Document vault",
+  lpDocsText:
+    "Photograph a receipt or upload a PDF and the AI reads it, summarises it, files it and pulls out the amount. Search reaches inside documents, not just filenames.",
+  lpTasks: "Things to do",
+  lpTasksText:
+    "Tasks and reminders, repeating monthly or yearly, assignable to family, with a nudge as the date approaches.",
+  lpAgenda: "One calendar",
+  lpAgendaText:
+    "Tasks, family events, document expiry dates and helper appointments in a single calendar — list, day, week or month.",
+  lpMoney: "Money in and out",
+  lpMoneyText:
+    "Log spending and income, categorised by AI, with a monthly budget, attached receipts and a warning when you approach it.",
+  lpSearch: "Search everything of mine",
+  lpSearchText: "One box across documents, tasks, money, benefits, places and legacy assets.",
+  lpFamily: "Family",
+  lpFamilyText:
+    "Nothing is shared unless you share it. Family calendar, assigned tasks, routine check-ins for older relatives, and per-person permissions.",
+  lpHelpMe: "Help me out",
+  lpHelpMeText:
+    "Describe a problem, the AI turns it into a job and matches local helpers. Money is held in escrow, with in-job chat, evidence and ratings.",
+  lpBenefits: "My benefits",
+  lpBenefitsText:
+    "Check which state benefits you likely qualify for, how to claim, official links, deadlines, and where each one stands.",
+  lpDecide: "Help me decide",
+  lpDecideText:
+    "Not a chatbot — a Decision Board comparing the options, which asks you back when it lacks facts and keeps a decision journal.",
+  lpLocal: "Good things nearby",
+  lpLocalText:
+    "Find shops and events in plain language, filter to what is open now, route several stops and save the trip. Shop owners can list their own.",
+  lpLegacy: "Life Legacy",
+  lpLegacyText:
+    "Your wishes, trusted people, assets and where the real will is kept — plus the after-the-event side, a memorial page and an AI funeral planner.",
+  lpInbox: "Notifications",
+  lpInboxText:
+    "Everything that happens to your account in one place, and on LINE once you connect it.",
+  lpConnectTitle: "Do it in one place, find it in another",
+  lpConnectSub: "This is what makes Life OS more than several apps in a trench coat",
+  lpFlow1:
+    "Say “log lunch, 80 baht, and remind me to renew the car insurance on 12 Nov” → an expense and a dated task, both saved",
+  lpFlow2:
+    "Upload an insurance policy → it is summarised, and one button turns its expiry date into a reminder",
+  lpFlow3: "Tick share on a task → the family sees it at once. Leave it unticked and nobody does",
+  lpFlow4:
+    "Record where a benefit claim stands → it comes back in the same search as your documents and spending",
+  lpPrivacyTitle: "The data is yours",
+  lpPrivacyText:
+    "Nothing is shared automatically; every share is a button you press. Take a copy of everything as one file, or delete the account and all of it, whenever you like.",
+  lpPriceTitle: "Free to start",
+  lpPriceFree: "Free — 60 AI calls a month (40 chat · 12 documents · 8 decisions · 15 voice)",
+  lpPricePayg: "Beyond that, ฿0.50 a call — pay for what you use",
+  lpPricePremium: "Premium ฿89/month or ฿890/year — AI without the quota",
+  lpPriceFamily: "Family ฿149/month or ฿1,490/year — the whole household shares it",
+  lpInstall: "Installs on a phone as an app, no store needed",
   flagsTitle: "Feature switches",
   flagsSub: "Turn a feature off at once, without a deploy",
   flag_google_places: "Google Places lookup (billed per call)",

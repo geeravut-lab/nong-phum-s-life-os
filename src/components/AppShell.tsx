@@ -22,9 +22,11 @@ import {
   ChevronUp,
   ChevronDown,
   Bell,
+  BookOpen,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useManualUrl } from "@/hooks/useFeatureFlags";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -269,6 +271,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/docs", label: t.navDocs, icon: FileText },
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
     { to: "/agenda", label: t.navAgenda ?? "Agenda", icon: CalendarDays },
+    // Fifth, not fifteenth. Half the menus can raise a red dot that points
+    // here, so burying it at the end of the list meant the one page the app
+    // actively pushes people towards was the furthest to reach.
+    { to: "/inbox", label: t.inboxTitle, icon: Bell },
     { to: "/search", label: t.navSearch ?? "Search", icon: Search },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
@@ -278,14 +284,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/local", label: t.navLocal, icon: MapPinned },
     { to: "/legacy", label: t.navLegacy, icon: Feather },
     { to: "/support", label: t.navSupport, icon: Heart },
-    { to: "/inbox", label: t.inboxTitle, icon: Bell },
   ] as const;
+
+  // Set by an admin, hidden when empty: a menu entry that opens nothing is
+  // worse than no entry. It is an outside link, so it opens in a new tab and
+  // cannot be a router Link.
+  const manualUrl = useManualUrl();
 
   const primaryNav = nav.slice(0, 4);
   const moreNav = nav.slice(4);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Local scope on purpose. supabase-js signs out globally by default, which
+    // revokes every refresh token the account holds - so signing out on the
+    // phone logged the same person out of their laptop as soon as its token
+    // came up for renewal. Nobody means that by "sign out"; they mean this
+    // device. Signing every device out is a separate, deliberate action.
+    await supabase.auth.signOut({ scope: "local" });
     navigate({ to: "/" });
   };
 
@@ -351,6 +366,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               </span>
             </Link>
           ) : null}
+          {manualUrl ? (
+            <a href={manualUrl} target="_blank" rel="noreferrer" className={linkClass}>
+              <BookOpen className="size-4 shrink-0" />
+              <span className="truncate">{t.navManual}</span>
+            </a>
+          ) : null}
           <Link to="/settings" className={linkClass} activeProps={{ className: activeClass }}>
             <Settings className="size-4 shrink-0" />
             <span className="truncate">{t.navSettings}</span>
@@ -385,7 +406,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             {planLabel}
           </span>
           {visibleTotal > 0 && (
-            <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
+            // It used to be a bare span: the app pulsed a red dot at people and
+            // gave them nothing to tap, with the notifications page sitting at
+            // the bottom of the "More" sheet. The dot is the natural target, so
+            // it is the link.
+            <Link
+              to="/inbox"
+              aria-label={t.inboxTitle}
+              className="ml-auto flex size-8 items-center justify-center"
+            >
+              <span className="size-2 animate-pulse rounded-full bg-red-500" />
+            </Link>
           )}
         </header>
 
@@ -475,6 +506,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                     ) : null}
                   </span>
                 </Link>
+              ) : null}
+              {manualUrl ? (
+                <a
+                  href={manualUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => setMoreOpen(false)}
+                  className={linkClass}
+                >
+                  <BookOpen className="size-4 shrink-0" />
+                  <span className="truncate">{t.navManual}</span>
+                </a>
               ) : null}
               <Link
                 to="/settings"

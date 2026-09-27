@@ -1,6 +1,6 @@
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -32,7 +32,6 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const { t, lang, setLang } = useI18n();
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [displayName, setDisplayName] = useState("");
   const [dark, setDark] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -103,11 +102,6 @@ function SettingsPage() {
     qc.invalidateQueries({ queryKey: ["profile"] });
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/" });
-  };
-
   return (
     <AppShell>
       <header className="mb-5">
@@ -160,10 +154,6 @@ function SettingsPage() {
           <h2 className="text-sm font-semibold">{t.privacy}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t.privacyText}</p>
         </section>
-
-        <Button variant="outline" onClick={signOut}>
-          {t.signOut}
-        </Button>
 
         <section className="rounded-2xl border border-border bg-card p-4 shadow-soft">
           <h2 className="text-sm font-semibold">{t.r5PrivacyCenter}</h2>

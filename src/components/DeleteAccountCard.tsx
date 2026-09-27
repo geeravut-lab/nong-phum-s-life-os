@@ -52,8 +52,10 @@ export function DeleteAccountCard() {
     try {
       await del({ data: { confirmation: typed.trim() } });
       // The auth row is gone; drop the local session so the guard does not
-      // keep presenting a token that no longer resolves to anyone.
-      await supabase.auth.signOut();
+      // keep presenting a token that no longer resolves to anyone. Global here,
+      // unlike the ordinary sign-out: the account no longer exists, so any
+      // session left on another device should go too.
+      await supabase.auth.signOut({ scope: "global" });
       toast.success(t.deleteDone);
       navigate({ to: "/" });
     } catch (err) {

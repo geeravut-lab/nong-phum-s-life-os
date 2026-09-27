@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { BarChart3 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { FEATURE_FLAGS } from "@/lib/flags";
-import { setFeatureFlag } from "@/lib/admin.functions";
+import { setFeatureFlag, setManualUrl } from "@/lib/admin.functions";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -192,6 +192,7 @@ function AdminPage() {
       <UsageHubCard />
       <RulesHubCard />
       <FeatureFlagsCard />
+      <ManualLinkCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <h2 className="mb-3 text-sm font-semibold">{t.adminNow}</h2>
@@ -640,6 +641,63 @@ function RulesHubCard() {
         <p className="mt-1 text-xs text-muted-foreground">{t.adminRulesCardSub}</p>
       </div>
     </Link>
+  );
+}
+
+function ManualLinkCard() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const save = useServerFn(setManualUrl);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const q = useQuery({
+    queryKey: ["manual-url-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("manual_url")
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.manual_url ?? "") as string;
+    },
+  });
+
+  // null means "not edited yet", so the field shows what is stored without
+  // fighting the user once they start typing.
+  const value = url ?? q.data ?? "";
+
+  const submit = async () => {
+    setBusy(true);
+    try {
+      await save({ data: { url: value.trim() } });
+      toast.success(t.manualSaved);
+      void qc.invalidateQueries({ queryKey: ["manual-url-admin"] });
+      void qc.invalidateQueries({ queryKey: ["feature-flags"] });
+      setUrl(null);
+    } catch (e) {
+      toast.error(errorText(e, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+      <h2 className="text-sm font-semibold">{t.manualTitle}</h2>
+      <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.manualSub}</p>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input
+          value={value}
+          placeholder={t.manualPlaceholder}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        <Button size="sm" disabled={busy} onClick={() => void submit()}>
+          {t.save}
+        </Button>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{t.manualHint}</p>
+    </section>
   );
 }
 
