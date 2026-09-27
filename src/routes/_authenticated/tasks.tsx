@@ -1,3 +1,4 @@
+import { DateTimeInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -194,9 +195,9 @@ function TasksPage() {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="due">{t.dueAt}</Label>
-              <Input
+              <DateTimeInput
                 id="due"
-                type="datetime-local"
+
                 value={dueAt}
                 onChange={(e) => setDueAt(e.target.value)}
               />

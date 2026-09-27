@@ -22,6 +22,13 @@ export type Notice = {
   href: string;
   refTable?: string | null;
   refId?: string | null;
+  /**
+   * Values for the kind's template, so the inbox can render the sentence in
+   * whichever language the reader uses. title/body remain the fallback - for
+   * rows written before templates existed, for kinds without one, and for LINE,
+   * which is sent text rather than a key.
+   */
+  params?: Record<string, string | number | boolean | null>;
 };
 
 /** Notify specific users, skipping the actor and any duplicates. */
@@ -44,6 +51,7 @@ export async function notifyUsers(
       href: n.href,
       ref_table: n.refTable ?? null,
       ref_id: n.refId ?? null,
+      params: n.params ?? {},
     })),
   );
   // A failed notification must never fail the action that triggered it: the
@@ -52,6 +60,13 @@ export async function notifyUsers(
     console.error("[notify] insert failed:", error.message);
     return 0;
   }
+
+  // Anyone who has pointed a webhook at this gets the same event. Imported
+  // lazily so the notification path does not pull in the sender when nobody
+  // has one configured.
+  const { deliverWebhooks } = await import("./webhooks.server");
+  await deliverWebhooks(ids, n);
+
   return ids.length;
 }
 

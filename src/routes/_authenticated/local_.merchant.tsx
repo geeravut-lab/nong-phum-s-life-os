@@ -1,3 +1,4 @@
+import { DateTimeInput, TimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -594,8 +595,7 @@ function MerchantDashboardPage() {
                     />
                     {label}
                   </label>
-                  <Input
-                    type="time"
+                  <TimeInput
                     className="w-28"
                     aria-label={`${label} ${t.hoursFrom}`}
                     value={h.open}
@@ -605,8 +605,7 @@ function MerchantDashboardPage() {
                     }
                   />
                   <span className="text-xs text-muted-foreground">{t.hoursTo}</span>
-                  <Input
-                    type="time"
+                  <TimeInput
                     className="w-28"
                     aria-label={`${label} ${t.hoursTo}`}
                     value={h.close}
@@ -696,10 +695,7 @@ function MerchantDashboardPage() {
           />
           <label className="block text-xs text-muted-foreground">
             {t.evtStartLabel}
-            <Input
-              type="datetime-local"
-              step={60}
-              lang="en-GB"
+            <DateTimeInput
               aria-label={t.evtStartLabel}
               value={evtWhen}
               onChange={(e) => setEvtWhen(e.target.value)}
@@ -707,10 +703,7 @@ function MerchantDashboardPage() {
           </label>
           <label className="block text-xs text-muted-foreground">
             {t.evtEndLabel}
-            <Input
-              type="datetime-local"
-              step={60}
-              lang="en-GB"
+            <DateTimeInput
               aria-label={t.evtEndLabel}
               value={evtEnd}
               onChange={(e) => setEvtEnd(e.target.value)}
@@ -856,10 +849,7 @@ function MerchantDashboardPage() {
           <div className="mb-2 grid gap-2 sm:grid-cols-2">
             <label className="block text-xs text-muted-foreground">
               {t.dealStartLabel}
-              <Input
-                type="datetime-local"
-                step={60}
-                lang="en-GB"
+              <DateTimeInput
                 aria-label={t.dealStartLabel}
                 value={dealStart}
                 onChange={(e) => setDealStart(e.target.value)}
@@ -867,10 +857,7 @@ function MerchantDashboardPage() {
             </label>
             <label className="block text-xs text-muted-foreground">
               {t.dealEndLabel}
-              <Input
-                type="datetime-local"
-                step={60}
-                lang="en-GB"
+              <DateTimeInput
                 aria-label={t.dealEndLabel}
                 value={dealEnd}
                 onChange={(e) => setDealEnd(e.target.value)}

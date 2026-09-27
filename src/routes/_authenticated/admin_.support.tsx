@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -315,16 +316,16 @@ function ReportSection() {
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <Label htmlFor="rep-start">{t.periodFrom}</Label>
-            <Input
+            <DateInput
               id="rep-start"
-              type="date"
+
               value={start}
               onChange={(e) => setStart(e.target.value)}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor="rep-end">{t.periodTo}</Label>
-            <Input id="rep-end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+            <DateInput id="rep-end" value={end} onChange={(e) => setEnd(e.target.value)} />
           </div>
         </div>
       )}

@@ -78,6 +78,7 @@ export const notifyJobOffer = createServerFn({ method: "POST" })
         [job.user_id as string],
         {
           kind: "job_offer",
+          params: { jobTitle: (job.title as string) ?? "" },
           title: "มีข้อเสนอใหม่",
           body: (job.title as string) ?? "",
           href: "/helpme",
@@ -112,6 +113,7 @@ export const notifyJobOffer = createServerFn({ method: "POST" })
       data.jobId,
       {
         kind: "job_accepted",
+        params: { jobTitle: (job.title as string) ?? "" },
         title: "ข้อเสนอถูกตอบรับ",
         body: (job.title as string) ?? "",
         href: "/helper-dashboard",

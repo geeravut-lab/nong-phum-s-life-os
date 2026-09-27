@@ -21,6 +21,7 @@ import {
   Search,
   ChevronUp,
   ChevronDown,
+  Bell,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -277,6 +278,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/local", label: t.navLocal, icon: MapPinned },
     { to: "/legacy", label: t.navLegacy, icon: Feather },
     { to: "/support", label: t.navSupport, icon: Heart },
+    { to: "/inbox", label: t.inboxTitle, icon: Bell },
   ] as const;
 
   const primaryNav = nav.slice(0, 4);

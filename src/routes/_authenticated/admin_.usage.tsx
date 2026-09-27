@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
-import { getUsageStats, type UsageStats } from "@/lib/usage.functions";
+import {
+  getUsageStats,
+  getAiCostStats,
+  type AiCostRow,
+  type UsageStats,
+} from "@/lib/usage.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/usage")({
   head: () => ({ meta: routeMeta("admin") }),
@@ -24,10 +29,22 @@ export const Route = createFileRoute("/_authenticated/admin_/usage")({
 function AdminUsagePage() {
   const { t } = useI18n();
   const load = useServerFn(getUsageStats);
+  const load2 = useServerFn(getAiCostStats);
   const [days, setDays] = useState(30);
   const q = useQuery({
     queryKey: ["usage-stats", days],
     queryFn: () => load({ data: { days } }) as Promise<UsageStats>,
+  });
+
+  const costQ = useQuery({
+    queryKey: ["ai-cost-stats", days],
+    queryFn: () =>
+      load2({ data: { days } }) as Promise<{
+        rows: AiCostRow[];
+        totalCalls: number;
+        totalCostThb: number;
+        hasUnpriced: boolean;
+      }>,
   });
 
   const stats = q.data;
@@ -143,6 +160,49 @@ function AdminUsagePage() {
             <p className="mt-2 text-[10px] text-muted-foreground">
               {stats.daily[0]?.day} → {stats.daily[stats.daily.length - 1]?.day}
             </p>
+          </section>
+
+          {/* What the AI actually cost. The pricing review had to estimate this
+              from the size of the prompts in the source; now it is measured. */}
+          <section className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+            <h2 className="text-sm font-semibold">{t.costTitle}</h2>
+            <p className="mb-2 text-xs text-muted-foreground">{t.costSub}</p>
+            {(costQ.data?.rows ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t.costEmpty}</p>
+            ) : (
+              <>
+                <p className="mb-2 text-sm">
+                  {t.costTotal}: ฿{(costQ.data?.totalCostThb ?? 0).toFixed(2)} ·{" "}
+                  {(costQ.data?.totalCalls ?? 0).toLocaleString()} {t.costCalls}
+                </p>
+                <ul className="space-y-2 text-sm">
+                  {(costQ.data?.rows ?? []).map((r) => (
+                    <li
+                      key={`${r.task}-${r.model}`}
+                      className="rounded-lg border border-border p-2"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="font-medium">
+                          {r.task} · {r.model}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {r.costThb != null
+                            ? `฿${r.costThb.toFixed(2)} · ฿${(r.costPerCallThb ?? 0).toFixed(3)} ${t.costPerCall}`
+                            : "—"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {r.calls.toLocaleString()} {t.costCalls} · {t.costTokens}{" "}
+                        {r.inputTokens.toLocaleString()}/{r.outputTokens.toLocaleString()}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                {costQ.data?.hasUnpriced ? (
+                  <p className="mt-2 text-[10px] text-muted-foreground">{t.costUnpriced}</p>
+                ) : null}
+              </>
+            )}
           </section>
         </>
       )}

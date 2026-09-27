@@ -34,7 +34,12 @@ const PROVIDERS: Record<ProviderId, ProviderConfig> = {
     models: {
       chat: "claude-haiku-4-5-20251001",
       document: "claude-sonnet-5",
-      reasoning: "claude-opus-5",
+      // Sonnet, not Opus. A "decide" call runs about 4k in / 1.2k out, which
+      // is ฿1.32 on Opus against ฿0.53 on Sonnet - and PAYG charges ฿0.50 for
+      // it, so every one of those calls was sold below cost. An admin who
+      // wants Opus back can set it per task in /admin; the default should not
+      // be the most expensive model in the catalogue.
+      reasoning: "claude-sonnet-5",
     },
     capabilities: { pdf: true, audio: false },
     create: (k) => createAnthropic({ apiKey: k }),
@@ -337,7 +342,9 @@ export async function withProviderFallback<T>(
 ): Promise<T> {
   const primary = await resolveProvider(task);
   try {
-    return await call(await modelFor(primary, task));
+    const result = await call(await modelFor(primary, task));
+    void recordTokens(task, primary, result);
+    return result;
   } catch (error) {
     const fallback = await resolveFallbackProvider();
     if (!fallback || fallback === primary || !shouldTryFallback(error)) {
@@ -373,7 +380,9 @@ export async function withProviderFallback<T>(
       message: `${messageOf(error)} → retried on "${fallback}"`,
     });
     try {
-      return await call(await modelFor(fallback, task));
+      const result = await call(await modelFor(fallback, task));
+      void recordTokens(task, fallback, result);
+      return result;
     } catch (fallbackError) {
       await logAiEvent({
         provider: fallback,
@@ -423,4 +432,62 @@ export function modelForId(id: ProviderId, modelId: string): LanguageModel {
   const apiKey = apiKeyFor(id);
   if (!apiKey) throw new Error(`${PROVIDERS[id].envKey} is not set.`);
   return PROVIDERS[id].create(apiKey)(modelId);
+}
+
+/**
+ * Count the tokens a call actually used.
+ *
+ * Every AI call in the app goes through withProviderFallback, so this is the
+ * one place that can see all of them, and the AI SDK puts the usage on the
+ * result whatever kind of call it was. Aggregated per day per task per model -
+ * enough to answer "what does a decide call cost" and "what did this month
+ * cost", which is what the pricing was being guessed at without.
+ *
+ * Fire and forget, and never throws: a failure to write a statistic must not
+ * fail the answer the user is waiting for.
+ */
+async function recordTokens(task: TaskKind, provider: ProviderId, result: unknown): Promise<void> {
+  try {
+    const usage = (result as { usage?: { inputTokens?: number; outputTokens?: number } })?.usage;
+    if (!usage) return;
+    const input = Math.max(0, Math.round(Number(usage.inputTokens ?? 0)));
+    const output = Math.max(0, Math.round(Number(usage.outputTokens ?? 0)));
+    if (input === 0 && output === 0) return;
+
+    const model = await resolveModelId(provider, task);
+    const day = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+
+    const { data: existing } = await supabaseAdmin
+      .from("ai_token_usage")
+      .select("id, calls, input_tokens, output_tokens")
+      .eq("day", day)
+      .eq("task", task)
+      .eq("provider", provider)
+      .eq("model", model)
+      .maybeSingle();
+
+    if (existing) {
+      await supabaseAdmin
+        .from("ai_token_usage")
+        .update({
+          calls: Number(existing.calls) + 1,
+          input_tokens: Number(existing.input_tokens) + input,
+          output_tokens: Number(existing.output_tokens) + output,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+    } else {
+      await supabaseAdmin.from("ai_token_usage").insert({
+        day,
+        task,
+        provider,
+        model,
+        calls: 1,
+        input_tokens: input,
+        output_tokens: output,
+      });
+    }
+  } catch (err) {
+    console.warn("[ai] could not record token usage:", err instanceof Error ? err.message : err);
+  }
 }

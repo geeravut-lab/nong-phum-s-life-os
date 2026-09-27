@@ -1,3 +1,4 @@
+import { DateTimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -378,11 +379,7 @@ function AgendaPage() {
             <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
               <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
               <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-              <Input
-                type="datetime-local"
-                value={editWhen}
-                onChange={(e) => setEditWhen(e.target.value)}
-              />
+              <DateTimeInput value={editWhen} onChange={(e) => setEditWhen(e.target.value)} />
               <Textarea
                 rows={2}
                 value={editNotes}

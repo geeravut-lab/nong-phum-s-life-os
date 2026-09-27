@@ -1,3 +1,4 @@
+import { DateTimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -578,11 +579,7 @@ function FamilyPage() {
                 value={evTitle}
                 onChange={(e) => setEvTitle(e.target.value)}
               />
-              <Input
-                type="datetime-local"
-                value={evWhen}
-                onChange={(e) => setEvWhen(e.target.value)}
-              />
+              <DateTimeInput value={evWhen} onChange={(e) => setEvWhen(e.target.value)} />
               <Button
                 size="sm"
                 disabled={busy || !evTitle.trim() || !evWhen}
@@ -870,11 +867,7 @@ function FamilyPage() {
                 value={taskTitle}
                 onChange={(e) => setTaskTitle(e.target.value)}
               />
-              <Input
-                type="datetime-local"
-                value={taskDue}
-                onChange={(e) => setTaskDue(e.target.value)}
-              />
+              <DateTimeInput value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
               <select
                 className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                 value={assignee}
@@ -1001,11 +994,7 @@ function FamilyPage() {
           <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
             <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
             <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            <Input
-              type="datetime-local"
-              value={editWhen}
-              onChange={(e) => setEditWhen(e.target.value)}
-            />
+            <DateTimeInput value={editWhen} onChange={(e) => setEditWhen(e.target.value)} />
             <Input
               value={editNotes}
               placeholder={t.note}

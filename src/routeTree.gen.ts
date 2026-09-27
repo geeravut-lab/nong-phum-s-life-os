@@ -21,6 +21,7 @@ import { Route as AuthenticatedDocsRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedFamilyRouteImport } from './routes/_authenticated/family'
 import { Route as AuthenticatedHelperDashboardRouteImport } from './routes/_authenticated/helper-dashboard'
 import { Route as AuthenticatedHelpmeRouteImport } from './routes/_authenticated/helpme'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedLegacyRouteImport } from './routes/_authenticated/legacy'
 import { Route as AuthenticatedLocalRouteImport } from './routes/_authenticated/local'
 import { Route as AuthenticatedMoneyRouteImport } from './routes/_authenticated/money'
@@ -103,6 +104,11 @@ const AuthenticatedHelperDashboardRoute =
 const AuthenticatedHelpmeRoute = AuthenticatedHelpmeRouteImport.update({
   id: '/helpme',
   path: '/helpme',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedLegacyRoute = AuthenticatedLegacyRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/family': typeof AuthenticatedFamilyRoute
   '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/helpme': typeof AuthenticatedHelpmeRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/family': typeof AuthenticatedFamilyRoute
   '/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/helpme': typeof AuthenticatedHelpmeRoute
+  '/inbox': typeof AuthenticatedInboxRoute
   '/legacy': typeof AuthenticatedLegacyRoute
   '/local': typeof AuthenticatedLocalRoute
   '/money': typeof AuthenticatedMoneyRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/_authenticated/family': typeof AuthenticatedFamilyRoute
   '/_authenticated/helper-dashboard': typeof AuthenticatedHelperDashboardRoute
   '/_authenticated/helpme': typeof AuthenticatedHelpmeRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/legacy': typeof AuthenticatedLegacyRoute
   '/_authenticated/local': typeof AuthenticatedLocalRoute
   '/_authenticated/money': typeof AuthenticatedMoneyRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/family'
     | '/helper-dashboard'
     | '/helpme'
+    | '/inbox'
     | '/legacy'
     | '/local'
     | '/money'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/family'
     | '/helper-dashboard'
     | '/helpme'
+    | '/inbox'
     | '/legacy'
     | '/local'
     | '/money'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/_authenticated/family'
     | '/_authenticated/helper-dashboard'
     | '/_authenticated/helpme'
+    | '/_authenticated/inbox'
     | '/_authenticated/legacy'
     | '/_authenticated/local'
     | '/_authenticated/money'
@@ -547,6 +559,13 @@ declare module '@tanstack/react-router' {
       path: '/helpme'
       fullPath: '/helpme'
       preLoaderRoute: typeof AuthenticatedHelpmeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/legacy': {
@@ -723,6 +742,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFamilyRoute: typeof AuthenticatedFamilyRoute
   AuthenticatedHelperDashboardRoute: typeof AuthenticatedHelperDashboardRoute
   AuthenticatedHelpmeRoute: typeof AuthenticatedHelpmeRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedLegacyRoute: typeof AuthenticatedLegacyRoute
   AuthenticatedLocalRoute: typeof AuthenticatedLocalRoute
   AuthenticatedMoneyRoute: typeof AuthenticatedMoneyRoute
@@ -754,6 +774,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFamilyRoute: AuthenticatedFamilyRoute,
   AuthenticatedHelperDashboardRoute: AuthenticatedHelperDashboardRoute,
   AuthenticatedHelpmeRoute: AuthenticatedHelpmeRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedLegacyRoute: AuthenticatedLegacyRoute,
   AuthenticatedLocalRoute: AuthenticatedLocalRoute,
   AuthenticatedMoneyRoute: AuthenticatedMoneyRoute,

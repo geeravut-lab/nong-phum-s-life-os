@@ -1,3 +1,4 @@
+import { DateTimeInput, TimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -383,8 +384,7 @@ function RequesterTab() {
             </div>
             <div>
               <Label>{t.jobWhen}</Label>
-              <Input
-                type="datetime-local"
+              <DateTimeInput
                 value={draft.scheduledAt ? draft.scheduledAt.slice(0, 16) : ""}
                 onChange={(e) => setDraft({ ...draft, scheduledAt: e.target.value || null })}
               />
@@ -708,6 +708,16 @@ function RequesterTab() {
                           {m.score}% {t.matchScore}
                         </Badge>
                       </div>
+                      {/* A ranked list with no explanation reads as
+                          favouritism, and the weights are in the spec anyway. */}
+                      {m.breakdown ? (
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          {t.matchWhy}: {t.matchSkills} {m.breakdown.skills}/35 · {t.matchDistance}{" "}
+                          {m.breakdown.distance}/20 · {t.matchAvail} {m.breakdown.availability}/15 ·{" "}
+                          {t.matchPrice} {m.breakdown.price}/10 · {t.matchRating}{" "}
+                          {m.breakdown.rating}/10 · {t.matchExp} {m.breakdown.experience}/10
+                        </p>
+                      ) : null}
                       <p className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         {m.distanceKm != null && (
                           <span className="inline-flex items-center gap-1">
@@ -1089,13 +1099,11 @@ function HelperTab() {
           <div>
             <Label>{t.helperAvail}</Label>
             <div className="flex items-center gap-2">
-              <Input
-                type="time"
+              <TimeInput
                 value={current.available_from}
                 onChange={(e) => setForm({ ...current, available_from: e.target.value })}
               />
-              <Input
-                type="time"
+              <TimeInput
                 value={current.available_to}
                 onChange={(e) => setForm({ ...current, available_to: e.target.value })}
               />

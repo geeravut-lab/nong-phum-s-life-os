@@ -35,6 +35,81 @@ export type Database = {
   };
   public: {
     Tables: {
+      webhook_endpoints: {
+        Row: {
+          id: string;
+          user_id: string;
+          url: string;
+          secret: string;
+          events: string[];
+          is_active: boolean;
+          last_status: number | null;
+          last_at: string | null;
+          failure_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          url: string;
+          secret?: string;
+          events?: string[];
+          is_active?: boolean;
+          last_status?: number | null;
+          last_at?: string | null;
+          failure_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          url?: string;
+          secret?: string;
+          events?: string[];
+          is_active?: boolean;
+          last_status?: number | null;
+          last_at?: string | null;
+          failure_count?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      ai_token_usage: {
+        Row: {
+          id: string;
+          day: string;
+          task: string;
+          provider: string;
+          model: string;
+          calls: number;
+          input_tokens: number;
+          output_tokens: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          day: string;
+          task: string;
+          provider: string;
+          model: string;
+          calls?: number;
+          input_tokens?: number;
+          output_tokens?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          day?: string;
+          task?: string;
+          provider?: string;
+          model?: string;
+          calls?: number;
+          input_tokens?: number;
+          output_tokens?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       usage_daily: {
         Row: {
           id: string;
@@ -64,6 +139,7 @@ export type Database = {
       };
       app_notifications: {
         Row: {
+          params: Json;
           body: string;
           created_at: string;
           href: string | null;
@@ -76,6 +152,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          params?: Json;
           body?: string;
           created_at?: string;
           href?: string | null;
@@ -88,6 +165,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          params?: Json;
           body?: string;
           created_at?: string;
           href?: string | null;
@@ -1345,6 +1423,7 @@ export type Database = {
       };
       decisions: {
         Row: {
+          scenarios: Json;
           evidence_mode: boolean;
           evidence_notes: string;
 
@@ -1363,6 +1442,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          scenarios?: Json;
           board?: Json;
           chosen_option_id?: string | null;
           context?: Json;
@@ -1378,6 +1458,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          scenarios?: Json;
           board?: Json;
           chosen_option_id?: string | null;
           context?: Json;
@@ -2579,6 +2660,7 @@ export type Database = {
       platform_settings: {
         Row: {
           feature_flags: Json;
+          premium_monthly_cap: number;
           cancel_fee_pct: number;
           commission_rate: number;
           created_at: string;
@@ -2592,6 +2674,7 @@ export type Database = {
         };
         Insert: {
           feature_flags?: Json;
+          premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;
@@ -2604,6 +2687,7 @@ export type Database = {
         };
         Update: {
           feature_flags?: Json;
+          premium_monthly_cap?: number;
           cancel_fee_pct?: number;
           commission_rate?: number;
           created_at?: string;
