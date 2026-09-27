@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Lang } from "@/lib/i18n";
+import { categoryLabels, type Lang } from "@/lib/i18n";
 import type { Dict } from "@/lib/i18n.dict";
 import { bangkokDateAtHour, todayInBangkok } from "@/lib/time";
 
@@ -18,10 +18,11 @@ export type DocAnalysisResult = {
   needsAction: boolean;
   isWarranty?: boolean;
   warrantyUntil?: string | null;
+  /** kind and category arrive as plain strings; see normaliseLines. */
   lineItems?: Array<{
     title: string;
     amount: number;
-    kind: "expense" | "income";
+    kind: string;
     on: string | null;
     category: string;
   }>;
@@ -82,6 +83,29 @@ export function routingNotes(
   }
   if (result.routed.includes("reminder")) notes.push(t.routedToTasks);
   return notes;
+}
+
+const CATEGORY_KEYS = new Set(Object.keys(categoryLabels));
+
+/**
+ * The line items, with the two free-text fields pinned back to known values.
+ *
+ * They are strings in the schema because Gemini refused the version with
+ * enums in it, so anything could come back. A category the app does not know
+ * would render as a raw slug in the list, and a row that is neither "expense"
+ * nor "income" has to land somewhere - money out is the safer guess for a
+ * statement, and the user can flip it from the card.
+ */
+function normaliseLines(result: DocAnalysisResult) {
+  return (result.lineItems ?? [])
+    .filter((l) => Number.isFinite(Number(l.amount)) && Number(l.amount) > 0)
+    .map((l) => ({
+      title: String(l.title ?? "").trim() || result.title,
+      amount: Number(l.amount),
+      kind: String(l.kind ?? "").toLowerCase() === "income" ? "income" : "expense",
+      on: /^\d{4}-\d{2}-\d{2}$/.test(String(l.on ?? "")) ? String(l.on) : null,
+      category: CATEGORY_KEYS.has(String(l.category)) ? String(l.category) : result.category,
+    }));
 }
 
 /** Thrown when the AI step fails; the row stays as status='failed' with its file so the user can retry or delete. */
@@ -229,7 +253,7 @@ async function analyzeAndFinalize(
   // line the user wrote down, which is the reason they keep the statement at
   // all - so when the AI found individual lines, those are what get filed and
   // the summary row is skipped.
-  const lines = (result.lineItems ?? []).filter((l) => Number(l.amount) > 0);
+  const lines = normaliseLines(result);
   if (lines.length > 0) {
     const expenses = lines.filter((l) => l.kind === "expense");
     const incomes = lines.filter((l) => l.kind === "income");
