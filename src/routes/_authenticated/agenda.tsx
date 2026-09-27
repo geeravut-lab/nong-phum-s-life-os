@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, List, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
+import { CalendarDays, Download, List, Loader2, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
 import { formatDay } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import {
   aiEditAgendaItem,
   listUnifiedAgenda,
@@ -184,6 +185,43 @@ function AgendaPage() {
   const selectedDayItems =
     view === "month" || view === "day" ? (byDay.get(localDayKey(cursor)) ?? []) : items;
 
+  // Whatever the current view is showing: the day in day view, the month in
+  // month view, the whole window in list view. Exporting everything from a
+  // page that is deliberately showing one day would be the wrong file.
+  const exportCsv = () => {
+    if (selectedDayItems.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    const rows = [...selectedDayItems]
+      .sort((a, b) => (a.startsAt < b.startsAt ? -1 : a.startsAt > b.startsAt ? 1 : 0))
+      .map((it) => [
+        formatDay(new Date(it.startsAt), lang, true),
+        it.endsAt ? formatDay(new Date(it.endsAt), lang, true) : "",
+        sourceLabel(it.source),
+        it.title,
+        it.detail,
+        it.meta.assigneeLabel ?? "",
+        it.meta.amount ?? "",
+        it.status,
+      ]);
+    downloadCsv(
+      `lifeos-agenda-${view}`,
+      [
+        t.csvStart,
+        t.csvEnd,
+        t.csvSource,
+        t.csvTitle,
+        t.note,
+        t.r4Assignee,
+        t.csvAmount,
+        t.csvStatus,
+      ],
+      rows,
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
+
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl px-4 py-6">
@@ -194,7 +232,11 @@ function AgendaPage() {
               {t.agendaSub ?? "งาน · ครอบครัว · เอกสาร · ช่วยฉันที"}
             </p>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <Button variant="outline" size="sm" onClick={exportCsv} className="mr-1">
+              <Download className="mr-1.5 size-4" />
+              {t.exportCsv}
+            </Button>
             {(
               [
                 ["list", t.agendaViewList ?? "รายการ"],

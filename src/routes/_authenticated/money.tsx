@@ -5,7 +5,7 @@ import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Download, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PhumQuickBar } from "@/components/PhumQuickBar";
@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
 import { formatDay, formatMoney, toDateInput } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv";
 import { APP_TIME_ZONE, APP_UTC_OFFSET, bangkokDateTime, bangkokMonthRange } from "@/lib/time";
 
 const hm = new Intl.DateTimeFormat("en-GB", {
@@ -155,6 +156,46 @@ function MoneyPage() {
     };
   }, [shownExpenses, shownIncomes, rows]);
 
+  // Both sides of the ledger for the chosen period, not just the open tab:
+  // a month's money is one question, and a file with only the expenses in it
+  // would have to be exported twice and stitched together.
+  const exportCsv = () => {
+    const all = [
+      ...shownExpenses.map((r) => ({ r, kind: "expense" as const })),
+      ...shownIncomes.map((r) => ({ r, kind: "income" as const })),
+    ];
+    if (all.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    const rows = all
+      .map(({ r, kind }) => {
+        const row = r as unknown as Record<string, unknown>;
+        const day = String(kind === "expense" ? row["spent_on"] : row["received_on"]);
+        const at = (kind === "expense" ? row["spent_at"] : row["received_at"]) as string | null;
+        return {
+          day,
+          cells: [
+            day,
+            at ? hm.format(new Date(at)) : "",
+            kind === "expense" ? t.tabExpense : t.tabIncome,
+            String(row["title"] ?? ""),
+            Number(row["amount"] ?? 0),
+            catLabel(String(row["category"] ?? ""), lang),
+            row["source_document_id"] ? t.docsTitle : "",
+          ],
+        };
+      })
+      .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0))
+      .map((x) => x.cells);
+    downloadCsv(
+      `lifeos-money-${range}`,
+      [t.csvDate, t.csvTime, t.csvKind, t.csvTitle, t.csvAmount, t.csvCategory, t.csvSource],
+      rows,
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
+
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     const { data: userData } = await supabase.auth.getUser();
@@ -201,10 +242,16 @@ function MoneyPage() {
           <h1 className="text-xl font-semibold tracking-tight">{t.moneyTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t.moneySub}</p>
         </div>
-        <Button onClick={() => setOpen((v) => !v)}>
-          <Plus className="mr-1.5 size-4" />
-          {tab === "expense" ? t.addExpense : t.addIncome}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={exportCsv}>
+            <Download className="mr-1.5 size-4" />
+            {t.exportCsv}
+          </Button>
+          <Button onClick={() => setOpen((v) => !v)}>
+            <Plus className="mr-1.5 size-4" />
+            {tab === "expense" ? t.addExpense : t.addIncome}
+          </Button>
+        </div>
       </header>
 
       <PhumQuickBar focus={tab === "expense" ? "expenses" : "incomes"} />

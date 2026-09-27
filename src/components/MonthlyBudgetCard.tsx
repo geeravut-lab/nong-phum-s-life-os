@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { errorText } from "@/lib/errors";
+import { getBudgetRule } from "@/lib/pricing.functions";
 
 /**
  * A monthly ceiling the user sets for themselves.
@@ -23,6 +24,14 @@ export function MonthlyBudgetCard() {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // The threshold the warning actually uses, not a number in a sentence: an
+  // admin moving the rule to 70% used to leave everyone reading "80%".
+  const { data: rule } = useQuery({
+    queryKey: ["budget-rule"],
+    queryFn: () => getBudgetRule(),
+    staleTime: 5 * 60_000,
+  });
 
   const q = useQuery({
     queryKey: ["monthly-budget", user?.id],
@@ -63,7 +72,11 @@ export function MonthlyBudgetCard() {
   return (
     <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
       <Label htmlFor="monthly-budget">{t.budgetTitle}</Label>
-      <p className="mt-1 mb-2 text-xs text-muted-foreground">{t.budgetSub}</p>
+      <p className="mt-1 mb-2 text-xs text-muted-foreground">
+        {rule && !rule.enabled
+          ? t.budgetSubOff
+          : t.budgetSub.replace("{pct}", String(rule?.percent ?? 80))}
+      </p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           id="monthly-budget"
