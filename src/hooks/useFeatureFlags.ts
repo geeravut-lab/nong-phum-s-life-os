@@ -28,14 +28,26 @@ export function usePlatformSettings() {
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await supabase
+      // manual_url arrives in a migration, and the site deploys before anyone
+      // runs it. PostgREST rejects the whole select for one unknown column, so
+      // asking for both would take the feature flags down in that window -
+      // every switch would read as on until the migration landed. Ask for both,
+      // and on failure fall back to the column that has always been there.
+      const both = await supabase
         .from("platform_settings")
         .select("feature_flags, manual_url")
         .maybeSingle();
-      return {
-        flags: ((data?.feature_flags ?? {}) as FlagMap) ?? {},
-        manualUrl: ((data?.manual_url ?? "") as string).trim(),
-      };
+      if (!both.error) {
+        return {
+          flags: ((both.data?.feature_flags ?? {}) as FlagMap) ?? {},
+          manualUrl: ((both.data?.manual_url ?? "") as string).trim(),
+        };
+      }
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("feature_flags")
+        .maybeSingle();
+      return { flags: ((data?.feature_flags ?? {}) as FlagMap) ?? {}, manualUrl: "" };
     },
   });
 }
