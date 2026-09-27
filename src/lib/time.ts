@@ -69,3 +69,25 @@ export function bangkokDateTime(
     : nowTimeInBangkok(now);
   return new Date(`${day}T${time}:00${APP_UTC_OFFSET}`).toISOString();
 }
+
+/**
+ * A datetime the model produced, read as Bangkok wall-clock whatever zone it
+ * tagged on.
+ *
+ * The prompt asks for +07:00 and the model mostly obliges, but not always:
+ * moving a 09:00 reminder to another day came back as ...T09:00:00Z, and
+ * new Date() then stored 02:00 Bangkok - the right clock face, seven hours
+ * wrong. Every time in this app is Bangkok time, and a person who says nine
+ * in the morning means nine in the morning, so the wall-clock is what is kept
+ * and the zone is re-applied. An explicit numeric offset is trusted, because
+ * that is the model doing as it was asked.
+ */
+export function bangkokIsoFromLoose(value: string): string {
+  const v = value.trim();
+  if (/[+-]\d{2}:?\d{2}$/.test(v)) return new Date(v).toISOString();
+  const naive = v.endsWith("Z") ? v.slice(0, -1) : v;
+  const parsed = new Date(`${naive}${APP_UTC_OFFSET}`);
+  // Anything unparseable falls back to the original rather than becoming
+  // Invalid Date and losing the reminder entirely.
+  return Number.isNaN(parsed.getTime()) ? new Date(v).toISOString() : parsed.toISOString();
+}
