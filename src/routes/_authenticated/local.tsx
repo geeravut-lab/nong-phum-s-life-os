@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { parseLocalQuery } from "@/lib/local.functions";
+import { deleteTripPlan, listTripPlans, saveTripPlan } from "@/lib/trip-plans.functions";
 import { listUpcomingLocalEvents, type LocalEventRow } from "@/lib/local-events.functions";
 import { mapsRouteUrl, orderStops, routeDistanceKm, type Stop } from "@/lib/itinerary";
 import {
@@ -43,6 +44,10 @@ export const Route = createFileRoute("/_authenticated/local")({
   head: () => ({ meta: routeMeta("local") }),
   component: LocalPage,
 });
+
+const PLAN_DRAFT_KEY = "lifeos.plan.draft";
+
+type SavedPlan = { id: string; name: string; stops: Stop[]; updated_at: string };
 
 /** 24-hour clock in both languages - th-TH and en-GB are both h23. */
 function hhmm(d: Date, lang: "th" | "en") {
@@ -73,6 +78,9 @@ function LocalPage() {
   const runParse = useServerFn(parseLocalQuery);
   const runGoogle = useServerFn(searchGooglePlaces);
   const runEvents = useServerFn(listUpcomingLocalEvents);
+  const runListPlans = useServerFn(listTripPlans);
+  const runSavePlan = useServerFn(saveTripPlan);
+  const runDeletePlan = useServerFn(deleteTripPlan);
   const [googlePlaces, setGooglePlaces] = useState<GooglePlaceItem[]>([]);
   const [googleMsg, setGoogleMsg] = useState<string | null>(null);
   // What the detail sheet is showing. A card is a summary by necessity - the
@@ -107,10 +115,35 @@ function LocalPage() {
   // "near home" stops meaning anything much past this.
   const MAX_RADIUS_KM = 20;
   const [radiusKm, setRadiusKm] = useState(5);
-  const [openOnly, setOpenOnly] = useState(false);
+  // On by default: somewhere that is shut is not an answer to "where shall we
+  // go", which is the question this page exists for.
+  const [openOnly, setOpenOnly] = useState(true);
   // The itinerary is a local selection: places and events the user picked for
   // one outing. Not persisted - it is a scratch plan, not a saved document.
-  const [plan, setPlan] = useState<Stop[]>([]);
+  // The plan survives leaving the page. It used to be state and nothing else,
+  // so walking off to check an opening time - exactly when people leave - threw
+  // it away. sessionStorage rather than the database because this is the plan
+  // being assembled, not one the user has decided to keep; saving is explicit.
+  const [plan, setPlan] = useState<Stop[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.sessionStorage.getItem(PLAN_DRAFT_KEY);
+      return raw ? (JSON.parse(raw) as Stop[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [planName, setPlanName] = useState("");
+  const [planBusy, setPlanBusy] = useState(false);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(PLAN_DRAFT_KEY, JSON.stringify(plan));
+    } catch {
+      // A private window with storage blocked still gets a working page; it
+      // just cannot remember the plan between navigations.
+    }
+  }, [plan]);
   // Google Maps takes 9 waypoints plus a destination on a shared link, so a
   // plan longer than 10 could not be opened in full.
   const MAX_STOPS = 10;
@@ -127,7 +160,10 @@ function LocalPage() {
         .from("local_places")
         .select("*")
         .eq("is_active", true)
-        // is_public: show shared places (default true)
+        // Sharing is enforced by the row policy, not here: a filter in the
+        // query would be a suggestion, and this comment used to claim one that
+        // did not exist. The owner and admins still see their own unshared
+        // places through that policy.
         .order("is_promoted", { ascending: false })
         .order("rating", { ascending: false })
         .limit(100);
@@ -189,7 +225,11 @@ function LocalPage() {
       });
     }
     if (openOnly) {
-      list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) === true);
+      // Hide what is known to be shut, not everything unproven. isOpenNow
+      // returns null when a place has no hours on file, and treating that as
+      // closed would empty the page of every shop whose owner has not filled
+      // the form in - which is not the same thing as being closed.
+      list = list.filter((p) => isOpenNow(p.open_hours as Record<string, string>) !== false);
     }
     const withinRadius = <T extends { distanceKm?: number | null }>(rows: T[]) => {
       if (!coords) return rows;
@@ -386,6 +426,26 @@ function LocalPage() {
       next.splice(to, 0, item!);
       return next;
     });
+  };
+
+  const savedPlansQ = useQuery({
+    queryKey: ["trip-plans"],
+    queryFn: () => runListPlans() as Promise<{ plans: SavedPlan[] }>,
+  });
+
+  const onSavePlan = async () => {
+    if (plan.length === 0 || !planName.trim()) return;
+    setPlanBusy(true);
+    try {
+      await runSavePlan({ data: { name: planName.trim(), stops: plan } });
+      setPlanName("");
+      toast.success(t.planSaved);
+      void qc.invalidateQueries({ queryKey: ["trip-plans"] });
+    } catch (e) {
+      toast.error(errorText(e, t));
+    } finally {
+      setPlanBusy(false);
+    }
   };
 
   const orderedPlan = useMemo(
@@ -657,8 +717,66 @@ function LocalPage() {
                 {t.planClear}
               </Button>
             </div>
+
+            {/* Saving is explicit: the draft above is what the user is still
+                assembling, a saved plan is one they decided to keep. */}
+            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3 sm:flex-row">
+              <Input
+                placeholder={t.planSaveName}
+                value={planName}
+                onChange={(e) => setPlanName(e.target.value)}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={planBusy || !planName.trim()}
+                onClick={() => void onSavePlan()}
+              >
+                {t.planSave}
+              </Button>
+            </div>
           </>
         )}
+
+        {(savedPlansQ.data?.plans ?? []).length > 0 ? (
+          <div className="mt-3 border-t border-border pt-3">
+            <h3 className="text-xs font-semibold">{t.planSavedTitle}</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {(savedPlansQ.data?.plans ?? []).map((sp) => (
+                <li key={sp.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    {sp.name}{" "}
+                    <span className="text-xs text-muted-foreground">({sp.stops.length})</span>
+                  </span>
+                  <span className="flex shrink-0 gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setPlan(sp.stops);
+                        setManualOrder(true);
+                      }}
+                    >
+                      {t.planLoad}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={planBusy}
+                      onClick={async () => {
+                        if (!window.confirm(t.planDeleteConfirm)) return;
+                        await runDeletePlan({ data: { id: sp.id } });
+                        void qc.invalidateQueries({ queryKey: ["trip-plans"] });
+                      }}
+                    >
+                      {t.planDelete}
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
 
       {(dealsQ.data ?? []).length > 0 && (
@@ -712,79 +830,83 @@ function LocalPage() {
               <p className="text-xs text-muted-foreground">{errorText(googleMsg, t)}</p>
             ) : null}
             <ul className="space-y-2">
-              {googlePlaces.map((g) => (
-                <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="font-medium">{g.name}</span>
-                      <p className="text-xs text-muted-foreground">{g.category}</p>
+              {googlePlaces
+                .filter((g) => !openOnly || g.openNow !== false)
+                .map((g) => (
+                  <li key={g.id} className="rounded-xl border border-border bg-card p-3 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-medium">{g.name}</span>
+                        <p className="text-xs text-muted-foreground">{g.category}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {g.rating != null ? (
+                          <span className="flex items-center gap-1">
+                            <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                            {g.rating.toFixed(1)}
+                            {g.ratingCount != null ? (
+                              <span className="text-xs text-muted-foreground">
+                                ({g.ratingCount})
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : null}
+                        {g.openNow === true ? (
+                          <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">
+                            {t.localOpenNow}
+                          </Badge>
+                        ) : g.openNow === false ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            {t.localClosed}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {g.rating != null ? (
-                        <span className="flex items-center gap-1">
-                          <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                          {g.rating.toFixed(1)}
-                          {g.ratingCount != null ? (
-                            <span className="text-xs text-muted-foreground">({g.ratingCount})</span>
-                          ) : null}
-                        </span>
-                      ) : null}
-                      {g.openNow === true ? (
-                        <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">
-                          {t.localOpenNow}
-                        </Badge>
-                      ) : g.openNow === false ? (
-                        <Badge variant="outline" className="text-[10px]">
-                          {t.localClosed}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{g.address}</p>
-                  {g.hoursToday ? (
-                    <p className="text-xs text-muted-foreground">{g.hoursToday}</p>
-                  ) : null}
-                  {g.tags.length > 0 ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {g.tags.slice(0, 6).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {g.mapsUrl ? (
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={g.mapsUrl} target="_blank" rel="noreferrer">
-                          <ExternalLink className="mr-1 size-3.5" />
-                          {t.localMap}
-                        </a>
-                      </Button>
+                    <p className="text-xs text-muted-foreground">{g.address}</p>
+                    {g.hoursToday ? (
+                      <p className="text-xs text-muted-foreground">{g.hoursToday}</p>
                     ) : null}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={inPlan(g.id)}
-                      onClick={() =>
-                        addToPlan({
-                          id: g.id,
-                          title: g.name,
-                          lat: g.lat,
-                          lng: g.lng,
-                          address: g.address,
-                          venue: g.name,
-                          // Google gave us the id, so Maps can be told exactly
-                          // which shop the name refers to.
-                          placeId: g.googlePlaceId,
-                        })
-                      }
-                    >
-                      {inPlan(g.id) ? t.evtInPlan : t.evtAddToPlan}
-                    </Button>
-                  </div>
-                </li>
-              ))}
+                    {g.tags.length > 0 ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {g.tags.slice(0, 6).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {g.mapsUrl ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={g.mapsUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="mr-1 size-3.5" />
+                            {t.localMap}
+                          </a>
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={inPlan(g.id)}
+                        onClick={() =>
+                          addToPlan({
+                            id: g.id,
+                            title: g.name,
+                            lat: g.lat,
+                            lng: g.lng,
+                            address: g.address,
+                            venue: g.name,
+                            // Google gave us the id, so Maps can be told exactly
+                            // which shop the name refers to.
+                            placeId: g.googlePlaceId,
+                          })
+                        }
+                      >
+                        {inPlan(g.id) ? t.evtInPlan : t.evtAddToPlan}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
             </ul>
           </section>
         )}

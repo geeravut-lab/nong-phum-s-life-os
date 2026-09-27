@@ -114,13 +114,6 @@ export function routeDistanceKm(
  */
 export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number } | null): string {
   const MAX_WAYPOINTS = 9;
-  // Coordinates route exactly; an address is a decent lookup. A title is the
-  // last resort and often useless to Maps ("แข่งกิน" is an event name, not a
-  // place), so it is only used when there is nothing else.
-  const key = (s: Stop) =>
-    s.lat != null && s.lng != null
-      ? `${s.lat},${s.lng}`
-      : s.address?.trim() || s.venue?.trim() || s.title;
 
   if (ordered.length === 0) return "https://www.google.com/maps";
 
@@ -130,22 +123,41 @@ export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number }
   // with an origin and no destination, which opened Maps on a blank route.
   const rest = [...ordered];
   const last = rest.pop()!;
-  const dest = destinationFor(last);
-  const points = rest.map(key).filter(Boolean);
-  const origin = from ? `${from.lat},${from.lng}` : points.length > 0 ? points.shift() : undefined;
+  const dest = pointFor(last);
+
+  // Every stop is named the same way, not just the destination. Naming only
+  // the last one is what made a plan wrong as soon as the shop was not last:
+  // a middle stop fell back to its address, and for a place whose address is
+  // only "นนทบุรี" that is where Maps sent the driver. Coordinates are no
+  // better in the middle - Maps labels a bare pin with whatever business it
+  // finds nearest, which is how วัดสวนแก้ว came out as a shop across the road.
+  const waypoints = rest.map(pointFor);
+  const origin: { text: string; placeId?: string } | undefined = from
+    ? { text: `${from.lat},${from.lng}` }
+    : waypoints.length > 0
+      ? waypoints.shift()
+      : undefined;
+  const kept = waypoints.slice(0, MAX_WAYPOINTS);
 
   const params = new URLSearchParams({ api: "1" });
-  if (origin) params.set("origin", origin);
+  if (origin) params.set("origin", origin.text);
+  if (origin?.placeId) params.set("origin_place_id", origin.placeId);
   params.set("destination", dest.text);
   if (dest.placeId) params.set("destination_place_id", dest.placeId);
-  if (points.length > 0) {
-    params.set("waypoints", points.slice(0, MAX_WAYPOINTS).join("|"));
+  if (kept.length > 0) {
+    params.set("waypoints", kept.map((p) => p.text).join("|"));
+    // Google matches waypoint_place_ids to waypoints by position, so the list
+    // is only sent when every waypoint has an id - a partial list would shift
+    // ids onto the wrong stops, which is worse than sending none.
+    if (kept.every((p) => p.placeId)) {
+      params.set("waypoint_place_ids", kept.map((p) => p.placeId!).join("|"));
+    }
   }
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
 /**
- * How the final stop is named to Maps.
+ * How a stop is named to Maps.
  *
  * Coordinates route exactly but open an unlabelled pin, and the user wants to
  * see which shop they are heading to - so the venue name is used whenever it
@@ -154,7 +166,7 @@ export function mapsRouteUrl(ordered: Stop[], from: { lat: number; lng: number }
  * the same chain. A name on its own is not enough to route by, so without
  * either of those the coordinates win over the label.
  */
-function destinationFor(s: Stop): { text: string; placeId?: string } {
+function pointFor(s: Stop): { text: string; placeId?: string } {
   const name = s.venue?.trim() || null;
   const address = s.address?.trim() || null;
   const placeId = s.placeId?.trim() || null;

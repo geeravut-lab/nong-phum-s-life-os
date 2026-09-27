@@ -26,6 +26,8 @@ export const APP_ERROR_CODES = [
   "webhook_limit",
   "feature_off",
   "ai_suspended",
+  "trial_already_used",
+  "trip_plan_limit",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];
