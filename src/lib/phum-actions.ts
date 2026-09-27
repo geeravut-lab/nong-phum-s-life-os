@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { todayInBangkok } from "@/lib/time";
+import { bangkokDateTime, todayInBangkok } from "@/lib/time";
 
 export type PhumActionPayload = {
   type: string;
@@ -11,6 +11,8 @@ export type PhumActionPayload = {
   category?: string | null;
   spentOn?: string | null;
   receivedOn?: string | null;
+  /** HH:mm, only when the user said a time of day. */
+  atTime?: string | null;
   query?: string | null;
 };
 
@@ -64,7 +66,12 @@ export async function applyPhumAction(
       title: action.title ?? "-",
       amount: action.amount,
       category: action.category ?? "other",
+      // The date still drives monthly totals and the budget, so it keeps its
+      // own column. spent_at carries the time of day the user actually said,
+      // filling in today and the current clock for whichever half they left
+      // out - so "80 on lunch at 5.15" lands at 17:15 today, not at midnight.
       spent_on: action.spentOn ?? today(),
+      spent_at: bangkokDateTime(action.spentOn, action.atTime),
     });
     if (error) throw error;
     return { kind: "expense", label: `${action.title ?? "-"} · ${action.amount}` };
@@ -77,6 +84,7 @@ export async function applyPhumAction(
       amount: action.amount,
       category: action.category ?? "other",
       received_on: action.receivedOn ?? action.spentOn ?? today(),
+      received_at: bangkokDateTime(action.receivedOn ?? action.spentOn, action.atTime),
     });
     if (error) throw error;
     return { kind: "income", label: `${action.title ?? "-"} · ${action.amount}` };

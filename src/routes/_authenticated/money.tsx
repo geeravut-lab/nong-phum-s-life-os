@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
-import { formatMoney, toDateInput } from "@/lib/format";
+import { formatDay, formatMoney, toDateInput } from "@/lib/format";
+import { APP_UTC_OFFSET, bangkokDateTime } from "@/lib/time";
 
 export const Route = createFileRoute("/_authenticated/money")({
   head: () => ({ meta: routeMeta("money") }),
@@ -84,6 +85,12 @@ function MoneyPage() {
         tab === "expense"
           ? (r as { spent_on: string }).spent_on
           : (r as { received_on: string }).received_on,
+      // Only rows saved since the app started keeping a time have one. The
+      // rest show the day alone rather than a midnight that never happened.
+      at:
+        tab === "expense"
+          ? ((r as { spent_at?: string | null }).spent_at ?? null)
+          : ((r as { received_at?: string | null }).received_at ?? null),
     }));
   }, [tab, expenses, incomes]);
 
@@ -111,8 +118,14 @@ function MoneyPage() {
     };
     const { error } =
       tab === "expense"
-        ? await supabase.from("expenses").insert({ ...base, spent_on: date })
-        : await supabase.from("incomes").insert({ ...base, received_on: date });
+        ? await supabase
+            .from("expenses")
+            // The form asks for a day, not a clock, so the time is now - the
+            // same rule the chat uses when someone names a date and no time.
+            .insert({ ...base, spent_on: date, spent_at: bangkokDateTime(date, null) })
+        : await supabase
+            .from("incomes")
+            .insert({ ...base, received_on: date, received_at: bangkokDateTime(date, null) });
     if (error) {
       toast.error(error.message);
       return;
@@ -240,7 +253,10 @@ function MoneyPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{r.title}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {catLabel(r.category, lang)} · {r.date}
+                      {catLabel(r.category, lang)} ·{" "}
+                      {r.at
+                        ? formatDay(new Date(r.at), lang, true)
+                        : formatDay(new Date(`${r.date}T00:00:00${APP_UTC_OFFSET}`), lang)}
                     </p>
                     <div className="mt-1.5">
                       <AttachmentControl

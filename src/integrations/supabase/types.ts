@@ -793,6 +793,7 @@ export type Database = {
           note: string | null;
           source_document_id: string | null;
           spent_on: string;
+          spent_at: string | null;
           title: string;
           updated_at: string;
           user_id: string;
@@ -808,6 +809,7 @@ export type Database = {
           note?: string | null;
           source_document_id?: string | null;
           spent_on?: string;
+          spent_at?: string | null;
           title: string;
           updated_at?: string;
           user_id: string;
@@ -823,6 +825,7 @@ export type Database = {
           note?: string | null;
           source_document_id?: string | null;
           spent_on?: string;
+          spent_at?: string | null;
           title?: string;
           updated_at?: string;
           user_id?: string;
@@ -1156,6 +1159,7 @@ export type Database = {
           is_shared: boolean;
           note: string | null;
           received_on: string;
+          received_at: string | null;
           source_document_id: string | null;
           title: string;
           updated_at: string;
@@ -1170,6 +1174,7 @@ export type Database = {
           is_shared?: boolean;
           note?: string | null;
           received_on?: string;
+          received_at?: string | null;
           source_document_id?: string | null;
           title: string;
           updated_at?: string;
@@ -1184,6 +1189,7 @@ export type Database = {
           is_shared?: boolean;
           note?: string | null;
           received_on?: string;
+          received_at?: string | null;
           source_document_id?: string | null;
           title?: string;
           updated_at?: string;

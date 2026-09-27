@@ -126,6 +126,16 @@ const ActionSchema = z.object({
         category: z.enum(CATEGORIES).nullable(),
         spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
         receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
+        // Time of day is separate from the date and separately optional,
+        // because people give one without the other: "ate at 5.15" has no date,
+        // "I paid it yesterday" has no clock. The app fills whichever is
+        // missing with the current one rather than guessing midnight.
+        atTime: z
+          .string()
+          .nullable()
+          .describe(
+            "HH:mm, 24-hour, ONLY when the user states a time of day for an expense or income. Null when they did not.",
+          ),
         query: z.string().nullable().describe("Search text for documents"),
       }),
     )
@@ -243,6 +253,7 @@ BENEFIT PROFILE: ${JSON.stringify(ctx.benefitProfile)}
 BENEFIT STATUSES: ${JSON.stringify(ctx.myBenefits)}
 
 The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
+For add_expense and add_income: fill spentOn/receivedOn only when the user names a day, and atTime only when they name a clock time ("ตอนห้าโมงสิบห้า" is 17:15, "เมื่อเช้า 8 โมง" is 08:00). Leave either null when they did not say it - the app fills the missing half with today and with the current time, and a null is what tells it to.
 Confirm ONLY what is in your actions list. If the user asked for something you did not return an action for, say plainly that you did not do that part rather than claiming you did — a reply that reports a reminder the app never saved is worse than one that admits the gap.`,
       messages: [
         ...(history.data ?? []).map((m) => ({
