@@ -106,13 +106,30 @@ const ActionSchema = z.object({
       z.object({
         type: z.enum([
           "create_reminder",
+          "update_reminder",
+          "delete_reminder",
           "add_expense",
+          "update_expense",
+          "delete_expense",
           "add_income",
+          "update_income",
+          "delete_income",
           "search_documents",
           "daily_brief",
           "list_benefits",
           "none",
         ]),
+        // Which existing row to change or remove. It must be an id copied from
+        // the lists in the prompt - the model has no way to invent one that
+        // resolves, and the row policy refuses another person's id anyway.
+        targetId: z
+          .string()
+          .nullable()
+          .describe(
+            "The id of the row to update or delete, copied exactly from REMINDERS / EXPENSES / INCOMES. Null for anything else.",
+          ),
+        /** Reminders only: 'done' closes it, 'open' reopens it. */
+        status: z.enum(["open", "done"]).nullable(),
         title: z.string().nullable(),
         dueAt: z
           .string()
@@ -153,20 +170,20 @@ async function loadContext(supabase: Db, userId: string) {
   const [reminders, expenses, incomes, documents, benefitProfile, myBenefits] = await Promise.all([
     supabase
       .from("reminders")
-      .select("title, due_at, priority, status")
+      .select("id, title, due_at, priority, status")
       .eq("user_id", userId)
       .eq("status", "open")
       .order("due_at", { ascending: true })
       .limit(15),
     supabase
       .from("expenses")
-      .select("title, amount, category, spent_on")
+      .select("id, title, amount, category, spent_on, spent_at")
       .eq("user_id", userId)
       .order("spent_on", { ascending: false })
       .limit(15),
     supabase
       .from("incomes")
-      .select("title, amount, category, received_on")
+      .select("id, title, amount, category, received_on, received_at")
       .eq("user_id", userId)
       .order("received_on", { ascending: false })
       .limit(15),
@@ -236,6 +253,8 @@ You route the user's request into their Life OS. One message can ask for
 several things - return one action for each, in the order asked. Return an
 empty list when the message needs no record kept:
 - create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
+- update_reminder / delete_reminder: the user wants to change or remove a task that already exists. Put its id in targetId and fill ONLY the fields that change; leave the rest null and they stay as they are. Use update_reminder with status 'done' when they say a task is finished.
+- update_expense / delete_expense / update_income / delete_income: the same, for a money row that already exists.
 - add_expense: the user reports spending money (fill title, amount, category, spentOn)
 - add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
 - search_documents: the user asks about something in their stored documents
@@ -243,6 +262,8 @@ empty list when the message needs no record kept:
 - daily_brief: the user asks what's going on today / what's coming up
 - none: casual conversation or a question you can answer from the context below
 ${focusLine}
+
+To change or remove something, find it in the lists below by what the user called it and copy its id into targetId. Every row carries an id for exactly this. If more than one row could be meant, do NOT guess - return no action and ask which one.
 
 Answer questions using ONLY this data about the user; if it isn't there, say you don't have it yet.
 REMINDERS: ${JSON.stringify(ctx.reminders)}

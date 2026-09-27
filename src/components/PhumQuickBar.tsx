@@ -48,7 +48,11 @@ export function PhumQuickBar({ focus }: { focus: Focus }) {
       const out = await ask({ data: { message: text, lang, focus } });
       const applied = await applyPhumActions(out.actions, uid);
       if (applied.length > 0) {
-        toast.success(applied.map((a) => t[savedLabel[a.kind]]).join(" · "));
+        for (const a of applied) {
+          const verb =
+            a.verb === "saved" ? t.phumSaved : a.verb === "updated" ? t.phumUpdated : t.phumDeleted;
+          toast.success(`${verb} — ${t[savedLabel[a.kind]]}${a.label ? ` · ${a.label}` : ""}`);
+        }
         qc.invalidateQueries();
       } else {
         toast.info(out.reply);
