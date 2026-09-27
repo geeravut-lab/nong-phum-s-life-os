@@ -114,6 +114,9 @@ const ActionSchema = z.object({
           "add_income",
           "update_income",
           "delete_income",
+          "family_assign_task",
+          "family_add_event",
+          "family_add_routine",
           "search_documents",
           "daily_brief",
           "list_benefits",
@@ -130,6 +133,14 @@ const ActionSchema = z.object({
           ),
         /** Reminders only: 'done' closes it, 'open' reopens it. */
         status: z.enum(["open", "done"]).nullable(),
+        /**
+         * The family member an action is about - who a task goes to, whose
+         * routine is being tracked. An id copied from FAMILY.members.
+         */
+        memberId: z.string().nullable(),
+        /** family_add_routine: how often it is expected, and the slack allowed. */
+        everyDays: z.number().int().nullable(),
+        graceDays: z.number().int().nullable(),
         title: z.string().nullable(),
         dueAt: z
           .string()
@@ -204,6 +215,32 @@ async function loadContext(supabase: Db, userId: string) {
       .eq("user_id", userId),
   ]);
 
+  // The family, and who is in it by name. Without this "มอบหมายให้พี่ต้น" has
+  // nothing to resolve against: the model would have to invent a user id, and
+  // the server function would rightly refuse it.
+  const membership = await supabase
+    .from("family_members")
+    .select("family_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  const familyId = (membership.data?.family_id as string | undefined) ?? null;
+
+  let family: { id: string; members: Array<{ id: string; name: string }> } | null = null;
+  if (familyId) {
+    const { data: members } = await supabase
+      .from("family_members")
+      .select("user_id, display_name")
+      .eq("family_id", familyId);
+    family = {
+      id: familyId,
+      members: (members ?? []).map((m) => ({
+        id: m.user_id as string,
+        name: (m.display_name as string | null) ?? "",
+      })),
+    };
+  }
+
   return {
     reminders: reminders.data ?? [],
     expenses: expenses.data ?? [],
@@ -211,6 +248,7 @@ async function loadContext(supabase: Db, userId: string) {
     documents: documents.data ?? [],
     benefitProfile: benefitProfile.data ?? null,
     myBenefits: myBenefits.data ?? [],
+    family,
   };
 }
 
@@ -255,6 +293,10 @@ empty list when the message needs no record kept:
 - create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
 - update_reminder / delete_reminder: the user wants to change or remove a task that already exists. Put its id in targetId and fill ONLY the fields that change; leave the rest null and they stay as they are. Use update_reminder with status 'done' when they say a task is finished.
 - update_expense / delete_expense / update_income / delete_income: the same, for a money row that already exists.
+- family_assign_task: give a task to someone at home ("บอกให้ต้นไปจ่ายค่าน้ำวันศุกร์"). Fill title, dueAt, and memberId with that person's id from FAMILY.members. Leave memberId null when they did not say who.
+- family_add_event: a shared appointment on the family calendar ("นัดหมอพ่อวันอังคารบ่ายสอง"). Fill title and dueAt.
+- family_add_routine: track a habit of someone at home ("ช่วยดูให้หน่อยว่าแม่กินยาทุกวัน"). Fill title, memberId, everyDays (how often it should happen) and graceDays (how long before it counts as missed - use 1 or 2 unless they say).
+These three need a family. If FAMILY is null the user is not in one: say so and suggest creating one on the ครอบครัว page instead of returning the action.
 - add_expense: the user reports spending money (fill title, amount, category, spentOn)
 - add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
 - search_documents: the user asks about something in their stored documents
@@ -272,6 +314,7 @@ INCOMES: ${JSON.stringify(ctx.incomes)}
 DOCUMENTS: ${JSON.stringify(ctx.documents)}
 BENEFIT PROFILE: ${JSON.stringify(ctx.benefitProfile)}
 BENEFIT STATUSES: ${JSON.stringify(ctx.myBenefits)}
+FAMILY: ${JSON.stringify(ctx.family)}
 
 The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
 For add_expense and add_income: fill spentOn/receivedOn only when the user names a day, and atTime only when they name a clock time ("ตอนห้าโมงสิบห้า" is 17:15, "เมื่อเช้า 8 โมง" is 08:00). Leave either null when they did not say it - the app fills the missing half with today and with the current time, and a null is what tells it to.

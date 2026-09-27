@@ -189,3 +189,38 @@ export function digestCard(items: FlexReminder[], dayIso: string, appUrl: string
     },
   };
 }
+
+/**
+ * Anything that is not a reminder: a job offer, a budget warning, an admin
+ * asking you to check a slip.
+ *
+ * One shape for all of them on purpose. The row carries a title, a body and
+ * the page it belongs to, which is everything a person needs to decide whether
+ * to open the app - a card per kind would be forty cards to keep in step with
+ * forty call sites.
+ */
+export function noticeCard(
+  n: { title: string; body: string | null; href: string | null },
+  appUrl: string,
+): FlexMessage {
+  const body = (n.body ?? "").trim();
+  return {
+    type: "flex",
+    altText: clip(body ? `${n.title} — ${body}` : n.title, 400),
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: header("น้องภูมิแจ้งเตือน", n.title),
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: body
+          ? [text(clip(body, 300), { size: "sm", wrap: true })]
+          : [text("เปิดแอปเพื่อดูรายละเอียด", { size: "sm", color: MUTED })],
+      },
+      footer: footer(appUrl, "เปิดน้องภูมิ"),
+    },
+  };
+}

@@ -2656,6 +2656,10 @@ export type Database = {
           attempts: number;
           channel: string;
           created_at: string;
+          app_notification_id: string | null;
+          body: string | null;
+          href: string | null;
+          title: string | null;
           digest_date: string | null;
           due_at: string | null;
           error: string | null;
@@ -2671,6 +2675,10 @@ export type Database = {
           attempts?: number;
           channel: string;
           created_at?: string;
+          app_notification_id?: string | null;
+          body?: string | null;
+          href?: string | null;
+          title?: string | null;
           digest_date?: string | null;
           due_at?: string | null;
           error?: string | null;
@@ -2686,6 +2694,10 @@ export type Database = {
           attempts?: number;
           channel?: string;
           created_at?: string;
+          app_notification_id?: string | null;
+          body?: string | null;
+          href?: string | null;
+          title?: string | null;
           digest_date?: string | null;
           due_at?: string | null;
           error?: string | null;

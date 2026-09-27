@@ -20,7 +20,7 @@
 //   timeout / 429      after MAX_ATTEMPTS
 //   409              → LINE already accepted this X-Line-Retry-Key: counts as sent
 import { supabaseAdmin } from "../integrations/supabase/client.server";
-import { digestCard, immediateCard, type FlexReminder } from "./line-flex";
+import { digestCard, immediateCard, noticeCard, type FlexReminder } from "./line-flex";
 import {
   appOpenUrl,
   checkFriend,
@@ -252,12 +252,16 @@ async function usedThisMonth(ctx: LineContext): Promise<number> {
 type LogRow = {
   id: string;
   user_id: string;
-  kind: "immediate" | "digest";
+  kind: "immediate" | "digest" | "app";
   reminder_id: string | null;
   due_at: string | null;
   digest_date: string | null;
   reminder_ids: string[];
   attempts: number;
+  /** 'app' rows carry their own text; the other kinds read reminders. */
+  title: string | null;
+  body: string | null;
+  href: string | null;
 };
 
 async function mark(
@@ -291,7 +295,9 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
 
   const { data: rows, error } = await supabaseAdmin
     .from("notification_log")
-    .select("id, user_id, kind, reminder_id, due_at, digest_date, reminder_ids, attempts")
+    .select(
+      "id, user_id, kind, reminder_id, due_at, digest_date, reminder_ids, attempts, title, body, href",
+    )
     .eq("channel", "line")
     .eq("status", "queued")
     .lt("attempts", MAX_ATTEMPTS)
@@ -336,6 +342,29 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
       continue;
     }
 
+    // An app notification carries its own words, so there is nothing to read
+    // back and nothing that can have gone stale: it reports something that
+    // already happened rather than something still outstanding.
+    if (row.kind === "app") {
+      const message = noticeCard(
+        { title: row.title ?? "", body: row.body, href: row.href },
+        appOpenUrl(row.href ?? "/inbox"),
+      );
+      const res = await pushFlex(ctx.token, link.line_user_id, message, row.id);
+      if (res.ok) {
+        await mark(row, {
+          status: "sent",
+          error: res.duplicate ? "accepted_earlier" : null,
+          bump: true,
+        });
+        ctx.sentThisMonth += 1;
+        sent += 1;
+      } else {
+        await handlePushFailure(ctx, row, link, res);
+      }
+      continue;
+    }
+
     // Content — read fresh so a reminder completed meanwhile is not announced.
     const ids = row.kind === "immediate" ? [row.reminder_id!] : row.reminder_ids;
     const { data: rems, error: remErr } = await supabaseAdmin
@@ -373,43 +402,57 @@ export async function deliverQueued(ctx: LineContext, overBudget: () => boolean)
       sent += 1;
       continue;
     }
-    switch (res.kind) {
-      case "auth":
-        await haltLine(ctx, `push ${res.status}: ${res.message}`);
-        break;
-      case "quota":
-        await mark(row, { status: "skipped", error: `line_429_monthly: ${res.message}` });
-        await lineEvent("error", "quota_line", `LINE says monthly limit reached: ${res.message}`);
-        ctx.stopped = "quota";
-        break;
-      case "target": {
-        await mark(row, { status: "failed", error: `line_400: ${res.message}`, bump: true });
-        const patch = {
-          is_friend: false,
-          blocked_at: ctx.now.toISOString(),
-          friend_checked_at: ctx.now.toISOString(),
-        };
-        await supabaseAdmin.from("line_links").update(patch).eq("user_id", link.user_id);
-        Object.assign(link, patch);
-        break;
-      }
-      case "retryable": {
-        const final = row.attempts + 1 >= MAX_ATTEMPTS;
-        await mark(row, {
-          status: final ? "failed" : "queued",
-          error: `line_${res.status}: ${res.message}`,
-          bump: true,
-        });
-        if (final && row.reminder_id) {
-          await supabaseAdmin
-            .from("reminders")
-            .update({ notify_error: `line_${res.status}`, notify_attempts: MAX_ATTEMPTS })
-            .eq("id", row.reminder_id);
-        }
-        ctx.summary["line_retries"] = Number(ctx.summary["line_retries"] ?? 0) + 1;
-        break;
-      }
-    }
+    await handlePushFailure(ctx, row, link, res);
   }
   return sent;
+}
+
+/**
+ * What to do when LINE refuses a push. Shared by both branches of the send
+ * loop, because a 401 means the same thing whether the message was a reminder
+ * or a job offer, and having two copies is how they drift.
+ */
+async function handlePushFailure(
+  ctx: LineContext,
+  row: LogRow,
+  link: LineLinkRow,
+  res: Extract<Awaited<ReturnType<typeof pushFlex>>, { ok: false }>,
+): Promise<void> {
+  switch (res.kind) {
+    case "auth":
+      await haltLine(ctx, `push ${res.status}: ${res.message}`);
+      break;
+    case "quota":
+      await mark(row, { status: "skipped", error: `line_429_monthly: ${res.message}` });
+      await lineEvent("error", "quota_line", `LINE says monthly limit reached: ${res.message}`);
+      ctx.stopped = "quota";
+      break;
+    case "target": {
+      await mark(row, { status: "failed", error: `line_400: ${res.message}`, bump: true });
+      const patch = {
+        is_friend: false,
+        blocked_at: ctx.now.toISOString(),
+        friend_checked_at: ctx.now.toISOString(),
+      };
+      await supabaseAdmin.from("line_links").update(patch).eq("user_id", link.user_id);
+      Object.assign(link, patch);
+      break;
+    }
+    case "retryable": {
+      const final = row.attempts + 1 >= MAX_ATTEMPTS;
+      await mark(row, {
+        status: final ? "failed" : "queued",
+        error: `line_${res.status}: ${res.message}`,
+        bump: true,
+      });
+      if (final && row.reminder_id) {
+        await supabaseAdmin
+          .from("reminders")
+          .update({ notify_error: `line_${res.status}`, notify_attempts: MAX_ATTEMPTS })
+          .eq("id", row.reminder_id);
+      }
+      ctx.summary["line_retries"] = Number(ctx.summary["line_retries"] ?? 0) + 1;
+      break;
+    }
+  }
 }

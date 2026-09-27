@@ -498,7 +498,20 @@ async function detectRoutineChanges(now: Date, overBudget: () => boolean): Promi
       }));
 
     if (rows.length > 0) {
-      await supabaseAdmin.from("app_notifications").insert(rows);
+      // Through notifyUsers, so a routine that has gone quiet reaches the
+      // person on LINE too, not only as a dot they have to open the app to see.
+      const { notifyUsers } = await import("./notify.server");
+      await notifyUsers(
+        rows.map((r) => r.user_id),
+        {
+          kind: rows[0]!.kind,
+          title: rows[0]!.title,
+          body: rows[0]!.body,
+          href: rows[0]!.href,
+          refTable: rows[0]!.ref_table,
+          refId: rows[0]!.ref_id,
+        },
+      );
       alerted += rows.length;
     }
   }

@@ -17,6 +17,7 @@ const savedLabel = {
   reminder: "routedToTasks",
   expense: "routedToExpense",
   income: "routedToIncome",
+  family: "routedToFamily",
 } as const;
 
 /**
