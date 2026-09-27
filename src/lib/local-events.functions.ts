@@ -26,6 +26,12 @@ export type LocalEventRow = {
   placeName: string | null;
   /** Whether the linked place is shared; null when the event stands alone. */
   placeIsPublic: boolean | null;
+  /**
+   * The linked shop's opening hours, raw, for the page to judge "open now"
+   * against the reader's own clock - the same call the places list makes, so
+   * the two cannot disagree. Null when the event stands alone.
+   */
+  placeOpenHours: Record<string, string> | null;
   startsAt: string;
   endsAt: string | null;
   priceMin: number | null;
@@ -46,6 +52,7 @@ function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
     lng?: number | null;
     is_public?: boolean | null;
     is_active?: boolean | null;
+    open_hours?: Record<string, string> | null;
   } | null;
   const lat = (r["lat"] as number | null) ?? place?.lat ?? null;
   const lng = (r["lng"] as number | null) ?? place?.lng ?? null;
@@ -65,6 +72,7 @@ function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
     // Null when the event has no place of its own - a street market is nobody's
     // shop, so there is nothing to hide it with.
     placeIsPublic: place ? place.is_public !== false && place.is_active !== false : null,
+    placeOpenHours: place?.open_hours ?? null,
     mapsUrl: (r["maps_url"] as string | null) ?? null,
     startsAt: r["starts_at"] as string,
     endsAt: (r["ends_at"] as string | null) ?? null,
@@ -101,7 +109,7 @@ export const listUpcomingLocalEvents = createServerFn({ method: "POST" })
 
     let qb = supabaseAdmin
       .from("local_events")
-      .select("*, local_places(name, address, area, lat, lng, is_public, is_active)")
+      .select("*, local_places(name, address, area, lat, lng, is_public, is_active, open_hours)")
       .limit(60);
 
     if (data.mineOnly) {
