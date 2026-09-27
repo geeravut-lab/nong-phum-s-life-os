@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { bangkokDateTime, todayInBangkok } from "@/lib/time";
+import { bangkokDateTime, bangkokIsoFromLoose, todayInBangkok } from "@/lib/time";
 
 export type PhumActionPayload = {
   type: string;
@@ -76,7 +76,7 @@ export async function applyPhumAction(
     const { error } = await supabase.from("reminders").insert({
       user_id: userId,
       title: action.title,
-      due_at: action.dueAt ? new Date(action.dueAt).toISOString() : null,
+      due_at: action.dueAt ? bangkokIsoFromLoose(action.dueAt) : null,
       priority: action.priority ?? "normal",
       recurrence: action.recurrence ?? "none",
     });
@@ -153,7 +153,7 @@ export async function applyPhumAction(
       status?: string;
     } = {};
     if (action.title) patch.title = action.title;
-    if (action.dueAt) patch.due_at = new Date(action.dueAt).toISOString();
+    if (action.dueAt) patch.due_at = bangkokIsoFromLoose(action.dueAt);
     if (action.priority) patch.priority = action.priority;
     if (action.recurrence) patch.recurrence = action.recurrence;
     if (action.status) patch.status = action.status;
