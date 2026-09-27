@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * The numbers the pre-login page quotes.
@@ -71,3 +72,27 @@ export const getPublicPricing = createServerFn({ method: "GET" }).handler(
     };
   },
 );
+
+/**
+ * The spending threshold the budget card quotes.
+ *
+ * It lives in automation_rules, which only an admin may read, so the card had
+ * the number written into its sentence instead - and an admin moving the rule
+ * to 70% left every user reading "80%". Signed in, because a budget is only
+ * shown to someone who has one.
+ */
+export const getBudgetRule = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async (): Promise<{ percent: number; enabled: boolean }> => {
+    try {
+      const { loadRules, ruleEnabled, ruleNumber } = await import("./rules.server");
+      const rules = await loadRules();
+      return {
+        percent: ruleNumber(rules, "budget_over_percent", "percent", 80),
+        enabled: ruleEnabled(rules, "budget_over_percent"),
+      };
+    } catch {
+      // The card still has to render; 80 is the value the rule ships with.
+      return { percent: 80, enabled: true };
+    }
+  });

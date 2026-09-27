@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listFamilyMemberLabels } from "@/lib/family.functions";
 import { useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Download, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PhumQuickBar } from "@/components/PhumQuickBar";
@@ -25,8 +25,10 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { errorText } from "@/lib/errors";
 import { formatDay } from "@/lib/format";
-import { completeReminder } from "@/lib/reminder-actions";
+import { downloadCsv } from "@/lib/csv";
+import { completeReminder, reopenReminder } from "@/lib/reminder-actions";
 import { AttachmentControl } from "@/components/AttachmentControl";
 import { loadLinkedDocs } from "@/lib/attachments";
 import { isRepeating } from "@/lib/recurrence";
@@ -103,6 +105,43 @@ function TasksPage() {
   const doneTasks = (tasks ?? []).filter((r) => r.status === "done");
   const shown = taskTab === "open" ? openTasks : doneTasks;
 
+  // Exactly the tab being looked at, not every task the account holds.
+  const exportCsv = () => {
+    if (shown.length === 0) {
+      toast.info(t.exportNothing);
+      return;
+    }
+    const rows = shown.map((r) => [
+      r.title,
+      r.status === "done" ? t.tasksTabDone : t.tasksTabOpen,
+      r.due_at ? formatDay(new Date(r.due_at), lang, true) : "",
+      r.priority === "high" ? t.high : r.priority === "low" ? t.low : t.normal,
+      r.recurrence === "monthly" ? t.monthly : r.recurrence === "yearly" ? t.yearly : t.none,
+      assigneeLabel(r.assignee_user_id) ?? "",
+      r.is_shared ? "✓" : "",
+      r.notes ?? "",
+      r.last_completed_at ? formatDay(new Date(r.last_completed_at), lang, true) : "",
+      r.created_at ? formatDay(new Date(r.created_at), lang, true) : "",
+    ]);
+    downloadCsv(
+      `lifeos-tasks-${taskTab}`,
+      [
+        t.taskTitle,
+        t.csvStatus,
+        t.dueAt,
+        t.priority,
+        t.recurrence,
+        t.r4Assignee,
+        t.csvShared,
+        t.note,
+        t.csvCompletedAt,
+        t.csvCreatedAt,
+      ],
+      rows,
+    );
+    toast.success(t.exportedRows.replace("{n}", String(rows.length)));
+  };
+
   const linkedIds = (tasks ?? []).map((r) => r.source_document_id);
   const { data: linkedDocs } = useQuery({
     queryKey: ["linked-docs", "tasks", linkedIds.filter(Boolean).sort()],
@@ -139,17 +178,17 @@ function TasksPage() {
   }) => {
     try {
       if (r.status === "done") {
-        const { error } = await supabase
-          .from("reminders")
-          .update({ status: "open" })
-          .eq("id", r.id);
-        if (error) throw error;
+        // Through the same server function as completing, for the same reason:
+        // a shared or assigned task is not yours to update from the client.
+        await reopenReminder(r.id);
       } else {
         const { advancedTo } = await completeReminder(r);
         if (advancedTo) toast.success(t.advancedTo(formatDay(advancedTo, lang)));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      // errorText, not the raw message: the server throws a code so the
+      // sentence can be in the reader's language.
+      toast.error(errorText(err, t));
       return;
     }
     qc.invalidateQueries({ queryKey: ["reminders"] });
@@ -254,22 +293,28 @@ function TasksPage() {
         <p className="mb-2 text-xs text-muted-foreground">{t.sharedHint}</p>
       ) : null}
 
-      <Tabs
-        value={taskTab}
-        onValueChange={(v) => setTaskTab(v as "open" | "done")}
-        className="mb-4 w-full"
-      >
-        <TabsList className="grid w-full max-w-xs grid-cols-2">
-          <TabsTrigger value="open">
-            {t.tasksTabOpen}
-            {openTasks.length > 0 ? ` (${openTasks.length})` : ""}
-          </TabsTrigger>
-          <TabsTrigger value="done">
-            {t.tasksTabDone}
-            {doneTasks.length > 0 ? ` (${doneTasks.length})` : ""}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <Tabs
+          value={taskTab}
+          onValueChange={(v) => setTaskTab(v as "open" | "done")}
+          className="w-full max-w-xs"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="open">
+              {t.tasksTabOpen}
+              {openTasks.length > 0 ? ` (${openTasks.length})` : ""}
+            </TabsTrigger>
+            <TabsTrigger value="done">
+              {t.tasksTabDone}
+              {doneTasks.length > 0 ? ` (${doneTasks.length})` : ""}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button variant="outline" size="sm" onClick={exportCsv}>
+          <Download className="mr-1.5 size-4" />
+          {t.exportCsv}
+        </Button>
+      </div>
 
       {shown.length ? (
         <ul className="space-y-2">

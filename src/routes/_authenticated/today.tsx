@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { errorText } from "@/lib/errors";
 import { generateDailyBrief } from "@/lib/lifeos.functions";
 import { formatDay, formatMoney } from "@/lib/format";
 import { bangkokDateAtHour, monthStartInBangkok, todayInBangkok } from "@/lib/time";
@@ -80,7 +81,7 @@ function TodayPage() {
       qc.invalidateQueries({ queryKey: ["today"] });
       toast.success(advancedTo ? t.advancedTo(formatDay(advancedTo, lang)) : t.done);
     },
-    onError: (err) => toast.error(err instanceof Error ? err.message : String(err)),
+    onError: (err) => toast.error(errorText(err, t)),
   });
 
   const doneLabel = (r: { recurrence: string; due_at: string | null }) =>

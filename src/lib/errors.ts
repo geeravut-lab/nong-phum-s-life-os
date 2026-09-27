@@ -28,6 +28,8 @@ export const APP_ERROR_CODES = [
   "ai_suspended",
   "trial_already_used",
   "trip_plan_limit",
+  "reminder_not_found",
+  "reminder_forbidden",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];
