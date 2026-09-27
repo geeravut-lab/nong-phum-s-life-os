@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { analyzeDocument, chatWithPhum, transcribeAudio } from "@/lib/lifeos.functions";
-import { applyPhumAction } from "@/lib/phum-actions";
+import { applyPhumActions } from "@/lib/phum-actions";
 import { intakeDocument } from "@/lib/doc-intake";
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -84,16 +84,18 @@ function ChatPage() {
       await post(uid, "user", text);
 
       const out = await ask({ data: { message: text, lang } });
-      const applied = await applyPhumAction(out.action, uid);
+      const applied = await applyPhumActions(out.actions, uid);
       await post(uid, "assistant", out.reply);
-      if (applied) {
-        const label =
-          applied.kind === "reminder"
+      if (applied.length > 0) {
+        // One line per record, so asking for two things and getting one is
+        // visible rather than something the reply has to be re-read to catch.
+        const label = (kind: (typeof applied)[number]["kind"]) =>
+          kind === "reminder"
             ? t.routedToTasks
-            : applied.kind === "expense"
+            : kind === "expense"
               ? t.routedToExpense
               : t.routedToIncome;
-        toast.success(`${t.phumSaved} — ${label}`);
+        toast.success(`${t.phumSaved} — ${applied.map((a) => label(a.kind)).join(" · ")}`);
         qc.invalidateQueries();
       }
     } catch (err) {

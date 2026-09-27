@@ -97,36 +97,45 @@ Never invent dates.`,
 
 const ActionSchema = z.object({
   reply: z.string().describe("Nong Phum's reply to the user"),
-  action: z
-    .object({
-      type: z.enum([
-        "create_reminder",
-        "add_expense",
-        "add_income",
-        "search_documents",
-        "daily_brief",
-        "list_benefits",
-        "none",
-      ]),
-      title: z.string().nullable(),
-      dueAt: z
-        .string()
-        .nullable()
-        .describe(
-          `ISO 8601 datetime for reminders, always with the ${APP_UTC_OFFSET} offset, e.g. 2026-09-15T09:00:00${APP_UTC_OFFSET}`,
-        ),
-      priority: z.enum(["high", "normal", "low"]).nullable(),
-      recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
-      amount: z.number().nullable(),
-      category: z.enum(CATEGORIES).nullable(),
-      spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
-      receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
-      query: z.string().nullable().describe("Search text for documents"),
-    })
-    .describe("The single action Nong Phum takes; use type 'none' when only chatting"),
+  // A list, because people ask for more than one thing in a breath: "note the
+  // coffee, 60 baht, and remind me to pay the water bill on the 5th" is two
+  // records. This used to be a single action, so the second request was
+  // silently dropped while the reply cheerfully confirmed both.
+  actions: z
+    .array(
+      z.object({
+        type: z.enum([
+          "create_reminder",
+          "add_expense",
+          "add_income",
+          "search_documents",
+          "daily_brief",
+          "list_benefits",
+          "none",
+        ]),
+        title: z.string().nullable(),
+        dueAt: z
+          .string()
+          .nullable()
+          .describe(
+            `ISO 8601 datetime for reminders, always with the ${APP_UTC_OFFSET} offset, e.g. 2026-09-15T09:00:00${APP_UTC_OFFSET}`,
+          ),
+        priority: z.enum(["high", "normal", "low"]).nullable(),
+        recurrence: z.enum(["none", "monthly", "yearly"]).nullable(),
+        amount: z.number().nullable(),
+        category: z.enum(CATEGORIES).nullable(),
+        spentOn: z.string().nullable().describe("YYYY-MM-DD for expenses"),
+        receivedOn: z.string().nullable().describe("YYYY-MM-DD for income"),
+        query: z.string().nullable().describe("Search text for documents"),
+      }),
+    )
+    .max(4)
+    .describe(
+      "Every action Nong Phum takes for this message, in the order they were asked for. Empty, or a single 'none', when only chatting.",
+    ),
 });
 
-export type PhumAction = z.infer<typeof ActionSchema>["action"];
+export type PhumAction = z.infer<typeof ActionSchema>["actions"][number];
 
 type Db = SupabaseClient<Database>;
 
@@ -213,7 +222,9 @@ export async function runChatRouter(
       schema: ActionSchema,
       system: `${persona(input.lang)}
 Today is ${today} (${APP_TIME_ZONE}, UTC${APP_UTC_OFFSET}). All dates and times are in that zone. Reply in ${langName}.
-You route the user's request to exactly one action in their Life OS:
+You route the user's request into their Life OS. One message can ask for
+several things - return one action for each, in the order asked. Return an
+empty list when the message needs no record kept:
 - create_reminder: the user wants to remember, do, or be reminded of something (fill title, dueAt, priority, recurrence)
 - add_expense: the user reports spending money (fill title, amount, category, spentOn)
 - add_income: the user reports receiving money — salary, transfer in, sale, bonus, refund (fill title, amount, category, receivedOn)
@@ -231,7 +242,8 @@ DOCUMENTS: ${JSON.stringify(ctx.documents)}
 BENEFIT PROFILE: ${JSON.stringify(ctx.benefitProfile)}
 BENEFIT STATUSES: ${JSON.stringify(ctx.myBenefits)}
 
-The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.`,
+The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
+Confirm ONLY what is in your actions list. If the user asked for something you did not return an action for, say plainly that you did not do that part rather than claiming you did — a reply that reports a reminder the app never saved is worse than one that admits the gap.`,
       messages: [
         ...(history.data ?? []).map((m) => ({
           role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
