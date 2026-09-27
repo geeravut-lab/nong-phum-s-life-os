@@ -937,6 +937,7 @@ const th = {
   r4Assignee: "ผู้รับผิดชอบ",
   r4Anyone: "ไม่ระบุ",
   r4TaskTitle: "ชื่องาน",
+  r4TaskDue: "วันเวลาที่กำหนด",
   r4Assign: "มอบหมาย",
   r4Permissions: "สิทธิ์การมองเห็น",
   r4PermDocs: "เอกสาร",
@@ -1109,7 +1110,7 @@ const th = {
   willKindAmphoe: "ทำที่อำเภอ",
   willKindLawyer: "ทำกับทนาย",
   willKindOther: "อื่น ๆ",
-  willMadeOn: "วันเวลาที่ทำพินัยกรรมและมรดก",
+  willMadeOn: "วันที่ทำพินัยกรรมและมรดก",
   willLocation: "ฉบับจริงเก็บไว้ที่ไหน",
   willExecutor: "ผู้จัดการมรดก",
   willExecutorContact: "ติดต่อผู้จัดการมรดก",
@@ -1381,7 +1382,6 @@ const th = {
   p6SendWreath: "วางพวงหรีด",
   p6MsgSent: "ส่งข้อความแล้ว",
   p6WreathSent: "บันทึกพวงหรีดแล้ว",
-  p6NavAfter: "หลังเหตุการณ์ (Phase 6)",
 } as const;
 
 // Thai is the source of truth. `satisfies` on `en` makes a missing or extra key a
@@ -2324,6 +2324,7 @@ const en = {
   r4Assignee: "Assignee",
   r4Anyone: "Unassigned",
   r4TaskTitle: "Task title",
+  r4TaskDue: "Due date and time",
   r4Assign: "Assign",
   r4Permissions: "Visibility permissions",
   r4PermDocs: "Documents",
@@ -2773,7 +2774,6 @@ const en = {
   p6SendWreath: "Place wreath",
   p6MsgSent: "Message sent",
   p6WreathSent: "Wreath recorded",
-  p6NavAfter: "After events (Phase 6)",
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };

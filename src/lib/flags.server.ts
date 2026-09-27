@@ -39,6 +39,18 @@ export async function featureEnabled(flag: FeatureFlag): Promise<boolean> {
   return isEnabled(await loadFlags(), flag);
 }
 
+/**
+ * Drop the cached copy so the next read goes back to the table.
+ *
+ * Called right after an admin writes a switch. It only clears the instance that
+ * served the write - the others still carry their own copy until the minute is
+ * up - but it removes the worst case, where the admin turns something off,
+ * tries it immediately on the same instance, and finds it still working.
+ */
+export function invalidateFlagsCache(): void {
+  cache = undefined;
+}
+
 /** Refuse the call when an admin has switched the feature off. */
 export async function assertFeature(flag: FeatureFlag): Promise<void> {
   if (!(await featureEnabled(flag))) throw appError("feature_off");
