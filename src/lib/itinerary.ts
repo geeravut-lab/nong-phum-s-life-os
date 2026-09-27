@@ -160,8 +160,17 @@ function destinationFor(s: Stop): { text: string; placeId?: string } {
   const placeId = s.placeId?.trim() || null;
   const hasPin = s.lat != null && s.lng != null;
 
+  // The name wins whenever there is one. Coordinates route to an exact point
+  // but open an unnamed pin, and the person driving wants to see the shop they
+  // are going to - which is the thing that has been asked for repeatedly.
+  //
+  // Precision is recovered where it can be: a Google place id resolves the name
+  // to exactly one shop, and an address narrows a name that a chain would
+  // otherwise share across branches. A bare name is the weakest of the three
+  // and can still land on the wrong branch, which is the cost of showing it.
   if (name && placeId) return { text: name, placeId };
   if (name && address) return { text: `${name}, ${address}` };
+  if (name) return { text: name };
   if (hasPin) return { text: `${s.lat},${s.lng}` };
-  return { text: name || address || s.title };
+  return { text: address || s.title };
 }

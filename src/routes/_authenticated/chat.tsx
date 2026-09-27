@@ -1,3 +1,4 @@
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,6 +34,7 @@ function ChatPage() {
   const ask = useServerFn(chatWithPhum);
   const analyze = useServerFn(analyzeDocument);
   const transcribe = useServerFn(transcribeAudio);
+  const flags = useFeatureFlags();
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
@@ -287,17 +289,21 @@ function ChatPage() {
         >
           <Paperclip className="size-4" />
         </Button>
-        <Button
-          type="button"
-          size="icon"
-          variant={recording ? "destructive" : "outline"}
-          disabled={anyBusy && !recording}
-          onClick={onMicClick}
-          aria-label={recording ? t.stopRecording : t.startRecording}
-          title={recording ? t.stopRecording : t.startRecording}
-        >
-          {recording ? <Square className="size-4" /> : <Mic className="size-4" />}
-        </Button>
+        {/* Hidden when an admin has switched voice off. The server refuses the
+            call either way - this is so nobody is offered a button that errors. */}
+        {flags.enabled("voice_input") ? (
+          <Button
+            type="button"
+            size="icon"
+            variant={recording ? "destructive" : "outline"}
+            disabled={anyBusy && !recording}
+            onClick={onMicClick}
+            aria-label={recording ? t.stopRecording : t.startRecording}
+            title={recording ? t.stopRecording : t.startRecording}
+          >
+            {recording ? <Square className="size-4" /> : <Mic className="size-4" />}
+          </Button>
+        ) : null}
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}

@@ -190,6 +190,7 @@ function AdminPage() {
       <PaymentsHubCard />
       <FuneralHubCard />
       <UsageHubCard />
+      <RulesHubCard />
       <FeatureFlagsCard />
       {/* ---- In effect now ---- */}
       <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
@@ -624,6 +625,21 @@ function LineQuotaCard() {
         </div>
       )}
     </section>
+  );
+}
+
+function RulesHubCard() {
+  const { t } = useI18n();
+  return (
+    <Link
+      to="/admin/rules"
+      className="mb-5 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-colors hover:bg-accent"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">{t.adminRulesCard}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t.adminRulesCardSub}</p>
+      </div>
+    </Link>
   );
 }
 

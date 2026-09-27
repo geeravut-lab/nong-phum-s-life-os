@@ -74,6 +74,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      automation_rules: {
+        Row: {
+          id: string;
+          key: string;
+          title: string;
+          description: string;
+          enabled: boolean;
+          params: Json;
+          sort_order: number;
+          last_run_at: string | null;
+          last_count: number | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          title: string;
+          description?: string;
+          enabled?: boolean;
+          params?: Json;
+          sort_order?: number;
+          last_run_at?: string | null;
+          last_count?: number | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          title?: string;
+          description?: string;
+          enabled?: boolean;
+          params?: Json;
+          sort_order?: number;
+          last_run_at?: string | null;
+          last_count?: number | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       ai_token_usage: {
         Row: {
           id: string;
@@ -2767,6 +2809,8 @@ export type Database = {
 
       profiles: {
         Row: {
+          monthly_budget: number | null;
+          ai_suspended: boolean;
           created_at: string;
           display_name: string | null;
           id: string;
@@ -2777,6 +2821,8 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          monthly_budget?: number | null;
+          ai_suspended?: boolean;
           created_at?: string;
           display_name?: string | null;
           id: string;
@@ -2787,6 +2833,8 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          monthly_budget?: number | null;
+          ai_suspended?: boolean;
           created_at?: string;
           display_name?: string | null;
           id?: string;

@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminFuneralRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated/admin_.marketplace'
 import { Route as AuthenticatedAdminPaymentsRouteImport } from './routes/_authenticated/admin_.payments'
 import { Route as AuthenticatedAdminPremiumRouteImport } from './routes/_authenticated/admin_.premium'
+import { Route as AuthenticatedAdminRulesRouteImport } from './routes/_authenticated/admin_.rules'
 import { Route as AuthenticatedAdminSafetyRouteImport } from './routes/_authenticated/admin_.safety'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin_.support'
 import { Route as AuthenticatedAdminUsageRouteImport } from './routes/_authenticated/admin_.usage'
@@ -195,6 +196,11 @@ const AuthenticatedAdminPremiumRoute =
     path: '/admin/premium',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminRulesRoute = AuthenticatedAdminRulesRouteImport.update({
+  id: '/admin_/rules',
+  path: '/admin/rules',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminSafetyRoute =
   AuthenticatedAdminSafetyRouteImport.update({
     id: '/admin_/safety',
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
+  '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/usage': typeof AuthenticatedAdminUsageRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/payments': typeof AuthenticatedAdminPaymentsRoute
   '/admin/premium': typeof AuthenticatedAdminPremiumRoute
+  '/admin/rules': typeof AuthenticatedAdminRulesRoute
   '/admin/safety': typeof AuthenticatedAdminSafetyRoute
   '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/admin/usage': typeof AuthenticatedAdminUsageRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/_authenticated/admin_/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin_/payments': typeof AuthenticatedAdminPaymentsRoute
   '/_authenticated/admin_/premium': typeof AuthenticatedAdminPremiumRoute
+  '/_authenticated/admin_/rules': typeof AuthenticatedAdminRulesRoute
   '/_authenticated/admin_/safety': typeof AuthenticatedAdminSafetyRoute
   '/_authenticated/admin_/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/admin_/usage': typeof AuthenticatedAdminUsageRoute
@@ -381,6 +390,7 @@ export interface FileRouteTypes {
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
+    | '/admin/rules'
     | '/admin/safety'
     | '/admin/support'
     | '/admin/usage'
@@ -418,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/marketplace'
     | '/admin/payments'
     | '/admin/premium'
+    | '/admin/rules'
     | '/admin/safety'
     | '/admin/support'
     | '/admin/usage'
@@ -456,6 +467,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin_/marketplace'
     | '/_authenticated/admin_/payments'
     | '/_authenticated/admin_/premium'
+    | '/_authenticated/admin_/rules'
     | '/_authenticated/admin_/safety'
     | '/_authenticated/admin_/support'
     | '/_authenticated/admin_/usage'
@@ -680,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPremiumRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin_/rules': {
+      id: '/_authenticated/admin_/rules'
+      path: '/admin/rules'
+      fullPath: '/admin/rules'
+      preLoaderRoute: typeof AuthenticatedAdminRulesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin_/safety': {
       id: '/_authenticated/admin_/safety'
       path: '/admin/safety'
@@ -755,6 +774,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminPaymentsRoute: typeof AuthenticatedAdminPaymentsRoute
   AuthenticatedAdminPremiumRoute: typeof AuthenticatedAdminPremiumRoute
+  AuthenticatedAdminRulesRoute: typeof AuthenticatedAdminRulesRoute
   AuthenticatedAdminSafetyRoute: typeof AuthenticatedAdminSafetyRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminUsageRoute: typeof AuthenticatedAdminUsageRoute
@@ -787,6 +807,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminPaymentsRoute: AuthenticatedAdminPaymentsRoute,
   AuthenticatedAdminPremiumRoute: AuthenticatedAdminPremiumRoute,
+  AuthenticatedAdminRulesRoute: AuthenticatedAdminRulesRoute,
   AuthenticatedAdminSafetyRoute: AuthenticatedAdminSafetyRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminUsageRoute: AuthenticatedAdminUsageRoute,

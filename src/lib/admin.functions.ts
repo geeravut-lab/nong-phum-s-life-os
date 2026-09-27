@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { FEATURE_FLAGS } from "@/lib/flags";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -420,4 +421,62 @@ export const setFeatureFlag = createServerFn({ method: "POST" })
       .eq("id", true);
     if (error) throw error;
     return { ok: true as const, flags };
+  });
+
+/** The automation rules, for the admin list. */
+export const listAutomationRules = createServerFn({ method: "GET" })
+  .middleware([requireAdmin])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("automation_rules")
+      .select("id, key, title, description, enabled, params, sort_order, last_run_at, last_count")
+      .order("sort_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return { rules: data ?? [] };
+  });
+
+/**
+ * Change a rule's switch or its numbers.
+ *
+ * Params are merged rather than replaced, so an admin editing one number cannot
+ * silently drop another the rule depends on, and only finite non-negative
+ * numbers are accepted - a rule reading NaN for its threshold would either
+ * never fire or fire on everything.
+ */
+export const updateAutomationRule = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        key: z.string().min(1).max(60),
+        enabled: z.boolean().optional(),
+        params: z.record(z.string(), z.number().min(0).max(100000)).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("automation_rules")
+      .select("params")
+      .eq("key", data.key)
+      .maybeSingle();
+    if (!row) throw new Error("rule not found");
+
+    const merged = {
+      ...((row.params ?? {}) as Record<string, number>),
+      ...(data.params ?? {}),
+    } as Json;
+    const { error } = await supabaseAdmin
+      .from("automation_rules")
+      .update({
+        ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
+        ...(data.params ? { params: merged } : {}),
+        updated_at: new Date().toISOString(),
+        updated_by: context.userId,
+      })
+      .eq("key", data.key);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });

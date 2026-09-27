@@ -1,3 +1,4 @@
+import { MonthlyBudgetCard } from "@/components/MonthlyBudgetCard";
 import { DateInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
@@ -124,6 +125,7 @@ function MoneyPage() {
 
   return (
     <AppShell>
+      <MonthlyBudgetCard />
       <header className="mb-5 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">{t.moneyTitle}</h1>

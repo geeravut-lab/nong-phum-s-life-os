@@ -284,6 +284,25 @@ export const checkAndConsumeAiQuota = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const settings = await loadBillingSettings();
+
+    // Unpaid pay-as-you-go past the grace period. The rules engine sets the
+    // flag; this is the half that makes it mean anything, and it applies to
+    // paid plans too - the debt is for calls already made.
+    const supabaseAdminEarly = await admin();
+    const { data: suspended } = await supabaseAdminEarly
+      .from("profiles")
+      .select("ai_suspended")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (suspended?.ai_suspended) {
+      return {
+        allowed: false as const,
+        reason: "suspended" as const,
+        remaining: 0,
+        message: "app:ai_suspended",
+      };
+    }
+
     const premium = await isPremiumActive(context.userId);
     const ym = yearMonthBangkok();
     const supabaseAdmin = await admin();
