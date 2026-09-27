@@ -1,3 +1,4 @@
+import { DateTimeInput, TimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -383,8 +384,7 @@ function RequesterTab() {
             </div>
             <div>
               <Label>{t.jobWhen}</Label>
-              <Input
-                type="datetime-local"
+              <DateTimeInput
                 value={draft.scheduledAt ? draft.scheduledAt.slice(0, 16) : ""}
                 onChange={(e) => setDraft({ ...draft, scheduledAt: e.target.value || null })}
               />
@@ -1089,13 +1089,11 @@ function HelperTab() {
           <div>
             <Label>{t.helperAvail}</Label>
             <div className="flex items-center gap-2">
-              <Input
-                type="time"
+              <TimeInput
                 value={current.available_from}
                 onChange={(e) => setForm({ ...current, available_from: e.target.value })}
               />
-              <Input
-                type="time"
+              <TimeInput
                 value={current.available_to}
                 onChange={(e) => setForm({ ...current, available_to: e.target.value })}
               />

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -1174,7 +1175,15 @@ function LegacyPage() {
 
       {tab === "ai" && (
         <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
+          {/* One line was not enough: the tab was described as "tell it in plain
+              language" without saying what came out the other side, so people
+              opened it and closed it again. */}
           <p className="text-sm text-muted-foreground">{t.legacyAiDesc}</p>
+          <ul className="space-y-1 rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+            <li>{t.legacyAiHow1}</li>
+            <li>{t.legacyAiHow2}</li>
+            <li>{t.legacyAiHow3}</li>
+          </ul>
           <Textarea
             rows={4}
             value={aiMsg}
@@ -1243,12 +1252,17 @@ function LegacyPage() {
             <option value="lawyer">{t.willKindLawyer}</option>
             <option value="other">{t.willKindOther}</option>
           </select>
-          <Input
-            type="date"
-            aria-label={t.willMadeOn}
-            value={w?.madeOn ?? ""}
-            onChange={(e) => setW({ madeOn: e.target.value })}
-          />
+          {/* Every other field here labels itself with a placeholder, which a
+              date input cannot show - so this one needs a real label or it is
+              just an empty box. */}
+          <div className="space-y-1.5">
+            <Label htmlFor="will-made-on">{t.willMadeOn}</Label>
+            <DateInput
+              id="will-made-on"
+              value={w?.madeOn ?? ""}
+              onChange={(e) => setW({ madeOn: e.target.value })}
+            />
+          </div>
           <Textarea
             placeholder={t.willLocation}
             value={w?.locationHint ?? ""}

@@ -1,3 +1,4 @@
+import { DateInput } from "@/components/ui/datetime-input";
 import { routeMeta } from "@/lib/i18n.dict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -214,9 +215,9 @@ function MoneyPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="ex-date">{tab === "expense" ? t.spentOn : t.receivedOn}</Label>
-                <Input
+                <DateInput
                   id="ex-date"
-                  type="date"
+
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />

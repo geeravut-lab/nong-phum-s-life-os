@@ -1,3 +1,4 @@
+import { DateTimeInput } from "@/components/ui/datetime-input";
 import { errorText } from "@/lib/errors";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -108,13 +109,7 @@ function TaskEditForm({
       <div className="w-full max-w-md space-y-3 rounded-2xl bg-background p-4 shadow-lg">
         <h2 className="font-semibold">{t.agendaEdit ?? "แก้ไขรายการ"}</h2>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Input
-          type="datetime-local"
-          step={60}
-          lang="en-GB"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-        />
+        <DateTimeInput value={when} onChange={(e) => setWhen(e.target.value)} />
         <Input value={notes} placeholder={t.note} onChange={(e) => setNotes(e.target.value)} />
         {members.length > 0 ? (
           <select

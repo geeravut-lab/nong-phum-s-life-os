@@ -773,8 +773,15 @@ const th = {
   legacyStoryDesc: "บันทึกเรื่องราวที่อยากเล่า",
   legacySocial: "เพื่อสังคม",
   legacyAi: "AI ช่วยวางแผน",
-  legacyAiDesc: "เล่าด้วยภาษาคน แล้วน้องภูมิช่วยจัดเป็นรายการ",
-  legacyPhase6Title: "Phase 6",
+  legacyAiDesc:
+    "พิมพ์เล่าเรื่องทรัพย์สินและความต้องการของคุณแบบไม่ต้องจัดรูปแบบ แล้วระบบจะแยกให้เป็นรายการ",
+  legacyAiHow1:
+    "ใช้ทำอะไร: แทนที่จะกรอกทีละช่องในแท็บ “ทรัพย์สิน” และ “ความประสงค์” ให้พิมพ์เล่ารวดเดียวเป็นภาษาพูด ระบบจะอ่านแล้วแยกออกมาเป็นรายการทรัพย์สิน (บัญชี ประกัน หนี้ ทรัพย์สินดิจิทัล) และความประสงค์ (งานศพ ข้อความถึงคนสำคัญ ฯลฯ) ให้อัตโนมัติ",
+  legacyAiHow2:
+    "ขั้นตอน: พิมพ์ → กด “วิเคราะห์และจัดรายการ” → ระบบแสดงตัวอย่างสิ่งที่แยกได้ พร้อมคำถามที่ยังขาด → ตรวจแล้วกด “เพิ่มรายการเหล่านี้ลงแผน” จึงจะบันทึกจริง",
+  legacyAiHow3:
+    "ไม่ได้ทำ: ไม่ใช่การทำพินัยกรรมตามกฎหมาย และไม่ส่งข้อมูลให้ใคร — ทุกอย่างอยู่ในบัญชีของคุณจนกว่าคุณจะแชร์เอง",
+  legacyPhase6Title: "หลังเหตุการณ์ — งานศพ ประกาศข่าว และหน้าอาลัย",
   legacyPhase6Desc: "ยืนยันการเสียชีวิต, Memorial, พวงหรีด, AI Funeral Planner",
   legacyDocsHint: "เอกสารสำคัญที่สแกนไว้แล้วดูได้ที่",
   legacySaved: "บันทึกแล้ว",
@@ -1020,7 +1027,7 @@ const th = {
   willKindAmphoe: "ทำที่อำเภอ",
   willKindLawyer: "ทำกับทนาย",
   willKindOther: "อื่น ๆ",
-  willMadeOn: "วันที่ทำ",
+  willMadeOn: "วันเวลาที่ทำพินัยกรรมและมรดก",
   willLocation: "ฉบับจริงเก็บไว้ที่ไหน",
   willExecutor: "ผู้จัดการมรดก",
   willExecutorContact: "ติดต่อผู้จัดการมรดก",
@@ -2063,8 +2070,15 @@ const en = {
   legacyStoryDesc: "Stories you want told",
   legacySocial: "For society",
   legacyAi: "AI helper",
-  legacyAiDesc: "Describe in plain language; Nong Phum structures the plan",
-  legacyPhase6Title: "Phase 6",
+  legacyAiDesc:
+    "Type about your assets and wishes however you like; the system sorts it into entries",
+  legacyAiHow1:
+    "What it is for: instead of filling in the Assets and Wishes tabs field by field, write it out in one go the way you would say it. The system reads it and produces asset entries (accounts, insurance, debts, digital assets) and wish entries (funeral, messages to people) for you.",
+  legacyAiHow2:
+    'How it goes: type → press "Analyze and structure" → it shows what it found and what is still missing → you review, then press "Add these to the plan" for anything to be saved.',
+  legacyAiHow3:
+    "What it does not do: it is not a legal will, and nothing is sent to anyone - it stays in your account until you share it yourself.",
+  legacyPhase6Title: "After the event — funeral, notifications and memorial",
   legacyPhase6Desc: "Death verification, Memorial, wreath, AI Funeral Planner",
   legacyDocsHint: "Scanned important documents live in",
   legacySaved: "Saved",
@@ -2310,7 +2324,7 @@ const en = {
   willKindAmphoe: "At the amphoe",
   willKindLawyer: "With a lawyer",
   willKindOther: "Other",
-  willMadeOn: "Date made",
+  willMadeOn: "Date the will was made",
   willLocation: "Where the original is kept",
   willExecutor: "Executor",
   willExecutorContact: "Executor contact",
