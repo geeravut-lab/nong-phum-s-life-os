@@ -45,6 +45,24 @@ const DocSchema = z.object({
     .describe("True when the user must do something before a deadline (pay, renew, submit, book)"),
   isWarranty: z.boolean().describe("True when this is a product warranty / guarantee certificate"),
   warrantyUntil: z.string().nullable().describe("Warranty end date as YYYY-MM-DD or null"),
+  // A statement, a ledger page or a note listing several payments is one
+  // document but many money records. Filing it as a single total left the user
+  // with one row of 4,820 where they had written down eleven, and no way to
+  // check any of them later.
+  lineItems: z
+    .array(
+      z.object({
+        title: z.string().describe("What this single line is for, as written"),
+        amount: z.number().describe("Amount of this one line in THB, always positive"),
+        kind: z.enum(["expense", "income"]).describe("Money out or money in"),
+        on: z.string().nullable().describe("The date of this line as YYYY-MM-DD, or null"),
+        category: z.enum(CATEGORIES),
+      }),
+    )
+    .max(60)
+    .describe(
+      "Every individual money line, when the document lists more than one - a bank statement, an expense ledger, a page of handwritten entries, a receipt with several payments. Leave it empty for a document with a single amount (one bill, one payslip, one receipt).",
+    ),
 });
 
 export type DocAnalysis = z.infer<typeof DocSchema>;
@@ -76,7 +94,8 @@ export async function runDocumentAnalysis(input: {
               text: `Read this document (file name: ${input.fileName}) and extract its details.
 If it is a warranty/guarantee card, set isWarranty=true, category=warranty, and warrantyUntil.
 If there is any expiry, renew-by, or due date, put it in dueDate.
-Never invent dates.`,
+Never invent dates.
+If the document LISTS SEVERAL amounts - a statement, a ledger, a page of entries, a receipt covering several payments - put every one of them in lineItems, one entry per line as written, each with its own date and whether it is money out or money in. Do not merge them and do not round. Keep 'amount' as the document's own total for reference. For a document with a single amount, leave lineItems empty.`,
             },
             isImage
               ? { type: "image" as const, image: input.base64, mediaType: input.mimeType }
@@ -305,6 +324,10 @@ These three need a family. If FAMILY is null the user is not in one: say so and 
 ${focusLine}
 
 To change or remove something, find it in the lists below by what the user called it and copy its id into targetId. Every row carries an id for exactly this. If more than one row could be meant, do NOT guess - return no action and ask which one.
+
+When the user calls something off - "ไม่ต้องแล้ว", "ยกเลิก", "เลิกหาแล้ว", "ไม่เอาแล้ว", "หยุดเรื่องนี้", "drop it", "never mind" - that is delete_reminder (or delete_expense / delete_income) on the row they mean, not a spoken acknowledgement. Saying "รับทราบครับ" and leaving the row in the list means the same thing comes back at them tomorrow.
+
+ANSWER ONLY WHAT WAS ASKED. The lists below are there so you can answer questions and find rows to change - they are not a list of things to bring up. Do not append progress reports, offers to help, or "I still have no information about X" about anything the user did not just mention. If they ask about buying a car, answer about buying a car and stop; an errand they mentioned days ago has no business in that reply. And when they say to stop discussing something, stop mentioning it at all - not even to confirm that you have stopped in every later answer.
 
 Answer questions using ONLY this data about the user; if it isn't there, say you don't have it yet.
 REMINDERS: ${JSON.stringify(ctx.reminders)}

@@ -91,3 +91,27 @@ export function bangkokIsoFromLoose(value: string): string {
   // Invalid Date and losing the reminder entirely.
   return Number.isNaN(parsed.getTime()) ? new Date(v).toISOString() : parsed.toISOString();
 }
+
+/**
+ * First and last day of a Bangkok calendar month, as YYYY-MM-DD.
+ *
+ * `offset` counts months back from the current one: 0 is this month, -1 last
+ * month. Built from the Bangkok date string rather than Date arithmetic so it
+ * cannot drift by a day when the server runs in UTC, and so that the 31st of
+ * a month rolls to the right place (new Date(2026, 0, 31) with setMonth(-1)
+ * lands in December but keeps the 31st; here the day is never carried).
+ */
+export function bangkokMonthRange(
+  offset = 0,
+  now: Date = new Date(),
+): { from: string; to: string } {
+  const [y, m] = todayInBangkok(now).split("-").map(Number) as [number, number];
+  // Months as a single count so the year rolls over on its own.
+  const total = y * 12 + (m - 1) + offset;
+  const year = Math.floor(total / 12);
+  const month = total % 12; // 0-11
+  const mm = String(month + 1).padStart(2, "0");
+  // Day 0 of the next month is the last day of this one.
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}` };
+}

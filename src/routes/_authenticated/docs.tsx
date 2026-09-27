@@ -17,7 +17,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { catLabel, useI18n } from "@/lib/i18n";
 import { analyzeDocument } from "@/lib/lifeos.functions";
 import { syncDocumentExpirations } from "@/lib/docs-legacy.functions";
-import { DocumentAnalysisError, intakeDocument, retryDocument } from "@/lib/doc-intake";
+import {
+  DocumentAnalysisError,
+  intakeDocument,
+  retryDocument,
+  routingNotes,
+} from "@/lib/doc-intake";
 import { formatMoney } from "@/lib/format";
 import { bangkokDateAtHour } from "@/lib/time";
 import { daysUntilFailedDocRemoved } from "@/lib/retention";
@@ -107,13 +112,9 @@ function DocsPage() {
     setBusy(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const { analysis, routed } = await intakeDocument(file, analyze, lang, userData.user!.id);
-
-      const notes: string[] = [t.savedToDocs];
-      if (routed.includes("expense")) notes.push(t.routedToExpense);
-      if (routed.includes("income")) notes.push(t.routedToIncome);
-      if (routed.includes("reminder")) notes.push(t.routedToTasks);
-      toast.success(`${analysis.title} — ${notes.join(" · ")}`);
+      const intake = await intakeDocument(file, analyze, lang, userData.user!.id);
+      const notes = routingNotes(intake, t);
+      toast.success(`${intake.analysis.title} — ${notes.join(" · ")}`);
       qc.invalidateQueries();
     } catch (err) {
       // A failed analysis leaves the row as status="failed"; refresh so it shows up with a retry button.
@@ -128,12 +129,9 @@ function DocsPage() {
     setRetrying(id);
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const { analysis, routed } = await retryDocument(id, analyze, lang, userData.user!.id);
-      const notes: string[] = [t.savedToDocs];
-      if (routed.includes("expense")) notes.push(t.routedToExpense);
-      if (routed.includes("income")) notes.push(t.routedToIncome);
-      if (routed.includes("reminder")) notes.push(t.routedToTasks);
-      toast.success(`${analysis.title} — ${notes.join(" · ")}`);
+      const intake = await retryDocument(id, analyze, lang, userData.user!.id);
+      const notes = routingNotes(intake, t);
+      toast.success(`${intake.analysis.title} — ${notes.join(" · ")}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t.error);
     } finally {

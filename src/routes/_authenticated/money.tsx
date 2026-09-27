@@ -27,7 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { catLabel, categoryLabels, useI18n } from "@/lib/i18n";
 import { formatDay, formatMoney, toDateInput } from "@/lib/format";
-import { APP_TIME_ZONE, APP_UTC_OFFSET, bangkokDateTime } from "@/lib/time";
+import { APP_TIME_ZONE, APP_UTC_OFFSET, bangkokDateTime, bangkokMonthRange } from "@/lib/time";
 
 const hm = new Intl.DateTimeFormat("en-GB", {
   timeZone: APP_TIME_ZONE,
@@ -36,6 +36,9 @@ const hm = new Intl.DateTimeFormat("en-GB", {
   hourCycle: "h23",
 });
 const nowHm = () => hm.format(new Date());
+
+const RANGES = ["this", "last", "all", "custom"] as const;
+type RangeKey = (typeof RANGES)[number];
 
 export const Route = createFileRoute("/_authenticated/money")({
   head: () => ({ meta: routeMeta("money") }),
@@ -55,6 +58,29 @@ function MoneyPage() {
   // is right for an entry typed as it happens and wrong for one typed later.
   const [time, setTime] = useState(nowHm());
   const [editing, setEditing] = useState<EditableMoneyRow | null>(null);
+  // The summary used to add up every row the account had ever had, which is a
+  // number nobody is looking for. This month is what people check.
+  const [range, setRange] = useState<RangeKey>("this");
+  const [customFrom, setCustomFrom] = useState(() => bangkokMonthRange(0).from);
+  const [customTo, setCustomTo] = useState(() => bangkokMonthRange(0).to);
+
+  const period = useMemo(() => {
+    if (range === "all") return null;
+    if (range === "custom") {
+      // Reversed ends are a slip, not an empty range.
+      return customFrom <= customTo
+        ? { from: customFrom, to: customTo }
+        : { from: customTo, to: customFrom };
+    }
+    return bangkokMonthRange(range === "this" ? 0 : -1);
+  }, [range, customFrom, customTo]);
+
+  const inPeriod = useMemo(() => {
+    if (!period) return () => true;
+    // The date columns are plain YYYY-MM-DD, so a string compare is the
+    // comparison - no Date, no zone, nothing to drift.
+    return (day: string | null | undefined) => !!day && day >= period.from && day <= period.to;
+  }, [period]);
 
   const { data: expenses } = useQuery({
     queryKey: ["expenses"],
@@ -87,8 +113,17 @@ function MoneyPage() {
     staleTime: 4 * 60_000, // thumbnails are 5-minute signed URLs
   });
 
+  const shownExpenses = useMemo(
+    () => (expenses ?? []).filter((r) => inPeriod((r as { spent_on: string }).spent_on)),
+    [expenses, inPeriod],
+  );
+  const shownIncomes = useMemo(
+    () => (incomes ?? []).filter((r) => inPeriod((r as { received_on: string }).received_on)),
+    [incomes, inPeriod],
+  );
+
   const rows = useMemo(() => {
-    return (tab === "expense" ? (expenses ?? []) : (incomes ?? [])).map((r) => ({
+    return (tab === "expense" ? shownExpenses : shownIncomes).map((r) => ({
       id: r.id,
       title: r.title,
       category: r.category,
@@ -105,11 +140,11 @@ function MoneyPage() {
           ? ((r as { spent_at?: string | null }).spent_at ?? null)
           : ((r as { received_at?: string | null }).received_at ?? null),
     }));
-  }, [tab, expenses, incomes]);
+  }, [tab, shownExpenses, shownIncomes]);
 
   const totals = useMemo(() => {
-    const expense = (expenses ?? []).reduce((s, e) => s + Number(e.amount ?? 0), 0);
-    const income = (incomes ?? []).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+    const expense = shownExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+    const income = shownIncomes.reduce((s, e) => s + Number(e.amount ?? 0), 0);
     const byCat = new Map<string, number>();
     rows.forEach((e) => byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amount));
     return {
@@ -118,7 +153,7 @@ function MoneyPage() {
       net: income - expense,
       byCat: [...byCat.entries()].sort((a, b) => b[1] - a[1]),
     };
-  }, [expenses, incomes, rows]);
+  }, [shownExpenses, shownIncomes, rows]);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,8 +209,52 @@ function MoneyPage() {
 
       <PhumQuickBar focus={tab === "expense" ? "expenses" : "incomes"} />
 
+      {/* Which slice of time the numbers below describe. Sits on the summary
+          card because the summary is what it changes. */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        {RANGES.map((r) => (
+          <Button
+            key={r}
+            size="sm"
+            variant={range === r ? "default" : "outline"}
+            onClick={() => setRange(r)}
+          >
+            {r === "this"
+              ? t.moneyRangeThisMonth
+              : r === "last"
+                ? t.moneyRangeLastMonth
+                : r === "all"
+                  ? t.moneyRangeAll
+                  : t.moneyRangeCustom}
+          </Button>
+        ))}
+      </div>
+      {range === "custom" && (
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="mr-from">{t.moneyRangeFrom}</Label>
+            <DateInput
+              id="mr-from"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="mr-to">{t.moneyRangeTo}</Label>
+            <DateInput id="mr-to" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+          </div>
+        </div>
+      )}
+
       <Card className="mb-5 shadow-soft">
         <CardContent className="pt-6">
+          {period && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              {formatDay(new Date(`${period.from}T00:00:00${APP_UTC_OFFSET}`), lang)} –{" "}
+              {formatDay(new Date(`${period.to}T00:00:00${APP_UTC_OFFSET}`), lang)} ·{" "}
+              {t.moneyRangeCount.replace("{n}", String(shownExpenses.length + shownIncomes.length))}
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p className="text-xs text-muted-foreground">{t.totalIncome}</p>

@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { analyzeDocument, chatWithPhum, transcribeAudio } from "@/lib/lifeos.functions";
 import { applyPhumActions } from "@/lib/phum-actions";
-import { intakeDocument } from "@/lib/doc-intake";
+import { BenefitCards } from "@/components/BenefitCards";
+import { intakeDocument, routingNotes } from "@/lib/doc-intake";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({ meta: routeMeta("chat") }),
@@ -39,9 +40,16 @@ function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const [recording, setRecording] = useState(false);
+  // The router can answer "what am I entitled to" with list_benefits, and the
+  // prompt tells it the app will show cards under the reply. It never did.
+  // Cleared on the next question, so the cards stay attached to the answer
+  // that asked for them rather than trailing the rest of the conversation.
+  const [showBenefits, setShowBenefits] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const firstLand = useRef(true);
+  const frame = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -60,7 +68,30 @@ function ChatPage() {
   });
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth" });
+    if (!messages) return;
+    const land = (behavior: ScrollBehavior) =>
+      bottom.current?.scrollIntoView({ behavior, block: "end" });
+
+    // Coming back to this page, the router restores the scroll offset the page
+    // had when it was last left - and it does that after this effect runs, so
+    // a single scrollIntoView here was being undone and the user landed in the
+    // middle of the history. Two animation frames put us after the restore;
+    // "auto" lands rather than animating away from wherever it dropped us.
+    // Later messages still slide in, which is what a chat should feel like.
+    if (firstLand.current) {
+      firstLand.current = false;
+      land("auto");
+      const a = requestAnimationFrame(() => {
+        land("auto");
+        frame.current = requestAnimationFrame(() => land("auto"));
+      });
+      frame.current = a;
+      return () => {
+        if (frame.current !== null) cancelAnimationFrame(frame.current);
+      };
+    }
+    land("smooth");
+    return;
   }, [messages, busy, fileBusy, voiceBusy]);
 
   useEffect(() => {
@@ -78,6 +109,7 @@ function ChatPage() {
   const sendText = async (text: string) => {
     if (!text.trim() || busy) return;
     setBusy(true);
+    setShowBenefits(false);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user!.id;
@@ -86,6 +118,7 @@ function ChatPage() {
       const out = await ask({ data: { message: text, lang } });
       const applied = await applyPhumActions(out.actions, uid);
       await post(uid, "assistant", out.reply);
+      setShowBenefits(out.actions.some((a) => a.type === "list_benefits"));
       if (applied.length > 0) {
         // One line per record, so asking for two things and getting one is
         // visible rather than something the reply has to be re-read to catch.
@@ -139,12 +172,9 @@ function ChatPage() {
       const uid = userData.user!.id;
       await post(uid, "user", `📎 ${file.name}`);
 
-      const { analysis, routed } = await intakeDocument(file, analyze, lang, uid);
-
-      const notes: string[] = [t.savedToDocs];
-      if (routed.includes("expense")) notes.push(t.routedToExpense);
-      if (routed.includes("income")) notes.push(t.routedToIncome);
-      if (routed.includes("reminder")) notes.push(t.routedToTasks);
+      const intake = await intakeDocument(file, analyze, lang, uid);
+      const { analysis } = intake;
+      const notes = routingNotes(intake, t);
 
       await post(uid, "assistant", `${analysis.summary}\n\n✅ ${notes.join(" · ")}`);
       toast.success(t.phumSaved);
@@ -278,6 +308,7 @@ function ChatPage() {
         {recording && (
           <p className="pl-10 text-sm font-medium text-destructive">{t.recordingHint}</p>
         )}
+        {showBenefits && !anyBusy && <BenefitCards />}
         <div ref={bottom} />
       </div>
 
