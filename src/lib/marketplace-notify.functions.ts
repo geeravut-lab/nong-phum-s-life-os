@@ -82,7 +82,7 @@ export const notifyJobOffer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { notifyUsers, notifyJobParties } = await import("./notify.server");
+    const { notifyUsers } = await import("./notify.server");
 
     const { data: job } = await supabaseAdmin
       .from("jobs")
@@ -161,8 +161,15 @@ export const notifyJobOffer = createServerFn({ method: "POST" })
 
     // Accepted: the helper needs to know, and only the owner may announce it.
     if (context.userId !== job.user_id) throw new Error("Forbidden");
-    const sent = await notifyJobParties(
-      data.jobId,
+
+    // Straight to the accepted offer's helper, not through notifyJobParties.
+    // That reads jobs.assigned_helper_id, which the browser writes *after* it
+    // calls this - so the lookup found nobody, the only other party was the
+    // actor, and the helper was never told their quote had been taken. Their
+    // user id is on the offer row we already have, and it is correct whatever
+    // order the client writes in.
+    const sent = await notifyUsers(
+      [(offer?.helper_user_id as string | null) ?? null],
       {
         kind: "job_accepted",
         params: { jobTitle: (job.title as string) ?? "" },
