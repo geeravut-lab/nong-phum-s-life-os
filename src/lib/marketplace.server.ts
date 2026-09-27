@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { persona } from "./ai-gateway.server";
 import { withProviderFallback } from "./ai-provider.server";
+import { bangkokHourOf } from "./time";
 
 export const JOB_CATEGORIES = [
   "buy_deliver",
@@ -177,7 +178,32 @@ export async function matchHelpersForJob(
   const extract = (j.ai_extract ?? {}) as { neededSkills?: string[] };
   const needed = (extract.neededSkills ?? []).map((s) => s.toLowerCase());
   const haystack = `${j.title} ${j.description ?? ""} ${j.category}`.toLowerCase();
-  const scheduledHour = j.scheduled_at ? new Date(j.scheduled_at).getHours() : null;
+  // Bangkok, not the server's zone. getHours() on Netlify is UTC, so a 14:00
+  // appointment was being compared against a working day as though it were
+  // 07:00 - every afternoon job looked like an early morning one.
+  const scheduledHour = bangkokHourOf(j.scheduled_at);
+
+  // Who is already booked at that hour. The window is generous on purpose:
+  // jobs carry a start and no duration, so anything within three hours either
+  // side is treated as a clash rather than pretending to know better.
+  const busyHelpers = new Set<string>();
+  if (j.scheduled_at) {
+    const at = new Date(j.scheduled_at).getTime();
+    const { data: booked } = await supabase
+      .from("jobs")
+      .select("assigned_helper_id, scheduled_at")
+      .in("status", ["matched", "in_progress"])
+      .not("assigned_helper_id", "is", null)
+      .not("scheduled_at", "is", null)
+      .gte("scheduled_at", new Date(at - 3 * 3600_000).toISOString())
+      .lte("scheduled_at", new Date(at + 3 * 3600_000).toISOString())
+      .neq("id", j.id)
+      .limit(500);
+    for (const b of booked ?? []) {
+      const id = (b as { assigned_helper_id: string | null }).assigned_helper_id;
+      if (id) busyHelpers.add(id);
+    }
+  }
   const budgetMax = j.budget_max ?? j.budget_min;
 
   const matches: HelperMatch[] = ((helpers ?? []) as HelperRow[]).map((h) => {
@@ -197,11 +223,21 @@ export async function matchHelpersForJob(
     }
     const distScore = distanceKm == null ? 0.5 : Math.max(0, 1 - distanceKm / 20);
 
+    // Three things, in order of how much they settle the question: a helper
+    // already booked at that hour cannot take it, whatever their stated hours
+    // say; then the working day they declared; then nothing known at all.
     let availScore = 0.5;
-    if (scheduledHour != null && h.available_from && h.available_to) {
+    if (busyHelpers.has(h.id)) {
+      availScore = 0;
+    } else if (scheduledHour != null && h.available_from && h.available_to) {
       const from = Number(h.available_from.slice(0, 2));
       const to = Number(h.available_to.slice(0, 2));
-      availScore = scheduledHour >= from && scheduledHour <= to ? 1 : 0.2;
+      // A window that wraps midnight (22:00-02:00) is two ranges, not one.
+      const within =
+        from <= to
+          ? scheduledHour >= from && scheduledHour <= to
+          : scheduledHour >= from || scheduledHour <= to;
+      availScore = within ? 1 : 0.2;
     }
 
     let priceScore = 0.5;

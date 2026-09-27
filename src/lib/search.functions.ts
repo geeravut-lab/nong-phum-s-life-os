@@ -68,9 +68,27 @@ export const universalSearch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const uid = context.userId;
     const lang = data.lang === "en" ? "en" : "th";
-    const q = like(data.q.trim());
-    const pat = `%${q}%`;
-    const PER_SOURCE = 8;
+    const raw = data.q.trim();
+    // Thai has no spaces, but people still type several things: "ค่าไฟ
+    // กันยายน" is two ideas, and as one pattern it matched nothing unless a
+    // row happened to contain that exact run of characters. Each fragment is
+    // matched on its own and all of them have to appear somewhere in the row,
+    // which is the closest thing to AND search there is without a tokenizer.
+    const fragments = raw
+      .split(/\s+/)
+      .filter((f) => f.length > 0)
+      .slice(0, 4);
+    const pats = (fragments.length > 1 ? fragments : [raw]).map((f) => `%${like(f)}%`);
+    const PER_SOURCE = 12;
+
+    /**
+     * "every fragment appears in at least one of these columns", as one filter.
+     *
+     * PostgREST nests: an or() holding a single and() group is an AND, and
+     * each element of that group can itself be an or() over the columns.
+     */
+    const terms = (...cols: string[]) =>
+      `and(${pats.map((p) => `or(${cols.map((c) => `${c}.ilike.${p}`).join(",")})`).join(",")})`;
 
     // Which family the user belongs to, so shared rows are searchable too.
     const { data: member } = await supabaseAdmin
@@ -95,44 +113,44 @@ export const universalSearch = createServerFn({ method: "POST" })
         // the counterparty and the whole `extracted` object, with a trigram
         // index behind it - so a word from inside the document matches, not
         // only one from its title.
-        .or(`search_text.ilike.${pat}`)
+        .or(terms("search_text"))
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("reminders")
         .select("id, title, notes, due_at, status, is_shared")
         .or(visible())
-        .or(`title.ilike.${pat},notes.ilike.${pat}`)
+        .or(terms("title", "notes"))
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("expenses")
         .select("id, title, note, category, amount, spent_on, is_shared")
         .or(visible())
-        .or(`title.ilike.${pat},note.ilike.${pat},category.ilike.${pat}`)
+        .or(terms("title", "note", "category"))
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("incomes")
         .select("id, title, note, category, amount, received_on, is_shared")
         .or(visible())
-        .or(`title.ilike.${pat},note.ilike.${pat},category.ilike.${pat}`)
+        .or(terms("title", "note", "category"))
         .limit(PER_SOURCE),
       // Benefits are a public catalogue, not per-user rows.
       supabaseAdmin
         .from("benefits")
         .select("id, title, title_en, summary, provider, slug, is_active")
         .eq("is_active", true)
-        .or(`title.ilike.${pat},title_en.ilike.${pat},summary.ilike.${pat},provider.ilike.${pat}`)
+        .or(terms("title", "title_en", "summary", "provider"))
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("local_places")
         .select("id, name, name_en, description, area, category, is_active")
         .eq("is_active", true)
-        .or(`name.ilike.${pat},name_en.ilike.${pat},description.ilike.${pat},area.ilike.${pat}`)
+        .or(terms("name", "name_en", "description", "area"))
         .limit(PER_SOURCE),
       supabaseAdmin
         .from("legacy_assets")
         .select("id, title, details, kind, location_hint, user_id")
         .eq("user_id", uid)
-        .or(`title.ilike.${pat},details.ilike.${pat},kind.ilike.${pat}`)
+        .or(terms("title", "details", "kind"))
         .limit(PER_SOURCE),
     ]);
 
@@ -216,7 +234,31 @@ export const universalSearch = createServerFn({ method: "POST" })
       });
     }
 
-    // Group in a stable order, newest first inside each group.
+    /**
+     * How well a hit answers what was typed.
+     *
+     * Without a Thai parser there is no stemming and no term frequency to
+     * lean on, but where a match lands still says a lot: a title that IS the
+     * query beats a title that contains it, which beats a mention buried in a
+     * summary. Date only breaks ties - the newest document is not the right
+     * answer to a specific word.
+     */
+    const score = (h: SearchHit): number => {
+      const title = h.title.toLowerCase();
+      const detail = (h.detail ?? "").toLowerCase();
+      let n = 0;
+      for (const f of (fragments.length > 1 ? fragments : [raw]).map((x) => x.toLowerCase())) {
+        if (title === f) n += 100;
+        else if (title.startsWith(f)) n += 60;
+        else if (title.includes(f)) n += 40;
+        if (detail.includes(f)) n += 10;
+      }
+      // A shorter title containing the term is more likely to be about it.
+      if (title.length <= 40) n += 5;
+      return n;
+    };
+
+    // Group in a stable order, best match first inside each group.
     const order: SearchHit["source"][] = [
       "task",
       "document",
@@ -231,6 +273,8 @@ export const universalSearch = createServerFn({ method: "POST" })
       const g = hits.filter((h) => h.source === source);
       if (g.length === 0) continue;
       g.sort((a, b) => {
+        const d = score(b) - score(a);
+        if (d !== 0) return d;
         if (a.date && b.date) return b.date.localeCompare(a.date);
         if (a.date) return -1;
         if (b.date) return 1;
