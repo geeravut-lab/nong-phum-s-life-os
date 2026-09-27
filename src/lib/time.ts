@@ -115,3 +115,21 @@ export function bangkokMonthRange(
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   return { from: `${year}-${mm}-01`, to: `${year}-${mm}-${String(lastDay).padStart(2, "0")}` };
 }
+
+// The hour of the day an instant falls on, in Bangkok. Date#getHours() is the
+// server's own zone, which on Netlify is UTC - so a 14:00 Bangkok appointment
+// read as 07:00 and was compared against the wrong end of a working day.
+const hourOnly = new Intl.DateTimeFormat("en-GB", {
+  timeZone: APP_TIME_ZONE,
+  hour: "2-digit",
+  hourCycle: "h23",
+});
+
+/** 0-23 in Bangkok, or null when the input is not a usable instant. */
+export function bangkokHourOf(value: string | Date | null | undefined): number | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const n = Number(hourOnly.format(d));
+  return Number.isFinite(n) ? n : null;
+}
