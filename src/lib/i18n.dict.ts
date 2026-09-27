@@ -1005,6 +1005,10 @@ const th = {
   ecoKindWreath: "พวงหรีดดิจิทัล",
   ecoKindTree: "ปลูกต้นไม้",
   ecoTreeBadge: "ต้นไม้",
+  navGroupDaily: "ประจำวัน",
+  navGroupMine: "ของฉัน",
+  navGroupServices: "บริการ",
+  navGroupLong: "ระยะยาว",
   navManual: "คู่มือการใช้งาน",
   manualTitle: "ลิงก์คู่มือการใช้งาน",
   manualSub:
@@ -2459,6 +2463,10 @@ const en = {
   ecoKindWreath: "Digital wreath",
   ecoKindTree: "Plant a tree",
   ecoTreeBadge: "Tree",
+  navGroupDaily: "Every day",
+  navGroupMine: "Mine",
+  navGroupServices: "Services",
+  navGroupLong: "Long term",
   navManual: "User manual",
   manualTitle: "User manual link",
   manualSub:

@@ -265,26 +265,47 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }, [activeNavBase, user?.id, totalUnread, qc]);
 
+  /**
+   * The menu, and the four groups it reads as.
+   *
+   * Fifteen entries in one unbroken column is past the length you can scan:
+   * you end up reading every label to find the one you want. The headings give
+   * the eye somewhere to land - what you touch daily, what is yours, what the
+   * app does for you, and what you set up once and come back to.
+   *
+   * The flat list stays the source of order, because the phone's bottom bar is
+   * its first four and the groups are cuts along it. Order inside each group is
+   * unchanged, and notifications stays near the top because half the other
+   * menus can raise a red dot pointing at it.
+   */
   const nav = [
+    // ประจำวัน / every day - 6
     { to: "/today", label: t.navToday, icon: Home },
     { to: "/chat", label: t.navChat, icon: MessageCircleHeart },
     { to: "/docs", label: t.navDocs, icon: FileText },
     { to: "/tasks", label: t.navTasks, icon: ListTodo },
     { to: "/agenda", label: t.navAgenda ?? "Agenda", icon: CalendarDays },
-    // Fifth, not fifteenth. Half the menus can raise a red dot that points
-    // here, so burying it at the end of the list meant the one page the app
-    // actively pushes people towards was the furthest to reach.
     { to: "/inbox", label: t.inboxTitle, icon: Bell },
+    // ของฉัน / mine - 3
     { to: "/search", label: t.navSearch ?? "Search", icon: Search },
     { to: "/money", label: t.navMoney, icon: Wallet },
     { to: "/family", label: t.navFamily, icon: Users },
+    // บริการ / services - 4
     { to: "/helpme", label: t.navHelpMe, icon: HandHelping },
     { to: "/benefits", label: t.navBenefits, icon: ShieldCheck },
     { to: "/decide", label: t.navDecide, icon: Scale },
     { to: "/local", label: t.navLocal, icon: MapPinned },
+    // ระยะยาว / long term - 2
     { to: "/legacy", label: t.navLegacy, icon: Feather },
     { to: "/support", label: t.navSupport, icon: Heart },
   ] as const;
+
+  const navGroups = [
+    { label: t.navGroupDaily, items: nav.slice(0, 6) },
+    { label: t.navGroupMine, items: nav.slice(6, 9) },
+    { label: t.navGroupServices, items: nav.slice(9, 13) },
+    { label: t.navGroupLong, items: nav.slice(13) },
+  ];
 
   // Set by an admin, hidden when empty: a menu entry that opens nothing is
   // worse than no entry. It is an outside link, so it opens in a new tab and
@@ -292,7 +313,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const manualUrl = useManualUrl();
 
   const primaryNav = nav.slice(0, 4);
-  const moreNav = nav.slice(4);
+  // The phone's bottom bar already carries the first four, so the sheet picks
+  // up where it leaves off - with the headings kept, and a group dropped once
+  // the bar has taken all of it.
+  const moreGroups = navGroups
+    .map((g) => ({ label: g.label, items: g.items.filter((i) => !primaryNav.includes(i)) }))
+    .filter((g) => g.items.length > 0);
 
   const signOut = async () => {
     // Local scope on purpose. supabase-js signs out globally by default, which
@@ -314,7 +340,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     for (const v of visibleUnreadByNav.values()) n += v;
     return n;
   }, [visibleUnreadByNav]);
-  const moreHasBadge = moreNav.some((i) => hasBadge(i.to)) || hasBadge("/admin");
+  const moreHasBadge = nav.slice(4).some((i) => hasBadge(i.to)) || hasBadge("/admin");
 
   return (
     <div className="min-h-screen bg-background md:flex">
@@ -334,19 +360,26 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <ScrollHint className="p-3">
           <nav className="flex flex-col gap-1">
-            {nav.map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={linkClass}
-                activeProps={{ className: activeClass }}
-              >
-                <span className="relative">
-                  <item.icon className="size-4 shrink-0" />
-                  <NavDot show={hasBadge(item.to)} />
-                </span>
-                <span className="truncate">{item.label}</span>
-              </Link>
+            {navGroups.map((group) => (
+              <div key={group.label} className="mb-1">
+                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={linkClass}
+                    activeProps={{ className: activeClass }}
+                  >
+                    <span className="relative">
+                      <item.icon className="size-4 shrink-0" />
+                      <NavDot show={hasBadge(item.to)} />
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
         </ScrollHint>
@@ -469,20 +502,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <ScrollHint className="p-3">
               <div className="flex flex-col gap-1">
-                {moreNav.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => setMoreOpen(false)}
-                    className={linkClass}
-                    activeProps={{ className: activeClass }}
-                  >
-                    <span className="relative">
-                      <item.icon className="size-4 shrink-0" />
-                      <NavDot show={hasBadge(item.to)} />
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </Link>
+                {moreGroups.map((group) => (
+                  <div key={group.label} className="mb-1">
+                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                      {group.label}
+                    </p>
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMoreOpen(false)}
+                        className={linkClass}
+                        activeProps={{ className: activeClass }}
+                      >
+                        <span className="relative">
+                          <item.icon className="size-4 shrink-0" />
+                          <NavDot show={hasBadge(item.to)} />
+                        </span>
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    ))}
+                  </div>
                 ))}
               </div>
             </ScrollHint>
