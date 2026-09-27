@@ -87,7 +87,9 @@ export async function runDocumentAnalysis(input: {
     generateObject({
       model,
       schema: DocSchema,
-      system: `${persona(input.lang)}\nYou are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.`,
+      system: `${persona(input.lang)}
+Today is ${todayInBangkok()} (${APP_TIME_ZONE}). You are extracting structured data from a document a user uploaded. Answer all free text in ${langName}. Use null when a field is genuinely absent — never guess.
+Dates: return every date in the Gregorian calendar as YYYY-MM-DD. Thai documents are often written in the Buddhist era, which is 543 years ahead - พ.ศ. 2569 is 2026. When a date gives only a day and a month, take the year from today's date above; if that would put it in the future, use the year before. Never invent a year.`,
       messages: [
         {
           role: "user",

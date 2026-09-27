@@ -88,6 +88,32 @@ export function routingNotes(
 const CATEGORY_KEYS = new Set(Object.keys(categoryLabels));
 
 /**
+ * A date for money that has already moved.
+ *
+ * The handwritten note that prompted this wrote "25/09" with no year, and the
+ * model filled the gap with 2028 - two years of expenses that would never
+ * appear in "this month" and would quietly skew every total. A payment cannot
+ * have happened in the future, so a future date is a misread rather than a
+ * fact: the same day in the current year is tried, then the year before.
+ * A Buddhist year passed through verbatim (2569) is handled first, since it
+ * is 543 years out and would fail the same test for the wrong reason.
+ *
+ * Only for spent_on / received_on. A due date in the future is perfectly
+ * normal and is left alone.
+ */
+export function moneyDate(raw: string | null | undefined, today: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw ?? "").trim());
+  if (!m) return null;
+  const [, ys, mo, d] = m as unknown as [string, string, string, string];
+  const year = Number(ys) >= 2400 ? Number(ys) - 543 : Number(ys);
+  const asWritten = `${String(year).padStart(4, "0")}-${mo}-${d}`;
+  if (asWritten <= today) return asWritten;
+  const thisYear = `${today.slice(0, 4)}-${mo}-${d}`;
+  if (thisYear <= today) return thisYear;
+  return `${Number(today.slice(0, 4)) - 1}-${mo}-${d}`;
+}
+
+/**
  * The line items, with the two free-text fields pinned back to known values.
  *
  * They are strings in the schema because Gemini refused the version with
@@ -96,14 +122,14 @@ const CATEGORY_KEYS = new Set(Object.keys(categoryLabels));
  * nor "income" has to land somewhere - money out is the safer guess for a
  * statement, and the user can flip it from the card.
  */
-function normaliseLines(result: DocAnalysisResult) {
+function normaliseLines(result: DocAnalysisResult, today: string) {
   return (result.lineItems ?? [])
     .filter((l) => Number.isFinite(Number(l.amount)) && Number(l.amount) > 0)
     .map((l) => ({
       title: String(l.title ?? "").trim() || result.title,
       amount: Number(l.amount),
       kind: String(l.kind ?? "").toLowerCase() === "income" ? "income" : "expense",
-      on: /^\d{4}-\d{2}-\d{2}$/.test(String(l.on ?? "")) ? String(l.on) : null,
+      on: moneyDate(l.on, today),
       category: CATEGORY_KEYS.has(String(l.category)) ? String(l.category) : result.category,
     }));
 }
@@ -253,7 +279,7 @@ async function analyzeAndFinalize(
   // line the user wrote down, which is the reason they keep the statement at
   // all - so when the AI found individual lines, those are what get filed and
   // the summary row is skipped.
-  const lines = normaliseLines(result);
+  const lines = normaliseLines(result, today);
   if (lines.length > 0) {
     const expenses = lines.filter((l) => l.kind === "expense");
     const incomes = lines.filter((l) => l.kind === "income");
@@ -264,7 +290,7 @@ async function analyzeAndFinalize(
           title: l.title,
           amount: l.amount,
           category: l.category || result.category,
-          spent_on: l.on ?? result.docDate ?? today,
+          spent_on: l.on ?? moneyDate(result.docDate, today) ?? today,
           source_document_id: documentId,
         })),
       );
@@ -280,7 +306,7 @@ async function analyzeAndFinalize(
           title: l.title,
           amount: l.amount,
           category: l.category || result.category,
-          received_on: l.on ?? result.docDate ?? today,
+          received_on: l.on ?? moneyDate(result.docDate, today) ?? today,
           source_document_id: documentId,
         })),
       );
@@ -295,7 +321,7 @@ async function analyzeAndFinalize(
       title: result.title,
       amount: result.amount,
       category: result.category,
-      received_on: result.docDate ?? today,
+      received_on: moneyDate(result.docDate, today) ?? today,
       source_document_id: documentId,
     });
     routed.push("income");
@@ -305,7 +331,7 @@ async function analyzeAndFinalize(
       title: result.title,
       amount: result.amount,
       category: result.category,
-      spent_on: result.docDate ?? today,
+      spent_on: moneyDate(result.docDate, today) ?? today,
       source_document_id: documentId,
     });
     routed.push("expense");
