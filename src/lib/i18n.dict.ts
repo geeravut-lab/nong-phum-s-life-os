@@ -8,7 +8,7 @@ const th = {
   appTagline: "ผู้ช่วยดูแลเรื่องรอบตัวคุณ",
   heroTitle: "ให้น้องภูมิดูแลเรื่องจุกจิกในชีวิตแทนคุณ",
   heroSub:
-    "ถ่ายรูปเอกสารแล้วน้องภูมิอ่านให้ สร้างเตือนความจำ จัดหมวดค่าใช้จ่าย แชร์เรื่องสำคัญกับครอบครัว และสรุปให้ฟังทุกเช้า",
+    "ถ่ายรูปเอกสารแล้วอ่านให้ · จดค่าใช้จ่ายและตั้งเตือนจากประโยคเดียว · รวมทุกนัดไว้ในปฏิทินเดียว · แชร์กับครอบครัวเท่าที่คุณเลือก · บอกสิทธิรัฐที่คุณน่าจะได้ · ช่วยตัดสินใจเรื่องใหญ่ · หาของดีใกล้บ้าน · และเก็บสิ่งที่อยากฝากไว้",
   heroCta: "เริ่มใช้งานฟรี",
   heroCta2: "ดูว่าน้องภูมิทำอะไรได้บ้าง",
   features: "น้องภูมิช่วยอะไรได้บ้าง",
@@ -1464,7 +1464,7 @@ const en = {
   appTagline: "Your always-on life assistant",
   heroTitle: "Let Nong Phum handle life's little things",
   heroSub:
-    "Snap a document and it reads it for you, sets reminders, sorts expenses, shares what matters with family, and briefs you every morning.",
+    "Photograph a document and it reads it. Log a cost and set a reminder in one sentence. Every appointment in one calendar. Share with family only what you choose. Find the state benefits you qualify for, work through the big decisions, discover what is good nearby, and keep what you want to leave behind.",
   heroCta: "Get started free",
   heroCta2: "See what it can do",
   features: "What Nong Phum does",
