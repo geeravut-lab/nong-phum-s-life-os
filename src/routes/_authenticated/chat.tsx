@@ -40,11 +40,6 @@ function ChatPage() {
   const [busy, setBusy] = useState(false);
   const [fileBusy, setFileBusy] = useState(false);
   const [recording, setRecording] = useState(false);
-  // The router can answer "what am I entitled to" with list_benefits, and the
-  // prompt tells it the app will show cards under the reply. It never did.
-  // Cleared on the next question, so the cards stay attached to the answer
-  // that asked for them rather than trailing the rest of the conversation.
-  const [showBenefits, setShowBenefits] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -60,7 +55,7 @@ function ChatPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("chat_messages")
-        .select("id, role, content")
+        .select("id, role, content, action")
         .order("created_at", { ascending: true })
         .limit(100);
       return data ?? [];
@@ -69,15 +64,18 @@ function ChatPage() {
 
   useEffect(() => {
     if (!messages) return;
+    // The end of the document, not the sentinel. scrollIntoView aligns the
+    // sentinel's bottom with the viewport's, which leaves everything that
+    // comes after it in the flow - the composer - still below the fold, and
+    // the newest message ends up behind the input box. Scrolling to
+    // scrollHeight is the one position that cannot be short.
     const land = (behavior: ScrollBehavior) =>
-      bottom.current?.scrollIntoView({ behavior, block: "end" });
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
 
-    // Coming back to this page, the router restores the scroll offset the page
-    // had when it was last left - and it does that after this effect runs, so
-    // a single scrollIntoView here was being undone and the user landed in the
-    // middle of the history. Two animation frames put us after the restore;
-    // "auto" lands rather than animating away from wherever it dropped us.
-    // Later messages still slide in, which is what a chat should feel like.
+    // The router's scroll restoration is off for this route, but the message
+    // list still grows after the first paint - images, fonts, the benefit
+    // cards fetching. A couple of frames lets the height settle before the
+    // landing, and "auto" lands rather than animating from wherever we were.
     if (firstLand.current) {
       firstLand.current = false;
       land("auto");
@@ -101,15 +99,25 @@ function ChatPage() {
     };
   }, []);
 
-  const post = async (uid: string, role: "user" | "assistant", content: string) => {
-    await supabase.from("chat_messages").insert({ user_id: uid, role, content });
+  // `action` has been on chat_messages since the first migration and nothing
+  // has used it. It is what makes the benefit cards survive leaving the page:
+  // the cards belong to the answer that asked for them, so the answer is what
+  // remembers, not a piece of component state that dies on unmount.
+  const post = async (
+    uid: string,
+    role: "user" | "assistant",
+    content: string,
+    action?: { cards: "benefits" },
+  ) => {
+    await supabase
+      .from("chat_messages")
+      .insert({ user_id: uid, role, content, ...(action ? { action } : {}) });
     qc.invalidateQueries({ queryKey: ["chat"] });
   };
 
   const sendText = async (text: string) => {
     if (!text.trim() || busy) return;
     setBusy(true);
-    setShowBenefits(false);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user!.id;
@@ -117,8 +125,8 @@ function ChatPage() {
 
       const out = await ask({ data: { message: text, lang } });
       const applied = await applyPhumActions(out.actions, uid);
-      await post(uid, "assistant", out.reply);
-      setShowBenefits(out.actions.some((a) => a.type === "list_benefits"));
+      const wantsBenefits = out.actions.some((a) => a.type === "list_benefits");
+      await post(uid, "assistant", out.reply, wantsBenefits ? { cards: "benefits" } : undefined);
       if (applied.length > 0) {
         // One line per record, so asking for two things and getting one is
         // visible rather than something the reply has to be re-read to catch.
@@ -286,20 +294,22 @@ function ChatPage() {
           </div>
         )}
         {messages?.map((m) => (
-          <div
-            key={m.id}
-            className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}
-          >
-            {m.role !== "user" && <PhumMark className="size-8 shrink-0" />}
-            <div
-              className={
-                m.role === "user"
-                  ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
-                  : "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm"
-              }
-            >
-              {m.content}
+          <div key={m.id} className="space-y-3">
+            <div className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2"}>
+              {m.role !== "user" && <PhumMark className="size-8 shrink-0" />}
+              <div
+                className={
+                  m.role === "user"
+                    ? "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+                    : "max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-muted px-4 py-2.5 text-sm"
+                }
+              >
+                {m.content}
+              </div>
             </div>
+            {(m.action as { cards?: string } | null)?.cards === "benefits" ? (
+              <BenefitCards />
+            ) : null}
           </div>
         ))}
         {busy && <p className="pl-10 text-sm text-muted-foreground">{t.thinking}</p>}
@@ -308,8 +318,10 @@ function ChatPage() {
         {recording && (
           <p className="pl-10 text-sm font-medium text-destructive">{t.recordingHint}</p>
         )}
-        {showBenefits && !anyBusy && <BenefitCards />}
-        <div ref={bottom} />
+        {/* Clears the composer, which is fixed above the nav bar on a phone and
+            so takes no space of its own. Without it the newest message sits
+            underneath the input box. */}
+        <div ref={bottom} className="h-24 md:h-2" />
       </div>
 
       <form
