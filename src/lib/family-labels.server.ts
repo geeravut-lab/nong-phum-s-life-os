@@ -11,6 +11,34 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  * Exported because the chat router needs the same names: "มอบหมายให้ต้น" can
  * only resolve to a person if the model was shown that a person is called ต้น.
  */
+/**
+ * A usable name for one account, without a family in the picture.
+ *
+ * Same fallback chain as the family version, and used by the notifications
+ * that name a person to somebody who is not in their family - the admin who
+ * sees "มีสลิปรอตรวจสอบ" needs to know whose, and an eight-character uuid at
+ * least tells two pending slips apart.
+ */
+export async function userLabel(userId: string | null | undefined): Promise<string> {
+  if (!userId) return "";
+  const { data: prof } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const fromProfile = (prof?.display_name as string | null)?.trim() || "";
+  if (fromProfile) return fromProfile;
+  try {
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const meta = u.user?.user_metadata as Record<string, string> | undefined;
+    const fromAuth = meta?.["full_name"] || meta?.["name"] || u.user?.email?.split("@")[0] || "";
+    if (fromAuth) return fromAuth;
+  } catch {
+    /* ignore - a name is never worth failing a notification over */
+  }
+  return userId.slice(0, 8);
+}
+
 export async function resolveMemberLabels(
   familyId: string,
 ): Promise<Array<{ memberId: string; userId: string; role: string; label: string }>> {

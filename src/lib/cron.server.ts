@@ -37,6 +37,7 @@ import { supabaseAdmin } from "../integrations/supabase/client.server";
 import { loadRules, recordRuleRun, ruleEnabled, ruleNumber, type RuleSet } from "./rules.server";
 import { notifyUsers } from "./notify.server";
 import { isRepeating, lastOccurrenceAtOrBefore, nextOccurrence } from "./recurrence";
+import { bahtTH, dayTH, noticeBody, whenTH } from "./notice-detail";
 import { bangkokDateAtHour, todayInBangkok } from "./time";
 import {
   bangkokHour,
@@ -81,6 +82,25 @@ function agoIso(now: Date, ms: number): string {
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
+
+/** A name for a notification, never a reason for one to fail. */
+async function userLabelSafe(userId: string | null | undefined): Promise<string> {
+  if (!userId) return "";
+  try {
+    const { userLabel } = await import("./family-labels.server");
+    return await userLabel(userId);
+  } catch {
+    return "";
+  }
+}
+
+/** "฿500 - ฿800", or one end of it, or nothing when the poster gave neither. */
+function budgetText(min: number | null, max: number | null): string {
+  const lo = bahtTH(min);
+  const hi = bahtTH(max);
+  if (lo && hi) return lo === hi ? lo : `${lo} - ${hi}`;
+  return lo || hi || "";
+}
 
 /**
  * One run of the scheduled job. `now` is injectable so a test can pretend to
@@ -477,11 +497,14 @@ async function detectRoutineChanges(now: Date, overBudget: () => boolean): Promi
 
     const { data: members } = await supabaseAdmin
       .from("family_members")
-      .select("user_id, display_name")
+      .select("user_id")
       .eq("family_id", r.family_id as string);
 
-    const subject =
-      (members ?? []).find((m) => m.user_id === r.subject_user_id)?.display_name || "สมาชิก";
+    // Through resolveMemberLabels, not family_members.display_name: that is a
+    // nickname almost nobody sets, so the alert used to read "ของสมาชิก".
+    const { resolveMemberLabels } = await import("./family-labels.server");
+    const labels = await resolveMemberLabels(r.family_id as string).catch(() => []);
+    const subject = labels.find((m) => m.userId === r.subject_user_id)?.label || "สมาชิกครอบครัว";
 
     const rows = (members ?? [])
       .map((m) => m.user_id as string)
@@ -491,7 +514,13 @@ async function detectRoutineChanges(now: Date, overBudget: () => boolean): Promi
         user_id: uid,
         kind: "family_routine",
         title: "กิจวัตรเปลี่ยนจากปกติ",
-        body: `ข้อมูล "${r.title}" ของ${subject} เปลี่ยนจากรูปแบบปกติ (${gapDays} วันที่ไม่มีบันทึก) แนะนำให้ลองติดต่อสอบถาม`,
+        body: noticeBody("แนะนำให้ลองติดต่อสอบถาม", [
+          ["กิจวัตร", r.title as string],
+          ["ของ", subject],
+          ["ไม่มีบันทึกมา", `${gapDays} วัน`],
+          ["ปกติทุก", `${r.interval_days} วัน (ผ่อนผัน ${r.grace_days} วัน)`],
+          ["บันทึกล่าสุด", dayTH(`${last.logged_on as string}T00:00:00+07:00`)],
+        ]),
         href: "/family",
         ref_table: "family_routines",
         ref_id: r.id as string,
@@ -781,17 +810,30 @@ async function checkinMissing(now: Date, rules: RuleSet): Promise<number> {
       if (others.length === 0) continue;
       if (await alreadyNotified(others[0]!, "checkin_missing", uid, days * DAY)) continue;
 
+      const { userLabel } = await import("./family-labels.server");
+      const who = (await userLabel(uid)) || "สมาชิกครอบครัว";
       const { data: prof } = await supabaseAdmin
         .from("profiles")
         .select("display_name")
         .eq("id", uid)
+        .maybeSingle();
+      const { data: lastCheckin } = await supabaseAdmin
+        .from("family_checkins")
+        .select("created_at, status")
+        .eq("user_id", uid)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       sent += await notifyUsers(
         others,
         {
           kind: "checkin_missing",
           title: "ยังไม่มีเช็คอิน",
-          body: `${prof?.display_name ?? "สมาชิกครอบครัว"} ไม่ได้เช็คอินมา ${days} วันแล้ว`,
+          body: noticeBody("ลองติดต่อสอบถามดูว่าทุกอย่างเรียบร้อยไหม", [
+            ["สมาชิก", who],
+            ["ไม่ได้เช็คอินมา", `${days} วัน`],
+            ["เช็คอินล่าสุด", whenTH((lastCheckin?.created_at as string | null) ?? null)],
+          ]),
           href: "/family",
           refTable: "family_checkins",
           refId: uid,
@@ -847,12 +889,22 @@ async function routineOverdueEscalate(now: Date, rules: RuleSet): Promise<number
     if (await alreadyNotified(ids[0]!, "routine_overdue", r.id as string, limitDays * DAY))
       continue;
 
+    const { resolveMemberLabels } = await import("./family-labels.server");
+    const overdueLabels = await resolveMemberLabels(r.family_id as string).catch(() => []);
+    const subjectName =
+      overdueLabels.find((m) => m.userId === r.subject_user_id)?.label || "สมาชิกครอบครัว";
+
     sent += await notifyUsers(
       ids,
       {
         kind: "routine_overdue",
         title: "กิจวัตรค้างนานผิดปกติ",
-        body: `${r.title} ไม่มีบันทึกมา ${daysSince} วัน (ปกติทุก ${r.interval_days} วัน)`,
+        body: noticeBody("ลองติดต่อสอบถามหรือช่วยกันเตือน", [
+          ["กิจวัตร", r.title as string],
+          ["ของ", subjectName],
+          ["ไม่มีบันทึกมา", `${daysSince} วัน`],
+          ["ปกติทุก", `${r.interval_days} วัน`],
+        ]),
         href: "/family",
         refTable: "family_routines",
         refId: r.id as string,
@@ -901,7 +953,18 @@ async function documentsExpiring(
       {
         kind: key,
         title: key === "insurance_expiring" ? "เอกสารใกล้หมดอายุ" : "ประกันสินค้าใกล้หมด",
-        body: `${d["title"] ?? ""} · ${on}`,
+        body: noticeBody(String(d["title"] ?? ""), [
+          [key === "insurance_expiring" ? "หมดอายุ" : "ประกันหมด", dayTH(`${on}T00:00:00+07:00`)],
+          [
+            "เหลืออีก",
+            `${Math.max(0, Math.ceil((Date.parse(`${on}T00:00:00+07:00`) - now.getTime()) / DAY))} วัน`,
+          ],
+          ...(key === "insurance_expiring"
+            ? ([["ระบบทำให้", "สร้างงาน “ต่ออายุ” ไว้ในเรื่องที่ต้องทำแล้ว"]] as Array<
+                [string, string]
+              >)
+            : []),
+        ]),
         href: "/docs",
         refTable: "documents",
         refId: id,
@@ -956,7 +1019,14 @@ async function premiumExpiring(now: Date, rules: RuleSet): Promise<number> {
       {
         kind: "plan_expiring",
         title: "แพ็กของคุณใกล้หมดอายุ",
-        body: `${p.plan_tier === "family" ? "Family" : "Premium"} หมดอายุ ${on}`,
+        body: noticeBody("ต่ออายุได้จากหน้าสนับสนุนและแพ็กเกจ", [
+          ["แพ็ก", p.plan_tier === "family" ? "Family" : "Premium"],
+          ["หมดอายุ", dayTH(String(p.plan_expires_at ?? "")) || on],
+          [
+            "เหลืออีก",
+            `${Math.max(0, Math.ceil((Date.parse(String(p.plan_expires_at ?? "")) - now.getTime()) / DAY))} วัน`,
+          ],
+        ]),
         href: "/support",
         refTable: "profiles",
         refId: id,
@@ -985,7 +1055,7 @@ async function paygOverdue(now: Date): Promise<number> {
 
   const { data: unpaid } = await supabaseAdmin
     .from("premium_payments")
-    .select("id, user_id, created_at")
+    .select("id, user_id, created_at, amount, period")
     .eq("plan_tier", "payg")
     .eq("payment_status", "pending")
     .lte("created_at", cutoff)
@@ -1003,7 +1073,12 @@ async function paygOverdue(now: Date): Promise<number> {
       {
         kind: "payg_overdue",
         title: "ค้างชำระ PAYG — ระงับการใช้ AI ชั่วคราว",
-        body: `เกินกำหนดชำระ ${grace} วัน ชำระแล้วระบบจะเปิดให้ใช้อีกครั้ง`,
+        body: noticeBody("ชำระแล้วระบบจะเปิดให้ใช้อีกครั้งอัตโนมัติ", [
+          ["ยอดค้าง", bahtTH(row.amount as number | null)],
+          ["รอบบิล", (row.period as string | null) ?? ""],
+          ["แจ้งยอดเมื่อ", dayTH((row.created_at as string | null) ?? null)],
+          ["เกินกำหนดมา", `${grace} วัน`],
+        ]),
         href: "/support",
         refTable: "premium_payments",
         refId: row.id as string,
@@ -1022,7 +1097,7 @@ async function funeralReviewStale(now: Date, rules: RuleSet): Promise<number> {
 
   const { data: plans } = await supabaseAdmin
     .from("funeral_plans")
-    .select("id, selected_package, updated_at")
+    .select("id, user_id, selected_package, updated_at, created_at")
     .eq("admin_status", "reviewing")
     .lte("updated_at", cutoff)
     .limit(50);
@@ -1045,7 +1120,12 @@ async function funeralReviewStale(now: Date, rules: RuleSet): Promise<number> {
       {
         kind: "funeral_stale",
         title: "แผนงานศพรอยืนยันนานแล้ว",
-        body: `รอมากกว่า ${hours} ชั่วโมง · ${plan.selected_package ?? ""}`,
+        body: noticeBody("ยังไม่มีใครตรวจแผนนี้", [
+          ["ผู้ใช้", await userLabelSafe(plan.user_id as string | null)],
+          ["แพ็กเกจ", (plan.selected_package as string | null) ?? ""],
+          ["รอมาแล้ว", `มากกว่า ${hours} ชั่วโมง`],
+          ["ส่งเข้ามาเมื่อ", whenTH((plan.created_at as string | null) ?? null)],
+        ]),
         href: "/admin/funeral",
         refTable: "funeral_plans",
         refId: plan.id as string,
@@ -1065,7 +1145,7 @@ async function jobsWithoutOffers(now: Date, rules: RuleSet): Promise<number> {
 
   const { data: jobs } = await supabaseAdmin
     .from("jobs")
-    .select("id, title, status, created_at")
+    .select("id, title, status, created_at, location_text, budget_min, budget_max, scheduled_at")
     .eq("status", "open")
     .lte("created_at", cutoff)
     .limit(30);
@@ -1100,7 +1180,15 @@ async function jobsWithoutOffers(now: Date, rules: RuleSet): Promise<number> {
       {
         kind: "job_match",
         title: "มีงานที่ตรงกับคุณ",
-        body: (job.title as string) ?? "",
+        body: noticeBody((job.title as string) ?? "", [
+          ["พื้นที่", (job.location_text as string | null) ?? ""],
+          [
+            "งบที่ตั้งไว้",
+            budgetText(job.budget_min as number | null, job.budget_max as number | null),
+          ],
+          ["นัดหมาย", whenTH((job.scheduled_at as string | null) ?? null)],
+          ["ประกาศเมื่อ", whenTH((job.created_at as string | null) ?? null)],
+        ]),
         href: "/helper-dashboard",
         refTable: "jobs",
         refId: job.id as string,
@@ -1150,7 +1238,13 @@ async function budgetOverPercent(now: Date, rules: RuleSet): Promise<number> {
       {
         kind: "budget_warning",
         title: "ใช้จ่ายเกินงบที่ตั้งไว้",
-        body: `เดือนนี้ใช้ไป ฿${Math.round(spent).toLocaleString()} จากงบ ฿${Math.round(budget).toLocaleString()}`,
+        body: noticeBody("ดูรายการทั้งหมดได้ในหน้ารายรับ-รายจ่าย", [
+          ["ใช้ไปเดือนนี้", bahtTH(spent)],
+          ["งบที่ตั้งไว้", bahtTH(budget)],
+          ["คิดเป็น", `${Math.round((spent / budget) * 100)}% ของงบ`],
+          ["เกณฑ์เตือน", `${percent}%`],
+          ["เหลืออีก", spent < budget ? bahtTH(budget - spent) : "ใช้เกินงบแล้ว"],
+        ]),
         href: "/money",
         refTable: "profiles",
         refId: p.id as string,

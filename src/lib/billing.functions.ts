@@ -3,6 +3,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { notifyAdmins, notifyUsers } from "./notify.server";
 import { appError } from "@/lib/errors";
+import { userLabel } from "./family-labels.server";
+import { bahtTH, dayTH, noticeBody } from "./notice-detail";
+
+const TIER_TH: Record<string, string> = {
+  premium: "Premium",
+  family: "Family",
+  payg: "จ่ายตามใช้ (PAYG)",
+};
+
+const PERIOD_TH: Record<string, string> = { monthly: "รายเดือน", yearly: "รายปี" };
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -484,7 +494,13 @@ export const confirmPremiumPaid = createServerFn({ method: "POST" })
       {
         kind: "billing_review",
         title: "มีสลิปรอตรวจสอบ",
-        body: "ผู้ใช้แจ้งว่าโอนแล้ว รอยืนยันการชำระเงิน",
+        body: noticeBody("ผู้ใช้แจ้งว่าโอนแล้ว รอยืนยันการชำระเงิน", [
+          ["ผู้ชำระ", await userLabel(pay.user_id as string | null)],
+          ["แพ็ก", TIER_TH[pay.plan_tier as string] ?? (pay.plan_tier as string)],
+          ["รอบ", PERIOD_TH[pay.period as string] ?? (pay.period as string)],
+          ["ยอด", bahtTH(pay.amount as number | null)],
+          ["อ้างอิงการโอน", data.payerRef],
+        ]),
         href: "/admin/premium",
         refTable: "premium_payments",
         refId: data.paymentId,
@@ -513,14 +529,19 @@ export const adminRejectPremiumPayment = createServerFn({ method: "POST" })
       .update({ payment_status: "rejected" })
       .eq("id", data.paymentId)
       .eq("payment_status", "pending")
-      .select("user_id")
+      .select("user_id, plan_tier, period, amount, payer_ref")
       .maybeSingle();
     await notifyUsers(
       [rejected?.user_id as string | undefined],
       {
         kind: "billing_result",
         title: "การชำระเงินไม่ผ่านการตรวจสอบ",
-        body: "กรุณาตรวจสอบสลิปแล้วแจ้งใหม่อีกครั้ง",
+        body: noticeBody("กรุณาตรวจสอบสลิปแล้วแจ้งใหม่อีกครั้ง", [
+          ["แพ็ก", TIER_TH[rejected?.plan_tier as string] ?? ""],
+          ["รอบ", PERIOD_TH[rejected?.period as string] ?? ""],
+          ["ยอดที่แจ้ง", bahtTH(rejected?.amount as number | null)],
+          ["อ้างอิงที่แจ้ง", (rejected?.payer_ref as string | null) ?? ""],
+        ]),
         href: "/support",
         refTable: "premium_payments",
         refId: data.paymentId,
@@ -635,7 +656,12 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
         kind: "billing_result",
         params: { planTier: pay.plan_tier },
         title: "ยืนยันการชำระเงินแล้ว",
-        body: "แพ็กของคุณเริ่มใช้งานได้แล้ว",
+        body: noticeBody("แพ็กของคุณเริ่มใช้งานได้แล้ว", [
+          ["แพ็ก", TIER_TH[pay.plan_tier as string] ?? (pay.plan_tier as string)],
+          ["รอบ", PERIOD_TH[pay.period as string] ?? (pay.period as string)],
+          ["ยอดที่ชำระ", bahtTH(pay.amount as number | null)],
+          ["ใช้ได้ถึง", pay.plan_tier === "payg" ? "" : dayTH(end.toISOString())],
+        ]),
         href: "/support",
         refTable: "premium_payments",
         refId: data.paymentId,

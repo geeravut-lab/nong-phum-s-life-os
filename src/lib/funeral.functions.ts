@@ -5,6 +5,8 @@ import { requireAdmin, requireSupabaseAuth } from "@/integrations/supabase/auth-
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { notifyAdmins, notifyUsers } from "@/lib/notify.server";
 import { installmentSchedule } from "@/lib/funeral.shared";
+import { userLabel } from "./family-labels.server";
+import { bahtTH, dayTH, noticeBody, whenTH } from "./notice-detail";
 
 export const planFuneral = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -107,7 +109,11 @@ export const selectFuneralPackage = createServerFn({ method: "POST" })
           total: Number(selected.totalBudget),
         },
         title: "มีผู้เลือกแพ็กเกจงานศพ",
-        body: `${selected.name ?? data.packageId} · ฿${Number(selected.totalBudget).toLocaleString()} — ต้องติดต่อสถานที่และผู้ให้บริการเพื่อยืนยัน`,
+        body: noticeBody("ต้องติดต่อสถานที่และผู้ให้บริการเพื่อยืนยัน", [
+          ["ผู้เลือก", await userLabel(context.userId)],
+          ["แพ็กเกจ", selected.name ?? data.packageId],
+          ["งบรวม", bahtTH(Number(selected.totalBudget))],
+        ]),
         href: "/admin/funeral",
         refTable: "funeral_plans",
         refId: data.planId,
@@ -145,7 +151,10 @@ export const setFuneralFulfilment = createServerFn({ method: "POST" })
         kind: "funeral_fulfilment",
         params: { mode: data.mode },
         title: "ผู้ใช้เลือกวิธีดำเนินการงานศพ",
-        body: data.mode === "platform" ? "ให้แพลตฟอร์มดำเนินการให้" : "ผู้ใช้จะดำเนินการเอง",
+        body: noticeBody(
+          data.mode === "platform" ? "ให้แพลตฟอร์มดำเนินการให้" : "ผู้ใช้จะดำเนินการเอง",
+          [["ผู้เลือก", await userLabel(context.userId)]],
+        ),
         href: "/admin/funeral",
         refTable: "funeral_plans",
         refId: data.planId,
@@ -394,7 +403,7 @@ export const adminReviewFuneralPlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: plan } = await supabaseAdmin
       .from("funeral_plans")
-      .select("id, user_id")
+      .select("id, user_id, selected_package")
       .eq("id", data.planId)
       .maybeSingle();
     if (!plan) throw new Error("plan not found");
@@ -423,11 +432,25 @@ export const adminReviewFuneralPlan = createServerFn({ method: "POST" })
             : data.decision === "declined"
               ? "แพ็กเกจงานศพยังดำเนินการไม่ได้"
               : "กำลังตรวจสอบแพ็กเกจงานศพ",
-        body: data.notes?.trim()
-          ? data.notes.trim().slice(0, 300)
-          : data.decision === "confirmed"
-            ? "เลือกได้แล้วว่าจะดำเนินการเองหรือให้แพลตฟอร์มดำเนินการให้"
-            : "เปิดดูรายละเอียดในเมนูมรดกแห่งชีวิต",
+        body: noticeBody(
+          data.notes?.trim()
+            ? data.notes.trim().slice(0, 300)
+            : data.decision === "confirmed"
+              ? "เลือกได้แล้วว่าจะดำเนินการเองหรือให้แพลตฟอร์มดำเนินการให้"
+              : "เปิดดูรายละเอียดในเมนูมรดกแห่งชีวิต",
+          [
+            ["แพ็กเกจ", plan.selected_package],
+            [
+              "ผลการตรวจ",
+              data.decision === "confirmed"
+                ? "ยืนยันแล้ว"
+                : data.decision === "declined"
+                  ? "ยังดำเนินการไม่ได้"
+                  : "กำลังตรวจสอบ",
+            ],
+            ["ตรวจเมื่อ", whenTH(new Date().toISOString())],
+          ],
+        ),
         href: "/legacy/after",
         refTable: "funeral_plans",
         refId: data.planId,
@@ -501,7 +524,12 @@ export const addFuneralEvidence = createServerFn({ method: "POST" })
         kind: "funeral_evidence",
         params: { title: data.title.trim() },
         title: "มีหลักฐานใหม่ในแผนงานศพของคุณ",
-        body: data.title.trim().slice(0, 300),
+        body: noticeBody(data.title.trim().slice(0, 300), [
+          ["ประเภท", data.kind],
+          ["เพิ่มโดย", await userLabel(context.userId)],
+          ["บันทึก", data.note.trim()],
+          ["ไฟล์แนบ", filePath ? "มี" : "ไม่มี"],
+        ]),
         href: "/legacy/after",
         refTable: "funeral_evidence",
         refId: data.planId,
@@ -552,7 +580,7 @@ export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: row } = await supabaseAdmin
       .from("funeral_installments")
-      .select("id, plan_id, seq")
+      .select("id, plan_id, seq, amount, due_on")
       .eq("id", data.installmentId)
       .maybeSingle();
     if (!row) throw new Error("not found");
@@ -594,7 +622,13 @@ export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
           kind: "funeral_installment",
           params: { seq: row.seq },
           title: "แจ้งชำระงวดค่างานศพ",
-          body: `งวดที่ ${row.seq}${data.payerRef ? ` · อ้างอิง ${data.payerRef}` : ""}`,
+          body: noticeBody(`งวดที่ ${row.seq}`, [
+            ["ผู้ชำระ", await userLabel(context.userId)],
+            ["ยอดงวดนี้", bahtTH(row.amount as number | null)],
+            ["ครบกำหนด", dayTH(row.due_on as string | null)],
+            ["อ้างอิงการโอน", data.payerRef],
+            ["งวดที่ยังค้าง", String(count ?? 0)],
+          ]),
           href: "/admin/funeral",
           refTable: "funeral_installments",
           refId: data.installmentId,

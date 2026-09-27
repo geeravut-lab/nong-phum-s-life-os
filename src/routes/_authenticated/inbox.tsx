@@ -118,7 +118,12 @@ function InboxPage() {
                     </Badge>
                   ) : null}
                 </div>
-                {body ? <p className="mt-0.5 text-sm text-muted-foreground">{body}</p> : null}
+                {/* A body is a summary line plus "label: value" lines (see
+                    notice-detail.ts), so the newlines have to survive - without
+                    this the due date runs into the assignee's name. */}
+                {body ? (
+                  <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">{body}</p>
+                ) : null}
                 <p className="mt-1 text-[10px] text-muted-foreground">
                   {formatDay(new Date(r.created_at), lang, true)}
                 </p>
