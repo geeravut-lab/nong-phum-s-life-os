@@ -228,16 +228,15 @@ async function loadContext(supabase: Db, userId: string) {
 
   let family: { id: string; members: Array<{ id: string; name: string }> } | null = null;
   if (familyId) {
-    const { data: members } = await supabase
-      .from("family_members")
-      .select("user_id, display_name")
-      .eq("family_id", familyId);
+    // The same resolver the family page uses. Reading display_name alone gave
+    // the model a list of ids with blank names, which is nothing to match
+    // "มอบหมายให้ต้น" against - most accounts keep their name on the profile
+    // or have only the one in their email.
+    const { resolveMemberLabels } = await import("./family-labels.server");
+    const labels = await resolveMemberLabels(familyId);
     family = {
       id: familyId,
-      members: (members ?? []).map((m) => ({
-        id: m.user_id as string,
-        name: (m.display_name as string | null) ?? "",
-      })),
+      members: labels.map((m) => ({ id: m.userId, name: m.label })),
     };
   }
 
