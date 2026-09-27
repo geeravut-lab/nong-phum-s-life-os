@@ -24,6 +24,8 @@ export type LocalEventRow = {
   mapsUrl: string | null;
   /** Name of the linked place, for routing and display. */
   placeName: string | null;
+  /** Whether the linked place is shared; null when the event stands alone. */
+  placeIsPublic: boolean | null;
   startsAt: string;
   endsAt: string | null;
   priceMin: number | null;
@@ -42,6 +44,8 @@ function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
     area?: string | null;
     lat?: number | null;
     lng?: number | null;
+    is_public?: boolean | null;
+    is_active?: boolean | null;
   } | null;
   const lat = (r["lat"] as number | null) ?? place?.lat ?? null;
   const lng = (r["lng"] as number | null) ?? place?.lng ?? null;
@@ -58,6 +62,9 @@ function toRow(r: Record<string, unknown>, uid: string): LocalEventRow {
     lat,
     lng,
     placeName: place?.name ?? null,
+    // Null when the event has no place of its own - a street market is nobody's
+    // shop, so there is nothing to hide it with.
+    placeIsPublic: place ? place.is_public !== false && place.is_active !== false : null,
     mapsUrl: (r["maps_url"] as string | null) ?? null,
     startsAt: r["starts_at"] as string,
     endsAt: (r["ends_at"] as string | null) ?? null,
@@ -94,7 +101,7 @@ export const listUpcomingLocalEvents = createServerFn({ method: "POST" })
 
     let qb = supabaseAdmin
       .from("local_events")
-      .select("*, local_places(name, address, area, lat, lng)")
+      .select("*, local_places(name, address, area, lat, lng, is_public, is_active)")
       .limit(60);
 
     if (data.mineOnly) {
@@ -119,6 +126,17 @@ export const listUpcomingLocalEvents = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     let events = (rows ?? []).map((r) => toRow(r as Record<string, unknown>, uid));
+
+    // A shop that is not shared takes its events with it. This runs on the
+    // service role, which bypasses the row policy that enforces the same rule
+    // for the page's own queries - so the rule has to be repeated here or the
+    // events would announce the shop by another route.
+    //
+    // The owner keeps seeing their own, otherwise unticking the box would hide
+    // the event from the person who created it.
+    if (!data.mineOnly) {
+      events = events.filter((e) => e.isMine || e.placeIsPublic !== false);
+    }
 
     // Budget is filtered here rather than in SQL: "not stated" (null) must not
     // be treated as free, and an event qualifies when its cheapest entry is

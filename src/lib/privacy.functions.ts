@@ -122,6 +122,17 @@ export const startPlanTrial = createServerFn({ method: "POST" })
     const days = data.days ?? 14;
     const expires = new Date(Date.now() + days * 864e5).toISOString();
 
+    // One trial per account, ever. The button was callable as often as anyone
+    // liked, which made the paid plans optional - and the check is here rather
+    // than on the button because hiding a button stops nobody.
+    const { data: prior } = await supabaseAdmin
+      .from("user_subscriptions")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("notes", "trial_skeleton")
+      .limit(1);
+    if ((prior ?? []).length > 0) throw appError("trial_already_used");
+
     const { error: sErr } = await supabaseAdmin.from("user_subscriptions").insert({
       user_id: context.userId,
       plan_tier: data.planTier,

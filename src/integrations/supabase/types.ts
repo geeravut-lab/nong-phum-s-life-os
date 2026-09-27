@@ -74,6 +74,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      trip_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          stops: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          stops?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          stops?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       automation_rules: {
         Row: {
           id: string;
