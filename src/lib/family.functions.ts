@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveMemberLabels } from "./family-labels.server";
+import { dayTH, noticeBody, PRIORITY_TH, whenTH } from "./notice-detail";
 import { notifyUsers } from "./notify.server";
 
 /**
@@ -41,6 +42,23 @@ async function notifyFamily(
     refTable: n.refTable,
     refId: n.refId,
   });
+}
+
+/**
+ * Names for the people a family notification talks about.
+ *
+ * One lookup serves both the actor and the assignee, because a card that says
+ * "มอบหมายโดย: แม่" is the whole point of the change and doing it twice would
+ * be two more round trips on a path that already writes three tables.
+ */
+async function familyNames(familyId: string): Promise<Map<string, string>> {
+  try {
+    const labels = await resolveMemberLabels(familyId);
+    return new Map(labels.map((m) => [m.userId, m.label]));
+  } catch {
+    // A missing name must never cost the notification itself.
+    return new Map();
+  }
 }
 
 async function requireFamilyMember(userId: string, familyId: string) {
@@ -114,10 +132,19 @@ export const createFamilyEvent = createServerFn({ method: "POST" })
     // Red dot on the unified agenda for everyone else in the family. The nav
     // badge is driven by app_notifications and kindToNav falls back to the
     // href, so pointing at /agenda is what lights that menu item up.
+    const eventNames = await familyNames(data.familyId);
     await notifyFamily(data.familyId, context.userId, {
       kind: "family_event",
       title: "นัดใหม่ในปฏิทินครอบครัว",
-      body: data.title,
+      body: noticeBody(data.title, [
+        ["เพิ่มโดย", eventNames.get(context.userId)],
+        [
+          data.allDay ? "วันที่" : "เริ่ม",
+          data.allDay ? dayTH(data.startsAt) : whenTH(data.startsAt),
+        ],
+        ["ถึง", data.allDay ? dayTH(data.endsAt) : whenTH(data.endsAt)],
+        ["บันทึก", data.notes],
+      ]),
       href: "/agenda",
       refTable: "family_events",
       refId: row.id as string,
@@ -184,12 +211,17 @@ export const postFamilyCheckin = createServerFn({ method: "POST" })
         data.status === "emergency"
           ? "ฉุกเฉิน — ต้องการความช่วยเหลือ"
           : "สมาชิกต้องการความช่วยเหลือ";
+      const checkinNames = await familyNames(data.familyId);
       await notifyUsers(
         (members ?? []).map((m) => m.user_id as string),
         {
           kind: "family_checkin",
           title,
-          body: data.note || title,
+          body: noticeBody(data.note, [
+            ["จาก", checkinNames.get(context.userId)],
+            ["สถานะ", data.status === "emergency" ? "ฉุกเฉิน" : "ต้องการความช่วยเหลือ"],
+            ["เวลา", whenTH(row.created_at as string)],
+          ]),
           href: "/family",
           refTable: "family_checkins",
           refId: row.id,
@@ -250,11 +282,20 @@ export const assignFamilyTask = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
+    const taskNames = await familyNames(data.familyId);
+    const assignedBy = taskNames.get(context.userId);
+    const dueText = data.dueAt ? whenTH(data.dueAt) : "ไม่ได้กำหนด";
+    const priorityText = PRIORITY_TH[data.priority ?? "normal"] ?? "";
+
     if (data.assigneeUserId && data.assigneeUserId !== context.userId) {
       await notifyUsers([data.assigneeUserId], {
         kind: "family_task",
         title: "งานครอบครัวที่มอบหมายให้คุณ",
-        body: data.title as string,
+        body: noticeBody(data.title as string, [
+          ["มอบหมายโดย", assignedBy],
+          ["กำหนดส่ง", dueText],
+          ["ความสำคัญ", priorityText],
+        ]),
         href: "/tasks",
         refTable: "reminders",
         refId: row.id as string,
@@ -266,7 +307,12 @@ export const assignFamilyTask = createServerFn({ method: "POST" })
     await notifyFamily(data.familyId, context.userId, {
       kind: "family_task",
       title: "งานครอบครัวใหม่ในปฏิทิน",
-      body: data.title,
+      body: noticeBody(data.title, [
+        ["มอบหมายโดย", assignedBy],
+        ["ผู้รับผิดชอบ", data.assigneeUserId ? taskNames.get(data.assigneeUserId) : "ยังไม่ระบุ"],
+        ["กำหนดส่ง", dueText],
+        ["ความสำคัญ", priorityText],
+      ]),
       href: "/agenda",
       refTable: "reminders",
       refId: row.id as string,

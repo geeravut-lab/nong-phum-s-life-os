@@ -9,6 +9,7 @@
 //   * every free-text node has wrap: true; Thai has no spaces to break on
 //   * dates are Buddhist era, Bangkok time
 //   * immediate = one card, one reminder · digest = one card, many rows
+import { parseNoticeBody } from "./notice-detail";
 import { APP_TIME_ZONE } from "./time";
 
 // oklch(0.52 0.098 205) — the app's --primary — as hex for LINE.
@@ -203,10 +204,22 @@ export function noticeCard(
   n: { title: string; body: string | null; href: string | null },
   appUrl: string,
 ): FlexMessage {
-  const body = (n.body ?? "").trim();
+  // The body is a summary line followed by "label: value" lines (see
+  // notice-detail.ts). Rendering the detail lines as rows is what makes the
+  // card answer "who, what, when" without opening the app - a single wrapped
+  // paragraph buries the due date in the middle of a sentence.
+  const parts = parseNoticeBody(n.body).slice(0, 8);
+  const contents = parts.map((p) =>
+    p.label ? row(p.label, clip(p.value, 120)) : text(clip(p.value, 300), { size: "sm" }),
+  );
   return {
     type: "flex",
-    altText: clip(body ? `${n.title} — ${body}` : n.title, 400),
+    altText: clip(
+      parts.length
+        ? `${n.title} — ${parts.map((p) => (p.label ? `${p.label} ${p.value}` : p.value)).join(" · ")}`
+        : n.title,
+      400,
+    ),
     contents: {
       type: "bubble",
       size: "mega",
@@ -216,8 +229,8 @@ export function noticeCard(
         layout: "vertical",
         spacing: "md",
         paddingAll: "16px",
-        contents: body
-          ? [text(clip(body, 300), { size: "sm", wrap: true })]
+        contents: contents.length
+          ? contents
           : [text("เปิดแอปเพื่อดูรายละเอียด", { size: "sm", color: MUTED })],
       },
       footer: footer(appUrl, "เปิดน้องภูมิ"),
