@@ -27,6 +27,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useManualUrl } from "@/hooks/useFeatureFlags";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -359,17 +360,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <ScrollHint className="p-3">
-          <nav className="flex flex-col gap-1">
+          {/* Headings cost vertical space, and the sidebar was already close to
+              full: adding four pushed the last entry below the fold. They are
+              kept tight and the rows a little shorter, which is a desktop-only
+              change - the phone's sheet uses the same class at its own size. */}
+          <nav className="flex flex-col">
             {navGroups.map((group) => (
-              <div key={group.label} className="mb-1">
-                <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+              <div key={group.label} className="mt-2 first:mt-0">
+                <p className="px-3 pb-0.5 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
                   {group.label}
                 </p>
                 {group.items.map((item) => (
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={linkClass}
+                    className={cn(linkClass, "py-2")}
                     activeProps={{ className: activeClass }}
                   >
                     <span className="relative">
