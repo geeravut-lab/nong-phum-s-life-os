@@ -100,6 +100,7 @@ export type Database = {
       };
       app_notifications: {
         Row: {
+          params: Json;
           body: string;
           created_at: string;
           href: string | null;
@@ -112,6 +113,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          params?: Json;
           body?: string;
           created_at?: string;
           href?: string | null;
@@ -124,6 +126,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          params?: Json;
           body?: string;
           created_at?: string;
           href?: string | null;

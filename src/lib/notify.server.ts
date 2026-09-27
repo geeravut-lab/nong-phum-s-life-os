@@ -22,6 +22,13 @@ export type Notice = {
   href: string;
   refTable?: string | null;
   refId?: string | null;
+  /**
+   * Values for the kind's template, so the inbox can render the sentence in
+   * whichever language the reader uses. title/body remain the fallback - for
+   * rows written before templates existed, for kinds without one, and for LINE,
+   * which is sent text rather than a key.
+   */
+  params?: Record<string, string | number | boolean | null>;
 };
 
 /** Notify specific users, skipping the actor and any duplicates. */
@@ -44,6 +51,7 @@ export async function notifyUsers(
       href: n.href,
       ref_table: n.refTable ?? null,
       ref_id: n.refId ?? null,
+      params: n.params ?? {},
     })),
   );
   // A failed notification must never fail the action that triggered it: the

@@ -614,6 +614,7 @@ export const adminConfirmPremiumPayment = createServerFn({ method: "POST" })
       [pay.user_id as string],
       {
         kind: "billing_result",
+        params: { planTier: pay.plan_tier },
         title: "ยืนยันการชำระเงินแล้ว",
         body: "แพ็กของคุณเริ่มใช้งานได้แล้ว",
         href: "/support",

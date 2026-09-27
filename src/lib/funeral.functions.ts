@@ -97,6 +97,10 @@ export const selectFuneralPackage = createServerFn({ method: "POST" })
     await notifyAdmins(
       {
         kind: "funeral_selected",
+        params: {
+          packageName: selected.name ?? data.packageId,
+          total: Number(selected.totalBudget),
+        },
         title: "มีผู้เลือกแพ็กเกจงานศพ",
         body: `${selected.name ?? data.packageId} · ฿${Number(selected.totalBudget).toLocaleString()} — ต้องติดต่อสถานที่และผู้ให้บริการเพื่อยืนยัน`,
         href: "/admin/funeral",
@@ -134,6 +138,7 @@ export const setFuneralFulfilment = createServerFn({ method: "POST" })
     await notifyAdmins(
       {
         kind: "funeral_fulfilment",
+        params: { mode: data.mode },
         title: "ผู้ใช้เลือกวิธีดำเนินการงานศพ",
         body: data.mode === "platform" ? "ให้แพลตฟอร์มดำเนินการให้" : "ผู้ใช้จะดำเนินการเอง",
         href: "/admin/funeral",
@@ -404,6 +409,7 @@ export const adminReviewFuneralPlan = createServerFn({ method: "POST" })
       [plan.user_id],
       {
         kind: "funeral_review",
+        params: { decision: data.decision, note: data.notes?.trim() ?? "" },
         title:
           data.decision === "confirmed"
             ? "แพ็กเกจงานศพยืนยันได้แล้ว"
@@ -486,6 +492,7 @@ export const addFuneralEvidence = createServerFn({ method: "POST" })
       [plan.user_id],
       {
         kind: "funeral_evidence",
+        params: { title: data.title.trim() },
         title: "มีหลักฐานใหม่ในแผนงานศพของคุณ",
         body: data.title.trim().slice(0, 300),
         href: "/legacy/after",
@@ -578,6 +585,7 @@ export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
       await notifyAdmins(
         {
           kind: "funeral_installment",
+          params: { seq: row.seq },
           title: "แจ้งชำระงวดค่างานศพ",
           body: `งวดที่ ${row.seq}${data.payerRef ? ` · อ้างอิง ${data.payerRef}` : ""}`,
           href: "/admin/funeral",
