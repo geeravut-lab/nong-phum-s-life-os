@@ -1,3 +1,4 @@
+import { assertFeature } from "@/lib/flags.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAdmin, requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -22,6 +23,8 @@ export const planFuneral = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    // Switched off means no new plans, not just a hidden form.
+    await assertFeature("funeral_planner");
     const { buildFuneralPackages } = await import("./funeral.server");
     const packages = await buildFuneralPackages({
       budget: data.budget ?? null,
@@ -67,6 +70,8 @@ export const selectFuneralPackage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    // A plan chosen while the feature is off would sit in an admin queue nobody is working.
+    await assertFeature("funeral_planner");
     const { data: plan, error } = await context.supabase
       .from("funeral_plans")
       .select("id, user_id, packages")
@@ -203,6 +208,8 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    // Never take money for a service that is currently switched off.
+    await assertFeature("funeral_planner");
     const { data: plan, error } = await context.supabase
       .from("funeral_plans")
       .select("id, user_id, packages, status, admin_status, fulfilment")

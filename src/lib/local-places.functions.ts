@@ -1,3 +1,4 @@
+import { featureEnabled } from "@/lib/flags.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -114,6 +115,10 @@ export const searchGooglePlaces = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
+    // The client checks this too, but the client is not what Google bills.
+    if (!(await featureEnabled("google_places"))) {
+      return { places: [] as GooglePlaceItem[], error: null as null, message: null as null };
+    }
     const key = mapsKey();
     if (!key) {
       return {

@@ -1,3 +1,4 @@
+import { assertFeature } from "@/lib/flags.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -106,6 +107,9 @@ export const transcribeAudio = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => TranscribeInput.parse(input))
   .handler(async ({ data }) => {
+    // Hiding the microphone is not switching voice off: this function is
+    // still callable, and it spends money on a vendor when it runs.
+    await assertFeature("voice_input");
     await requireQuota("transcribe");
     const { transcribeAudio: run } = await import("./phum.server");
     return run(data);

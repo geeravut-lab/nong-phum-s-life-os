@@ -18,7 +18,14 @@ CREATE TABLE IF NOT EXISTS public.webhook_endpoints (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   url text NOT NULL,
-  secret text NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'),
+  -- Built from core functions only. gen_random_bytes comes from pgcrypto, which
+  -- Supabase installs into the extensions schema rather than public, so calling
+  -- it unqualified fails on the real database even though it works locally.
+  -- sha256 and gen_random_uuid are in core Postgres and need no extension.
+  secret text NOT NULL DEFAULT encode(
+    sha256((gen_random_uuid()::text || clock_timestamp()::text)::bytea),
+    'hex'
+  ),
   /** Notification kinds to send. Empty array means every kind. */
   events text[] NOT NULL DEFAULT '{}',
   is_active boolean NOT NULL DEFAULT true,
