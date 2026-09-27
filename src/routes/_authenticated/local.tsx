@@ -193,10 +193,26 @@ function LocalPage() {
     },
   });
 
+  /**
+   * What this page is allowed to show, before any search or filter.
+   *
+   * The row policy already hides an unshared shop from other users, but it
+   * makes two exceptions: the owner, and anyone with the admin role. The
+   * admin exception is there for moderation, and on a moderation screen it is
+   * right - here it is wrong, because this is the page everyone browses, and an
+   * admin browsing it would see shops their owners had deliberately unticked.
+   * So the same rule is applied again in the page: shared, or mine.
+   */
+  const visiblePlaces = useMemo(() => {
+    const uid = user?.id;
+    return (placesQ.data ?? []).filter((p) => {
+      const row = p as { is_public?: boolean | null; owner_user_id?: string | null };
+      return row.is_public !== false || (!!uid && row.owner_user_id === uid);
+    });
+  }, [placesQ.data, user?.id]);
+
   const ranked = useMemo(() => {
-    const places = (placesQ.data ?? []).filter(
-      (p) => (p as { is_demo?: boolean }).is_demo !== true,
-    );
+    const places = visiblePlaces.filter((p) => (p as { is_demo?: boolean }).is_demo !== true);
     let list = places;
     // Free-text terms actually filter. Ranking alone still returned every
     // place, so searching "วัด" listed shops with nothing to do with a temple,
@@ -267,15 +283,25 @@ function LocalPage() {
         score: p.score + (p.is_promoted ? 40 : 0),
       })),
     );
-  }, [placesQ.data, intent, coords, openOnly, radiusKm, submittedQuery]);
+  }, [visiblePlaces, intent, coords, openOnly, radiusKm, submittedQuery]);
 
   const placeNameById = useMemo(() => {
     const m = new Map<string, string>();
-    for (const p of placesQ.data ?? []) {
+    for (const p of visiblePlaces) {
       m.set(p.id, lang === "en" && p.name_en ? p.name_en : p.name);
     }
     return m;
-  }, [placesQ.data, lang]);
+  }, [visiblePlaces, lang]);
+
+  /**
+   * A promotion belongs to a shop, so it is only on offer while the shop is.
+   * Unticking "share" used to leave the promotion on the page announcing the
+   * shop by name, which is the same leak by another route.
+   */
+  const visibleDeals = useMemo(
+    () => (dealsQ.data ?? []).filter((d) => placeNameById.has(d.place_id)),
+    [dealsQ.data, placeNameById],
+  );
 
   const dealsByPlace = useMemo(() => {
     const m = new Map<string, LocalDeal[]>();
@@ -779,14 +805,14 @@ function LocalPage() {
         ) : null}
       </section>
 
-      {(dealsQ.data ?? []).length > 0 && (
+      {visibleDeals.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Tag className="size-4" />
             {t.localDealsTitle}
           </h2>
           <ul className="flex gap-2 overflow-x-auto pb-1">
-            {(dealsQ.data ?? []).slice(0, 8).map((d) => (
+            {visibleDeals.slice(0, 8).map((d) => (
               <li key={d.id} className="min-w-[200px] shrink-0">
                 <button
                   type="button"

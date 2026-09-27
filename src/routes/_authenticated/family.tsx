@@ -867,7 +867,17 @@ function FamilyPage() {
                 value={taskTitle}
                 onChange={(e) => setTaskTitle(e.target.value)}
               />
-              <DateTimeInput value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
+              {/* The box alone reads as a second, nameless field. Saying what
+                  the date is for is the difference between "when is this due"
+                  and "what am I supposed to type here". */}
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                {t.r4TaskDue}
+                <DateTimeInput
+                  className="text-sm text-foreground"
+                  value={taskDue}
+                  onChange={(e) => setTaskDue(e.target.value)}
+                />
+              </label>
               <select
                 className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                 value={assignee}

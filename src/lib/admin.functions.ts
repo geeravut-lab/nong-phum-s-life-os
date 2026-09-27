@@ -420,6 +420,10 @@ export const setFeatureFlag = createServerFn({ method: "POST" })
       .update({ feature_flags: flags })
       .eq("id", true);
     if (error) throw error;
+
+    const { invalidateFlagsCache } = await import("@/lib/flags.server");
+    invalidateFlagsCache();
+
     return { ok: true as const, flags };
   });
 
