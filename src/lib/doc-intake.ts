@@ -223,7 +223,7 @@ async function analyzeAndFinalize(
 
   const today = todayInBangkok();
   const routed: IntakeResult["routed"] = [];
-  const lines_ = { expense: 0, income: 0 };
+  const lineCounts = { expense: 0, income: 0 };
 
   // A statement lists many payments. Posting its total as one row loses every
   // line the user wrote down, which is the reason they keep the statement at
@@ -246,7 +246,7 @@ async function analyzeAndFinalize(
       );
       if (!error) {
         routed.push("expense");
-        lines_.expense = expenses.length;
+        lineCounts.expense = expenses.length;
       }
     }
     if (incomes.length > 0) {
@@ -262,7 +262,7 @@ async function analyzeAndFinalize(
       );
       if (!error) {
         routed.push("income");
-        lines_.income = incomes.length;
+        lineCounts.income = incomes.length;
       }
     }
   } else if (result.isIncome && result.amount) {
@@ -315,5 +315,5 @@ async function analyzeAndFinalize(
     routed.push("reminder");
   }
 
-  return { analysis: result, routed, lines: lines_ };
+  return { analysis: result, routed, lines: lineCounts };
 }
