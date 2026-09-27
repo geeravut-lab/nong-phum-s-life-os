@@ -12,9 +12,24 @@ const JobId = z.object({ jobId: z.string().uuid() });
  * name. Failures come back empty - noticeBody drops empty details, so a card
  * loses a row instead of the notification being lost.
  */
-async function jobFacts(
-  jobId: string,
-): Promise<{ title: string; agreedPrice: number | null; helperName: string }> {
+type JobFacts = {
+  title: string;
+  agreedPrice: number | null;
+  helperName: string;
+  /** What the payer actually transfers, which is the agreed price plus the fee. */
+  paidAmount: number | null;
+  /** What the helper receives once the money is released. */
+  providerAmount: number | null;
+};
+
+async function jobFacts(jobId: string): Promise<JobFacts> {
+  const empty: JobFacts = {
+    title: "",
+    agreedPrice: null,
+    helperName: "",
+    paidAmount: null,
+    providerAmount: null,
+  };
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: job } = await supabaseAdmin
@@ -22,6 +37,12 @@ async function jobFacts(
       .select("title, agreed_price, assigned_helper_id")
       .eq("id", jobId)
       .maybeSingle();
+    const { data: pay } = await supabaseAdmin
+      .from("job_payments")
+      .select("amount, provider_amount")
+      .eq("job_id", jobId)
+      .maybeSingle();
+
     let helperName = "";
     if (job?.assigned_helper_id) {
       const { data: helper } = await supabaseAdmin
@@ -39,9 +60,11 @@ async function jobFacts(
       title: (job?.title as string | null) ?? "",
       agreedPrice: (job?.agreed_price as number | null) ?? null,
       helperName,
+      paidAmount: (pay?.amount as number | null) ?? null,
+      providerAmount: (pay?.provider_amount as number | null) ?? null,
     };
   } catch {
-    return { title: "", agreedPrice: null, helperName: "" };
+    return empty;
   }
 }
 
@@ -74,7 +97,7 @@ export const submitPaymentRef = createServerFn({ method: "POST" })
         body: noticeBody("รอตรวจสอบและยืนยันยอดที่รับเข้า", [
           ["งาน", job.title],
           ["ผู้ว่าจ้าง", await userLabel(context.userId)],
-          ["ยอด", bahtTH(job.agreedPrice)],
+          ["ยอดที่ต้องโอน", bahtTH(job.paidAmount ?? job.agreedPrice)],
           ["อ้างอิงการโอน", data.payerRef],
         ]),
         href: "/admin/payments",
@@ -104,7 +127,7 @@ export const verifyJobService = createServerFn({ method: "POST" })
         body: noticeBody("เงินถูกปล่อยเข้าคิวจ่ายให้ผู้รับงาน", [
           ["งาน", verified.title],
           ["ผู้รับงาน", verified.helperName],
-          ["ยอดที่ตกลง", bahtTH(verified.agreedPrice)],
+          ["ยอดที่ปล่อยให้ผู้รับงาน", bahtTH(verified.providerAmount ?? verified.agreedPrice)],
         ]),
         href: "/helper-dashboard",
         refTable: "jobs",
