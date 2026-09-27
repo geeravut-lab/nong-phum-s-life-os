@@ -1382,7 +1382,6 @@ const th = {
   p6SendWreath: "วางพวงหรีด",
   p6MsgSent: "ส่งข้อความแล้ว",
   p6WreathSent: "บันทึกพวงหรีดแล้ว",
-  p6NavAfter: "หลังเหตุการณ์ (Phase 6)",
 } as const;
 
 // Thai is the source of truth. `satisfies` on `en` makes a missing or extra key a
@@ -2775,7 +2774,6 @@ const en = {
   p6SendWreath: "Place wreath",
   p6MsgSent: "Message sent",
   p6WreathSent: "Wreath recorded",
-  p6NavAfter: "After events (Phase 6)",
 } satisfies Dict;
 
 export const dict: Record<Lang, Dict> = { th, en };
