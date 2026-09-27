@@ -1,4 +1,5 @@
 import type { Dict } from "./i18n.dict";
+import { parseNoticeBody } from "./notice-detail";
 
 /**
  * Turning a stored notification into a sentence the reader understands.
@@ -49,12 +50,32 @@ const TEMPLATES: Record<string, Template> = {
   }),
 };
 
+/**
+ * The "label: value" lines of a stored body, without its summary line.
+ *
+ * A template renders the summary in the reader's language but knows nothing
+ * about the details, which were written into the body when the thing happened.
+ * Keeping them means the app says as much as the LINE card does - the reader
+ * should not have to check their phone to find out who assigned the task.
+ */
+function detailLines(body: string): string {
+  return parseNoticeBody(body)
+    .filter((p) => p.label)
+    .map((p) => `${p.label}: ${p.value}`)
+    .join("\n");
+}
+
 export function renderNotification(row: NotificationRow, t: Dict): { title: string; body: string } {
   const tpl = TEMPLATES[row.kind];
   const params = (row.params ?? {}) as Record<string, unknown>;
   // A template with no values behind it would render an empty sentence, which
   // is worse than the Thai text that was actually written at the time.
-  if (tpl && Object.keys(params).length > 0) return tpl(t, params);
-  if (tpl && row.kind === "billing_result") return tpl(t, params);
-  return { title: row.title, body: row.body };
+  const usable = tpl && (Object.keys(params).length > 0 || row.kind === "billing_result");
+  if (!usable) return { title: row.title, body: row.body };
+
+  const rendered = tpl(t, params);
+  const details = detailLines(row.body);
+  return details
+    ? { ...rendered, body: [rendered.body, details].filter(Boolean).join("\n") }
+    : rendered;
 }
