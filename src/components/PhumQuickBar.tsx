@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { chatWithPhum } from "@/lib/lifeos.functions";
-import { applyPhumAction } from "@/lib/phum-actions";
+import { applyPhumActions } from "@/lib/phum-actions";
 
 type Focus = "tasks" | "expenses" | "incomes";
 
@@ -46,9 +46,9 @@ export function PhumQuickBar({ focus }: { focus: Focus }) {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user!.id;
       const out = await ask({ data: { message: text, lang, focus } });
-      const applied = await applyPhumAction(out.action, uid);
-      if (applied) {
-        toast.success(t[savedLabel[applied.kind]]);
+      const applied = await applyPhumActions(out.actions, uid);
+      if (applied.length > 0) {
+        toast.success(applied.map((a) => t[savedLabel[a.kind]]).join(" · "));
         qc.invalidateQueries();
       } else {
         toast.info(out.reply);

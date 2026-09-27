@@ -18,7 +18,28 @@ export type AppliedAction = { kind: "reminder" | "expense" | "income"; label: st
 
 const today = () => todayInBangkok();
 
-/** Saves the action Nong Phum decided on straight into the matching module. */
+/**
+ * Saves every action Nong Phum decided on, in order, and reports what landed.
+ *
+ * One message can carry more than one record - an expense and a reminder - so
+ * this returns a list. A failure on one is not allowed to lose the others: the
+ * ones already saved are kept and the error is rethrown after, so the caller
+ * can say what did and did not happen.
+ */
+export async function applyPhumActions(
+  actions: PhumActionPayload[] | PhumActionPayload | null | undefined,
+  userId: string,
+): Promise<AppliedAction[]> {
+  const list = Array.isArray(actions) ? actions : actions ? [actions] : [];
+  const applied: AppliedAction[] = [];
+  for (const a of list) {
+    const one = await applyPhumAction(a, userId);
+    if (one) applied.push(one);
+  }
+  return applied;
+}
+
+/** Saves one action straight into the matching module. */
 export async function applyPhumAction(
   action: PhumActionPayload | null | undefined,
   userId: string,

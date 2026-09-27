@@ -223,7 +223,12 @@ function MerchantDashboardPage() {
   /** hours state -> open_hours json. Unticked days are stored as null = closed. */
   const hoursToJson = () => {
     const anyOn = DAY_KEYS.some((d) => hours[d]?.on);
-    if (!anyOn) return null; // nothing set: keep "unknown" rather than "closed all week"
+    // Nothing ticked means "unknown", not "closed all week" - the box says so.
+    // An empty object, not null: the column is NOT NULL, so null made the save
+    // fail with a raw Postgres message and no shop could be added without
+    // first filling in hours. isOpenNow reads {} as unknown, which is the
+    // behaviour the box promises.
+    if (!anyOn) return {};
     return Object.fromEntries(
       DAY_KEYS.map((d) => {
         const h = hours[d];
