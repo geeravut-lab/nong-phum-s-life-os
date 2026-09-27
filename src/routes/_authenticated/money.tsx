@@ -116,16 +116,27 @@ function MoneyPage() {
       amount: Number(amount || 0),
       category,
     };
-    const { error } =
+    // The form asks for a day, not a clock, so the time is now - the same rule
+    // the chat uses when someone names a date and no time. The retry is for the
+    // window between this deploying and the migration running: PostgREST
+    // refuses the whole insert over one unknown column, and losing the expense
+    // is a worse outcome than losing the time of day.
+    const insert = (withTime: boolean) =>
       tab === "expense"
-        ? await supabase
-            .from("expenses")
-            // The form asks for a day, not a clock, so the time is now - the
-            // same rule the chat uses when someone names a date and no time.
-            .insert({ ...base, spent_on: date, spent_at: bangkokDateTime(date, null) })
-        : await supabase
-            .from("incomes")
-            .insert({ ...base, received_on: date, received_at: bangkokDateTime(date, null) });
+        ? supabase.from("expenses").insert({
+            ...base,
+            spent_on: date,
+            ...(withTime ? { spent_at: bangkokDateTime(date, null) } : {}),
+          })
+        : supabase.from("incomes").insert({
+            ...base,
+            received_on: date,
+            ...(withTime ? { received_at: bangkokDateTime(date, null) } : {}),
+          });
+    let { error } = await insert(true);
+    if (error?.code === "PGRST204" || error?.code === "42703") {
+      ({ error } = await insert(false));
+    }
     if (error) {
       toast.error(error.message);
       return;

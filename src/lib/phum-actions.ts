@@ -41,6 +41,21 @@ export async function applyPhumActions(
   return applied;
 }
 
+/**
+ * PostgREST refuses the whole insert when one column is not in its schema
+ * cache, and the site deploys before anyone runs the migration. Without this,
+ * every expense and income spoken into the chat would be lost for the length
+ * of that window - the row rejected, nothing saved, and the person told
+ * nothing useful. Drop the new column and save the rest; the time of day is
+ * worth having, not worth losing the expense over.
+ */
+function missingColumn(error: { code?: string; message?: string } | null, column: string) {
+  if (!error) return false;
+  return (
+    (error.code === "PGRST204" || error.code === "42703") && (error.message ?? "").includes(column)
+  );
+}
+
 /** Saves one action straight into the matching module. */
 export async function applyPhumAction(
   action: PhumActionPayload | null | undefined,
@@ -61,7 +76,7 @@ export async function applyPhumAction(
   }
 
   if (action.type === "add_expense" && action.amount != null) {
-    const { error } = await supabase.from("expenses").insert({
+    const base = {
       user_id: userId,
       title: action.title ?? "-",
       amount: action.amount,
@@ -71,21 +86,32 @@ export async function applyPhumAction(
       // filling in today and the current clock for whichever half they left
       // out - so "80 on lunch at 5.15" lands at 17:15 today, not at midnight.
       spent_on: action.spentOn ?? today(),
-      spent_at: bangkokDateTime(action.spentOn, action.atTime),
-    });
+    };
+    let { error } = await supabase
+      .from("expenses")
+      .insert({ ...base, spent_at: bangkokDateTime(action.spentOn, action.atTime) });
+    if (missingColumn(error, "spent_at")) {
+      ({ error } = await supabase.from("expenses").insert(base));
+    }
     if (error) throw error;
     return { kind: "expense", label: `${action.title ?? "-"} · ${action.amount}` };
   }
 
   if (action.type === "add_income" && action.amount != null) {
-    const { error } = await supabase.from("incomes").insert({
+    const base = {
       user_id: userId,
       title: action.title ?? "-",
       amount: action.amount,
       category: action.category ?? "other",
       received_on: action.receivedOn ?? action.spentOn ?? today(),
+    };
+    let { error } = await supabase.from("incomes").insert({
+      ...base,
       received_at: bangkokDateTime(action.receivedOn ?? action.spentOn, action.atTime),
     });
+    if (missingColumn(error, "received_at")) {
+      ({ error } = await supabase.from("incomes").insert(base));
+    }
     if (error) throw error;
     return { kind: "income", label: `${action.title ?? "-"} · ${action.amount}` };
   }
