@@ -346,17 +346,27 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background md:flex">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-        <div className="shrink-0 border-b border-border p-4">
-          <Link to="/today" className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border p-4">
+          <Link to="/today" className="flex min-w-0 items-center gap-2">
             <PhumMark />
             <span className="font-semibold tracking-tight">{t.appName}</span>
             <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
               {planLabel}
             </span>
-            {visibleTotal > 0 && (
-              <span className="ml-auto size-2 animate-pulse rounded-full bg-red-500" />
-            )}
           </Link>
+          {/* Its own link, outside the one wrapping the logo. Inside it, the
+              dot inherited "go to Today" - so the one thing on the sidebar
+              that means "something new happened" took you somewhere else.
+              Same target as the dot in the phone header. */}
+          {visibleTotal > 0 && (
+            <Link
+              to="/inbox"
+              aria-label={t.inboxTitle}
+              className="ml-auto flex size-8 items-center justify-center"
+            >
+              <span className="size-2 animate-pulse rounded-full bg-red-500" />
+            </Link>
+          )}
         </div>
 
         <ScrollHint className="p-3">

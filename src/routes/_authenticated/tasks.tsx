@@ -320,11 +320,15 @@ function TasksPage() {
         <p className="mb-2 text-xs text-muted-foreground">{t.sharedHint}</p>
       ) : null}
 
+      {/* Each field takes the same share of the row - half of it on a phone,
+          a fixed column on anything wider. Sized to their own content they
+          came out visibly uneven, because a label as short as "ถึง" made its
+          box narrower than the one beside it. */}
       <div className="mb-3 flex flex-wrap items-end gap-2">
-        <div className="space-y-1">
+        <div className="min-w-0 basis-[calc(50%-0.25rem)] space-y-1 sm:basis-40">
           <Label className="text-xs text-muted-foreground">{t.r4Assignee}</Label>
           <select
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
             value={fAssignee}
             onChange={(e) => setFAssignee(e.target.value)}
           >
@@ -337,10 +341,10 @@ function TasksPage() {
             ))}
           </select>
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 basis-[calc(50%-0.25rem)] space-y-1 sm:basis-40">
           <Label className="text-xs text-muted-foreground">{t.priority}</Label>
           <select
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
             value={fPriority}
             onChange={(e) => setFPriority(e.target.value)}
           >
@@ -350,17 +354,27 @@ function TasksPage() {
             <option value="low">{t.low}</option>
           </select>
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 basis-[calc(50%-0.25rem)] space-y-1 sm:basis-40">
           <Label className="text-xs text-muted-foreground" htmlFor="tf-from">
             {t.filterDueFrom}
           </Label>
-          <DateInput id="tf-from" value={fFrom} onChange={(e) => setFFrom(e.target.value)} />
+          <DateInput
+            id="tf-from"
+            className="w-full"
+            value={fFrom}
+            onChange={(e) => setFFrom(e.target.value)}
+          />
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 basis-[calc(50%-0.25rem)] space-y-1 sm:basis-40">
           <Label className="text-xs text-muted-foreground" htmlFor="tf-to">
             {t.filterDueTo}
           </Label>
-          <DateInput id="tf-to" value={fTo} onChange={(e) => setFTo(e.target.value)} />
+          <DateInput
+            id="tf-to"
+            className="w-full"
+            value={fTo}
+            onChange={(e) => setFTo(e.target.value)}
+          />
         </div>
         {filtersOn ? (
           <Button

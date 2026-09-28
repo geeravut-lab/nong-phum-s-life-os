@@ -62,11 +62,21 @@ export function MoneyTrend({
   if (months.length < 2) return null;
 
   const peak = Math.max(1, ...months.flatMap((m) => [m.expense, m.income]));
-  const label = (key: string) =>
+
+  // Month and year on their own lines, always. Left as one string they wrapped
+  // on a phone for whichever months happened to be widest - "เม.ย. 69" in Thai,
+  // "Sept 26" in English - and the column that wrapped grew taller than the
+  // rest, which pushed its neighbours' bars down. Two fixed lines means every
+  // column is the same height whatever the month is called.
+  const monthOf = (key: string) =>
     new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH-u-ca-buddhist", {
       month: "short",
+    }).format(new Date(`${key}-01T00:00:00+07:00`));
+  const yearOf = (key: string) =>
+    new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH-u-ca-buddhist", {
       year: "2-digit",
     }).format(new Date(`${key}-01T00:00:00+07:00`));
+  const label = (key: string) => `${monthOf(key)} ${yearOf(key)}`;
 
   return (
     <Card className="mb-5 shadow-soft">
@@ -82,7 +92,9 @@ export function MoneyTrend({
             {t.totalExpense}
           </span>
         </div>
-        <div className="flex items-end justify-between gap-2">
+        {/* items-stretch, not items-end: every column is the same height, so
+            the bars share one baseline no matter how the labels render. */}
+        <div className="flex items-stretch justify-between gap-1">
           {months.map((m) => {
             const net = m.income - m.expense;
             return (
@@ -90,7 +102,7 @@ export function MoneyTrend({
                 key={m.key}
                 type="button"
                 onClick={() => onPickMonth?.(m.key)}
-                className="flex flex-1 flex-col items-center gap-1.5 rounded-lg p-1 hover:bg-muted"
+                className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-lg p-0.5 hover:bg-muted"
                 title={`${label(m.key)} · ${formatMoney(net)}`}
               >
                 <div className="flex h-24 w-full items-end justify-center gap-1">
@@ -103,9 +115,12 @@ export function MoneyTrend({
                     style={{ height: `${Math.round((m.expense / peak) * 100)}%` }}
                   />
                 </div>
-                <span className="text-[10px] text-muted-foreground">{label(m.key)}</span>
+                <span className="text-center text-[10px] leading-tight text-muted-foreground">
+                  <span className="block whitespace-nowrap">{monthOf(m.key)}</span>
+                  <span className="block whitespace-nowrap">{yearOf(m.key)}</span>
+                </span>
                 <span
-                  className={`text-[10px] font-medium ${net < 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
+                  className={`whitespace-nowrap text-[10px] font-medium ${net < 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}`}
                 >
                   {formatMoney(net)}
                 </span>
