@@ -12,7 +12,7 @@ import { useAuthUser } from "@/hooks/useAuthUser";
 import { useI18n } from "@/lib/i18n";
 import { errorText } from "@/lib/errors";
 import { formatDay } from "@/lib/format";
-import { renderNotification } from "@/lib/notifications.shared";
+import { NOT_LEGACY_TRIGGER_ROW, renderNotification } from "@/lib/notifications.shared";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({ meta: routeMeta("today") }),
@@ -53,6 +53,7 @@ function InboxPage() {
         .from("app_notifications")
         .select("id,kind,title,body,href,params,read_at,created_at")
         .eq("user_id", user!.id)
+        .or(NOT_LEGACY_TRIGGER_ROW)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
