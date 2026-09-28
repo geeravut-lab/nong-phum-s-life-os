@@ -72,10 +72,15 @@ export function MoneyTrend({
     new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH-u-ca-buddhist", {
       month: "short",
     }).format(new Date(`${key}-01T00:00:00+07:00`));
+  // Asked for the year on its own, Thai adds the era: "พ.ศ. 69". Under a
+  // three-letter month that is the widest thing in the column and says nothing
+  // the reader does not know, so only the digits are kept.
   const yearOf = (key: string) =>
     new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH-u-ca-buddhist", {
       year: "2-digit",
-    }).format(new Date(`${key}-01T00:00:00+07:00`));
+    })
+      .format(new Date(`${key}-01T00:00:00+07:00`))
+      .replace(/[^\d]/gu, "");
   const label = (key: string) => `${monthOf(key)} ${yearOf(key)}`;
 
   return (
