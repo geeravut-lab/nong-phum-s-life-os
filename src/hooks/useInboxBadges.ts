@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { NOT_LEGACY_TRIGGER_ROW } from "@/lib/notifications.shared";
 
 export type AppNotification = {
   id: string;
@@ -40,6 +41,9 @@ export function useInboxBadges() {
         .select("id,user_id,kind,title,body,href,ref_table,ref_id,read_at,created_at")
         .eq("user_id", user!.id)
         .is("read_at", null)
+        // The dot counts what the notifications page shows, so an old
+        // trigger-written copy must not add one of its own.
+        .or(NOT_LEGACY_TRIGGER_ROW)
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;

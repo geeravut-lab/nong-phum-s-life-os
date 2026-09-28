@@ -16,6 +16,22 @@ export type NotificationRow = {
   params?: Record<string, unknown> | null;
 };
 
+/**
+ * Rows a database trigger wrote, which are copies of one somebody else sent.
+ *
+ * Until 20260928120000 an AFTER INSERT trigger on job_messages and job_offers
+ * wrote its own notification, and so did notifyJobChat / notifyJobOffer - so a
+ * single chat message showed up twice on this page, once with the job, the
+ * sender and the time, and once as a bare line. The trigger is gone, but the
+ * copies it already wrote are still in the table, and the trigger is the only
+ * thing that ever pointed a notification at job_messages or job_offers (the
+ * server functions point at the job), so they are recognisable and hidden.
+ */
+export const LEGACY_TRIGGER_REFS = ["job_messages", "job_offers"] as const;
+
+/** The same rule as a PostgREST filter, so the copies never fill the page. */
+export const NOT_LEGACY_TRIGGER_ROW = `ref_table.is.null,ref_table.not.in.(${LEGACY_TRIGGER_REFS.join(",")})`;
+
 type Template = (t: Dict, p: Record<string, unknown>) => { title: string; body: string };
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0));
