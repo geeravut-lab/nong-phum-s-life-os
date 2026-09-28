@@ -569,6 +569,113 @@ export const getFuneralEvidenceUrl = createServerFn({ method: "POST" })
     return { url: signed?.signedUrl ?? null };
   });
 
+/**
+ * Correct a piece of evidence an admin already filed.
+ *
+ * A typo in a provider's name, a note that turned out to be wrong, or the wrong
+ * photo attached: before this the only way out was to delete the row and add it
+ * again, which sent the owner a second "new evidence" notification for
+ * something they had already been told about. A replaced file leaves the old
+ * object behind on purpose - it is what the owner may already have opened, and
+ * deleting it is the delete below, deliberately.
+ */
+export const updateFuneralEvidence = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        evidenceId: z.string().uuid(),
+        kind: z.enum(["provider_contact", "insurance", "payment", "other"]),
+        title: z.string().min(1).max(160),
+        note: z.string().max(2000).default(""),
+        file: z
+          .object({
+            base64: z.string().min(1),
+            mimeType: z.string().min(1).max(120),
+            fileName: z.string().min(1).max(160),
+          })
+          .optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { data: row } = await supabaseAdmin
+      .from("funeral_evidence")
+      .select("id, plan_id")
+      .eq("id", data.evidenceId)
+      .maybeSingle();
+    if (!row) throw new Error("evidence not found");
+
+    const { data: plan } = await supabaseAdmin
+      .from("funeral_plans")
+      .select("id, user_id")
+      .eq("id", row.plan_id)
+      .maybeSingle();
+    if (!plan) throw new Error("plan not found");
+
+    let filePath: string | null = null;
+    if (data.file) {
+      const bytes = Buffer.from(data.file.base64, "base64");
+      if (bytes.byteLength > 8 * 1024 * 1024) throw new Error("file too large");
+      const safe = data.file.fileName.replace(/[^\w.\-ก-๙ ]+/g, "_").slice(0, 80);
+      filePath = `${plan.user_id}/funeral-evidence/${row.plan_id}/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("documents")
+        .upload(filePath, bytes, { contentType: data.file.mimeType, upsert: false });
+      if (upErr) throw new Error(upErr.message);
+    }
+
+    const { data: written, error } = await supabaseAdmin
+      .from("funeral_evidence")
+      .update({
+        kind: data.kind,
+        title: data.title.trim(),
+        note: data.note.trim(),
+        // No new file means keep the one that is there, not clear it.
+        ...(filePath ? { file_path: filePath } : {}),
+      })
+      .eq("id", data.evidenceId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    // PostgREST answers an update that matched nothing with a success, so the
+    // row count is the only thing that says it happened.
+    if (!written || written.length === 0) throw new Error("evidence not found");
+
+    return { ok: true as const, filePath };
+  });
+
+/** Remove a piece of evidence, and the file it was standing for. */
+export const deleteFuneralEvidence = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) => z.object({ evidenceId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: row } = await supabaseAdmin
+      .from("funeral_evidence")
+      .select("id, file_path")
+      .eq("id", data.evidenceId)
+      .maybeSingle();
+    if (!row) throw new Error("evidence not found");
+
+    const { data: gone, error } = await supabaseAdmin
+      .from("funeral_evidence")
+      .delete()
+      .eq("id", data.evidenceId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!gone || gone.length === 0) throw new Error("evidence not found");
+
+    // The row is the only thing that pointed at the object, so it goes too -
+    // after the row, so a failed storage call cannot leave a record pointing at
+    // a file that is no longer there.
+    if (row.file_path) {
+      const { error: rmErr } = await supabaseAdmin.storage
+        .from("documents")
+        .remove([row.file_path as string]);
+      if (rmErr) console.error("[funeral] evidence file remove failed:", rmErr.message);
+    }
+    return { ok: true as const };
+  });
+
 /** Mark one instalment paid. The payer can report it; an admin can confirm it. */
 export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

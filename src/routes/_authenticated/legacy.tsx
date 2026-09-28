@@ -7,6 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
   BookOpen,
+  Check,
   CheckSquare,
   FileText,
   Heart,
@@ -14,6 +15,7 @@ import {
   Loader2,
   Lock,
   MessageSquareHeart,
+  Pencil,
   Plus,
   ScrollText,
   Sparkles,
@@ -240,8 +242,53 @@ function LegacyPage() {
     }
   };
 
+  /**
+   * Editing a row means filling the form above it.
+   *
+   * The alternative is a second copy of every field inside each list item, and
+   * a contact has seven of them. The form that knows how to write a contact is
+   * already on the page, so an edit loads the row into it and the same button
+   * saves; `editing` is which row each list is currently editing, so the button
+   * knows whether to insert or update and the list knows which row to mark.
+   */
+  const [editing, setEditing] = useState<{
+    contact: string | null;
+    asset: string | null;
+    wish: string | null;
+  }>({ contact: null, asset: null, wish: null });
+
+  const jumpToForm = (anchor: string) => {
+    document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  /**
+   * An UPDATE nobody is allowed to make comes back as a success with no rows
+   * touched, so the row count is the only proof it happened. Every row here is
+   * the user's own, but a silent no-op once cost a release, so it is checked.
+   */
+  const updateRow = async (
+    table: "legacy_contacts" | "legacy_assets" | "legacy_wishes",
+    id: string,
+    patch: Record<string, unknown>,
+  ): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from(table)
+      .update(patch as never)
+      .eq("id", id)
+      .select("id");
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      toast.error(t.legacyEditGone);
+      return false;
+    }
+    return true;
+  };
+
   // --- Contact form ---
-  const [cForm, setCForm] = useState({
+  const emptyContact = {
     full_name: "",
     relation: "",
     phone: "",
@@ -249,12 +296,12 @@ function LegacyPage() {
     priority: "1",
     is_verifier: false,
     personal_message: "",
-  });
+  };
+  const [cForm, setCForm] = useState(emptyContact);
   const addContact = async () => {
     if (!user || !cForm.full_name.trim()) return;
     setBusy(true);
-    const { error } = await supabase.from("legacy_contacts").insert({
-      user_id: user.id,
+    const row = {
       full_name: cForm.full_name.trim(),
       relation: cForm.relation.trim(),
       phone: cForm.phone.trim() || null,
@@ -262,59 +309,102 @@ function LegacyPage() {
       priority: Number(cForm.priority) || 1,
       is_verifier: cForm.is_verifier,
       personal_message: cForm.personal_message.trim(),
-    });
+    };
+    let ok: boolean;
+    if (editing.contact) {
+      ok = await updateRow("legacy_contacts", editing.contact, row);
+    } else {
+      const { error } = await supabase.from("legacy_contacts").insert({ user_id: user.id, ...row });
+      if (error) toast.error(error.message);
+      ok = !error;
+    }
     setBusy(false);
-    if (error) toast.error(error.message);
-    else {
+    if (ok) {
       toast.success(t.legacySaved);
-      setCForm({
-        full_name: "",
-        relation: "",
-        phone: "",
-        email: "",
-        priority: "1",
-        is_verifier: false,
-        personal_message: "",
-      });
+      setCForm(emptyContact);
+      setEditing((e) => ({ ...e, contact: null }));
       void qc.invalidateQueries({ queryKey: ["legacy-contacts"] });
     }
   };
+  const editContact = (c: {
+    id: string;
+    full_name: string | null;
+    relation: string | null;
+    phone: string | null;
+    email: string | null;
+    priority: number | null;
+    is_verifier: boolean | null;
+    personal_message: string | null;
+  }) => {
+    setCForm({
+      full_name: c.full_name ?? "",
+      relation: c.relation ?? "",
+      phone: c.phone ?? "",
+      email: c.email ?? "",
+      priority: String(c.priority ?? 1),
+      is_verifier: !!c.is_verifier,
+      personal_message: c.personal_message ?? "",
+    });
+    setEditing((e) => ({ ...e, contact: c.id }));
+    jumpToForm("legacy-contact-form");
+  };
 
   // --- Asset form ---
-  const [aForm, setAForm] = useState({
+  const emptyAsset = {
     kind: "bank" as AssetKind,
     title: "",
     details: "",
     is_liability: false,
     location_hint: "",
     beneficiary_hint: "",
-  });
+  };
+  const [aForm, setAForm] = useState(emptyAsset);
   const addAsset = async () => {
     if (!user || !aForm.title.trim()) return;
     setBusy(true);
-    const { error } = await supabase.from("legacy_assets").insert({
-      user_id: user.id,
+    const row = {
       kind: aForm.kind,
       title: aForm.title.trim(),
       details: aForm.details.trim(),
       is_liability: aForm.is_liability,
       location_hint: aForm.location_hint.trim() || null,
       beneficiary_hint: aForm.beneficiary_hint.trim() || null,
-    });
+    };
+    let ok: boolean;
+    if (editing.asset) {
+      ok = await updateRow("legacy_assets", editing.asset, row);
+    } else {
+      const { error } = await supabase.from("legacy_assets").insert({ user_id: user.id, ...row });
+      if (error) toast.error(error.message);
+      ok = !error;
+    }
     setBusy(false);
-    if (error) toast.error(error.message);
-    else {
+    if (ok) {
       toast.success(t.legacySaved);
-      setAForm({
-        kind: "bank",
-        title: "",
-        details: "",
-        is_liability: false,
-        location_hint: "",
-        beneficiary_hint: "",
-      });
+      setAForm(emptyAsset);
+      setEditing((e) => ({ ...e, asset: null }));
       void qc.invalidateQueries({ queryKey: ["legacy-assets"] });
     }
+  };
+  const editAsset = (a: {
+    id: string;
+    kind: string;
+    title: string | null;
+    details: string | null;
+    is_liability: boolean | null;
+    location_hint: string | null;
+    beneficiary_hint: string | null;
+  }) => {
+    setAForm({
+      kind: a.kind as AssetKind,
+      title: a.title ?? "",
+      details: a.details ?? "",
+      is_liability: !!a.is_liability,
+      location_hint: a.location_hint ?? "",
+      beneficiary_hint: a.beneficiary_hint ?? "",
+    });
+    setEditing((e) => ({ ...e, asset: a.id }));
+    jumpToForm("legacy-asset-form");
   };
 
   // --- Wish form ---
@@ -327,19 +417,44 @@ function LegacyPage() {
     if (!user || !wForm.body.trim()) return;
     setBusy(true);
     const section = sectionOverride ?? wForm.section;
-    const { error } = await supabase.from("legacy_wishes").insert({
-      user_id: user.id,
-      section,
-      title: wForm.title.trim(),
-      body: wForm.body.trim(),
-    });
+    const row = { section, title: wForm.title.trim(), body: wForm.body.trim() };
+    let ok: boolean;
+    if (editing.wish) {
+      ok = await updateRow("legacy_wishes", editing.wish, row);
+    } else {
+      const { error } = await supabase.from("legacy_wishes").insert({ user_id: user.id, ...row });
+      if (error) toast.error(error.message);
+      ok = !error;
+    }
     setBusy(false);
-    if (error) toast.error(error.message);
-    else {
+    if (ok) {
       toast.success(t.legacySaved);
       setWForm({ section: wForm.section, title: "", body: "" });
+      setEditing((e) => ({ ...e, wish: null }));
       void qc.invalidateQueries({ queryKey: ["legacy-wishes"] });
     }
+  };
+  const editWish = (w: {
+    id: string;
+    section: string;
+    title: string | null;
+    body: string | null;
+  }) => {
+    setWForm({
+      section: w.section as WishSection,
+      title: w.title ?? "",
+      body: w.body ?? "",
+    });
+    setEditing((e) => ({ ...e, wish: w.id }));
+    jumpToForm("legacy-wish-form");
+  };
+
+  /** Leaving an edit without saving it - the form goes back to being an "add". */
+  const cancelEdit = (which: "contact" | "asset" | "wish") => {
+    setEditing((e) => ({ ...e, [which]: null }));
+    if (which === "contact") setCForm(emptyContact);
+    if (which === "asset") setAForm(emptyAsset);
+    if (which === "wish") setWForm((f) => ({ section: f.section, title: "", body: "" }));
   };
 
   const delRow = async (table: string, id: string) => {
@@ -762,7 +877,15 @@ function LegacyPage() {
             </div>
           )}
 
-          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <div
+            id="legacy-contact-form"
+            className="space-y-2 rounded-2xl border border-border bg-card p-4"
+          >
+            {editing.contact ? (
+              <p className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary">
+                {t.legacyEditing}
+              </p>
+            ) : null}
             <Label>{t.legacyContactName}</Label>
             <Input
               value={cForm.full_name}
@@ -807,10 +930,21 @@ function LegacyPage() {
               value={cForm.personal_message}
               onChange={(e) => setCForm((f) => ({ ...f, personal_message: e.target.value }))}
             />
-            <Button disabled={busy} onClick={addContact}>
-              <Plus className="mr-1 size-4" />
-              {t.legacyAdd}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={busy} onClick={addContact}>
+                {editing.contact ? (
+                  <Check className="mr-1 size-4" />
+                ) : (
+                  <Plus className="mr-1 size-4" />
+                )}
+                {editing.contact ? t.legacySaveEdit : t.legacyAdd}
+              </Button>
+              {editing.contact ? (
+                <Button variant="outline" disabled={busy} onClick={() => cancelEdit("contact")}>
+                  {t.cancel}
+                </Button>
+              ) : null}
+            </div>
           </div>
           <ul className="space-y-2">
             {(contactsQ.data ?? []).map((c) => (
@@ -863,9 +997,26 @@ function LegacyPage() {
                     </Button>
                   )}
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => delRow("legacy_contacts", c.id)}>
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t.legacyEdit}
+                    title={t.legacyEdit}
+                    onClick={() => editContact(c)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t.delete}
+                    title={t.delete}
+                    onClick={() => delRow("legacy_contacts", c.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -874,7 +1025,15 @@ function LegacyPage() {
 
       {tab === "assets" && (
         <section className="space-y-4">
-          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <div
+            id="legacy-asset-form"
+            className="space-y-2 rounded-2xl border border-border bg-card p-4"
+          >
+            {editing.asset ? (
+              <p className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary">
+                {t.legacyEditing}
+              </p>
+            ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
                 <Label>{t.legacyAssetKind}</Label>
@@ -927,10 +1086,21 @@ function LegacyPage() {
               />
               {t.legacyAssetLiability}
             </label>
-            <Button disabled={busy} onClick={addAsset}>
-              <Plus className="mr-1 size-4" />
-              {t.legacyAdd}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button disabled={busy} onClick={addAsset}>
+                {editing.asset ? (
+                  <Check className="mr-1 size-4" />
+                ) : (
+                  <Plus className="mr-1 size-4" />
+                )}
+                {editing.asset ? t.legacySaveEdit : t.legacyAdd}
+              </Button>
+              {editing.asset ? (
+                <Button variant="outline" disabled={busy} onClick={() => cancelEdit("asset")}>
+                  {t.cancel}
+                </Button>
+              ) : null}
+            </div>
           </div>
           <ul className="space-y-2">
             {(assetsQ.data ?? []).map((a) => (
@@ -952,9 +1122,26 @@ function LegacyPage() {
                   </p>
                   <p className="text-xs text-muted-foreground">{a.details}</p>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => delRow("legacy_assets", a.id)}>
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t.legacyEdit}
+                    title={t.legacyEdit}
+                    onClick={() => editAsset(a)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={t.delete}
+                    title={t.delete}
+                    onClick={() => delRow("legacy_assets", a.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -967,7 +1154,15 @@ function LegacyPage() {
         tab === "messages" ||
         tab === "story") && (
         <section className="space-y-4">
-          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+          <div
+            id="legacy-wish-form"
+            className="space-y-2 rounded-2xl border border-border bg-card p-4"
+          >
+            {editing.wish ? (
+              <p className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary">
+                {t.legacyEditing}
+              </p>
+            ) : null}
             <Label>{t.legacyWishSection}</Label>
             <Select
               value={
@@ -1018,25 +1213,36 @@ function LegacyPage() {
               value={wForm.body}
               onChange={(e) => setWForm((f) => ({ ...f, body: e.target.value }))}
             />
-            <Button
-              disabled={busy}
-              onClick={() => {
-                const section: WishSection =
-                  tab === "vault"
-                    ? "vault_note"
-                    : tab === "will"
-                      ? "will_ref"
-                      : tab === "messages"
-                        ? "legacy_message"
-                        : tab === "story"
-                          ? "life_story"
-                          : wForm.section;
-                void addWish(section);
-              }}
-            >
-              <Plus className="mr-1 size-4" />
-              {t.legacyAdd}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  const section: WishSection =
+                    tab === "vault"
+                      ? "vault_note"
+                      : tab === "will"
+                        ? "will_ref"
+                        : tab === "messages"
+                          ? "legacy_message"
+                          : tab === "story"
+                            ? "life_story"
+                            : wForm.section;
+                  void addWish(section);
+                }}
+              >
+                {editing.wish ? (
+                  <Check className="mr-1 size-4" />
+                ) : (
+                  <Plus className="mr-1 size-4" />
+                )}
+                {editing.wish ? t.legacySaveEdit : t.legacyAdd}
+              </Button>
+              {editing.wish ? (
+                <Button variant="outline" disabled={busy} onClick={() => cancelEdit("wish")}>
+                  {t.cancel}
+                </Button>
+              ) : null}
+            </div>
           </div>
           <ul className="space-y-2">
             {wishesOf(
@@ -1070,13 +1276,26 @@ function LegacyPage() {
                       {w.title ? <p className="mt-1 font-medium">{w.title}</p> : null}
                       <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{w.body}</p>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => delRow("legacy_wishes", w.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={t.legacyEdit}
+                        title={t.legacyEdit}
+                        onClick={() => editWish(w)}
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={t.delete}
+                        title={t.delete}
+                        onClick={() => delRow("legacy_wishes", w.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </li>
               ))}
@@ -1223,85 +1442,90 @@ function LegacyPage() {
           )}
         </section>
       )}
-      {/* 6. Will & estate - location of the real document, never the will itself */}
-      <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <h2 className="text-sm font-semibold">{t.willTitle}</h2>
-        <p className="mt-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
-          {t.willDisclaimer}
-        </p>
-        <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.willPrivate}</p>
+      {/* 6. Will & estate - location of the real document, never the will itself.
+          It sat outside every tab test, so the same form appeared under all
+          eleven tabs; it belongs where someone would look for it, which is the
+          overview and the will tab. */}
+      {(tab === "hub" || tab === "will") && (
+        <section className="mb-5 rounded-2xl border border-border bg-card p-4 shadow-soft">
+          <h2 className="text-sm font-semibold">{t.willTitle}</h2>
+          <p className="mt-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-xs">
+            {t.willDisclaimer}
+          </p>
+          <p className="mt-1 mb-3 text-xs text-muted-foreground">{t.willPrivate}</p>
 
-        <label className="mb-2 flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={!!w?.hasWill}
-            onChange={(e) => setW({ hasWill: e.target.checked })}
-          />
-          {t.willHas}
-        </label>
+          <label className="mb-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!w?.hasWill}
+              onChange={(e) => setW({ hasWill: e.target.checked })}
+            />
+            {t.willHas}
+          </label>
 
-        <div className="space-y-2">
-          <select
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            value={w?.willKind ?? "other"}
-            onChange={(e) => setW({ willKind: e.target.value as WillRecord["willKind"] })}
-            aria-label={t.willKind}
-          >
-            <option value="handwritten">{t.willKindHandwritten}</option>
-            <option value="amphoe">{t.willKindAmphoe}</option>
-            <option value="lawyer">{t.willKindLawyer}</option>
-            <option value="other">{t.willKindOther}</option>
-          </select>
-          {/* Every other field here labels itself with a placeholder, which a
+          <div className="space-y-2">
+            <select
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={w?.willKind ?? "other"}
+              onChange={(e) => setW({ willKind: e.target.value as WillRecord["willKind"] })}
+              aria-label={t.willKind}
+            >
+              <option value="handwritten">{t.willKindHandwritten}</option>
+              <option value="amphoe">{t.willKindAmphoe}</option>
+              <option value="lawyer">{t.willKindLawyer}</option>
+              <option value="other">{t.willKindOther}</option>
+            </select>
+            {/* Every other field here labels itself with a placeholder, which a
               date input cannot show - so this one needs a real label or it is
               just an empty box. */}
-          <div className="space-y-1.5">
-            <Label htmlFor="will-made-on">{t.willMadeOn}</Label>
-            <DateInput
-              id="will-made-on"
-              value={w?.madeOn ?? ""}
-              onChange={(e) => setW({ madeOn: e.target.value })}
+            <div className="space-y-1.5">
+              <Label htmlFor="will-made-on">{t.willMadeOn}</Label>
+              <DateInput
+                id="will-made-on"
+                value={w?.madeOn ?? ""}
+                onChange={(e) => setW({ madeOn: e.target.value })}
+              />
+            </div>
+            <Textarea
+              placeholder={t.willLocation}
+              value={w?.locationHint ?? ""}
+              onChange={(e) => setW({ locationHint: e.target.value })}
             />
+            <div className="flex gap-2">
+              <Input
+                placeholder={t.willExecutor}
+                value={w?.executorName ?? ""}
+                onChange={(e) => setW({ executorName: e.target.value })}
+              />
+              <Input
+                placeholder={t.willExecutorContact}
+                value={w?.executorContact ?? ""}
+                onChange={(e) => setW({ executorContact: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder={t.willLawyer}
+                value={w?.lawyerName ?? ""}
+                onChange={(e) => setW({ lawyerName: e.target.value })}
+              />
+              <Input
+                placeholder={t.willLawyerContact}
+                value={w?.lawyerContact ?? ""}
+                onChange={(e) => setW({ lawyerContact: e.target.value })}
+              />
+            </div>
+            <Textarea
+              placeholder={t.willNotes}
+              value={w?.notes ?? ""}
+              onChange={(e) => setW({ notes: e.target.value })}
+            />
+            <Button size="sm" disabled={busy} onClick={() => void saveWill()}>
+              {t.save}
+            </Button>
           </div>
-          <Textarea
-            placeholder={t.willLocation}
-            value={w?.locationHint ?? ""}
-            onChange={(e) => setW({ locationHint: e.target.value })}
-          />
-          <div className="flex gap-2">
-            <Input
-              placeholder={t.willExecutor}
-              value={w?.executorName ?? ""}
-              onChange={(e) => setW({ executorName: e.target.value })}
-            />
-            <Input
-              placeholder={t.willExecutorContact}
-              value={w?.executorContact ?? ""}
-              onChange={(e) => setW({ executorContact: e.target.value })}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder={t.willLawyer}
-              value={w?.lawyerName ?? ""}
-              onChange={(e) => setW({ lawyerName: e.target.value })}
-            />
-            <Input
-              placeholder={t.willLawyerContact}
-              value={w?.lawyerContact ?? ""}
-              onChange={(e) => setW({ lawyerContact: e.target.value })}
-            />
-          </div>
-          <Textarea
-            placeholder={t.willNotes}
-            value={w?.notes ?? ""}
-            onChange={(e) => setW({ notes: e.target.value })}
-          />
-          <Button size="sm" disabled={busy} onClick={() => void saveWill()}>
-            {t.save}
-          </Button>
-        </div>
-      </section>
+        </section>
+      )}
     </AppShell>
   );
 }

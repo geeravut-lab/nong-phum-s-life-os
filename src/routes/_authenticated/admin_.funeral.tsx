@@ -19,7 +19,9 @@ import {
   addFuneralEvidence,
   adminListFuneralPlans,
   adminReviewFuneralPlan,
+  deleteFuneralEvidence,
   getFuneralEvidenceUrl,
+  updateFuneralEvidence,
 } from "@/lib/funeral.functions";
 
 export const Route = createFileRoute("/_authenticated/admin_/funeral")({
@@ -54,7 +56,13 @@ type PlanRow = {
     amount: number;
     payment_status: string;
   }>;
-  evidence: Array<{ id: string; kind: string; title: string; file_path: string | null }>;
+  evidence: Array<{
+    id: string;
+    kind: string;
+    title: string;
+    note: string | null;
+    file_path: string | null;
+  }>;
 };
 
 function AdminFuneralPage() {
@@ -63,6 +71,8 @@ function AdminFuneralPage() {
   const load = useServerFn(adminListFuneralPlans);
   const runReview = useServerFn(adminReviewFuneralPlan);
   const runAddEvidence = useServerFn(addFuneralEvidence);
+  const runEditEvidence = useServerFn(updateFuneralEvidence);
+  const runDeleteEvidence = useServerFn(deleteFuneralEvidence);
   const runEvidenceUrl = useServerFn(getFuneralEvidenceUrl);
 
   const [filter, setFilter] = useState<"all" | "reviewing" | "confirmed">("reviewing");
@@ -102,22 +112,81 @@ function AdminFuneralPage() {
     }
   };
 
+  /**
+   * Which evidence row each plan's form is editing, if any.
+   *
+   * The form below the list is the only thing that knows how to describe a piece
+   * of evidence, so editing one loads it back into that form rather than growing
+   * a second copy of the fields inside the row.
+   */
+  const [editingEvidence, setEditingEvidence] = useState<Record<string, string | null>>({});
+
   const submitEvidence = async (planId: string) => {
     const e = evidence[planId];
     if (!e?.title.trim()) return;
+    const editId = editingEvidence[planId];
     setBusy(true);
     try {
-      await runAddEvidence({
-        data: {
-          planId,
-          kind: e.kind,
-          title: e.title.trim(),
-          note: e.note,
-          ...(e.file ? { file: e.file } : {}),
-        },
-      });
+      if (editId) {
+        await runEditEvidence({
+          data: {
+            evidenceId: editId,
+            kind: e.kind,
+            title: e.title.trim(),
+            note: e.note,
+            ...(e.file ? { file: e.file } : {}),
+          },
+        });
+      } else {
+        await runAddEvidence({
+          data: {
+            planId,
+            kind: e.kind,
+            title: e.title.trim(),
+            note: e.note,
+            ...(e.file ? { file: e.file } : {}),
+          },
+        });
+      }
       setEvidence((cur) => ({ ...cur, [planId]: { kind: "other", title: "", note: "" } }));
+      setEditingEvidence((cur) => ({ ...cur, [planId]: null }));
       toast.success(t.saved);
+      refresh();
+    } catch (err) {
+      toast.error(errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startEditEvidence = (
+    planId: string,
+    row: { id: string; kind: string; title: string; note: string | null },
+  ) => {
+    setEvidence((cur) => ({
+      ...cur,
+      [planId]: {
+        kind: row.kind as "provider_contact" | "insurance" | "payment" | "other",
+        title: row.title,
+        note: row.note ?? "",
+      },
+    }));
+    setEditingEvidence((cur) => ({ ...cur, [planId]: row.id }));
+  };
+
+  const cancelEditEvidence = (planId: string) => {
+    setEvidence((cur) => ({ ...cur, [planId]: { kind: "other", title: "", note: "" } }));
+    setEditingEvidence((cur) => ({ ...cur, [planId]: null }));
+  };
+
+  const removeEvidence = async (planId: string, evidenceId: string) => {
+    if (!window.confirm(t.fnAdminEvidenceConfirmDelete)) return;
+    setBusy(true);
+    try {
+      await runDeleteEvidence({ data: { evidenceId } });
+      // The form may be holding the row that has just gone.
+      if (editingEvidence[planId] === evidenceId) cancelEditEvidence(planId);
+      toast.success(t.fnAdminEvidenceDeleted);
       refresh();
     } catch (err) {
       toast.error(errorText(err, t));
@@ -280,14 +349,35 @@ function AdminFuneralPage() {
                     <ul className="space-y-1 text-xs">
                       {p.evidence.map((e) => (
                         <li key={e.id} className="flex items-center justify-between gap-2">
-                          <span>
+                          <span className="min-w-0 flex-1">
                             {e.title} · {e.kind}
+                            {e.note ? (
+                              <span className="block text-muted-foreground">{e.note}</span>
+                            ) : null}
                           </span>
-                          {e.file_path ? (
-                            <Button size="sm" variant="ghost" onClick={() => void openFile(e.id)}>
-                              {t.fnEvidenceOpen}
+                          <span className="flex shrink-0 items-center gap-1">
+                            {e.file_path ? (
+                              <Button size="sm" variant="ghost" onClick={() => void openFile(e.id)}>
+                                {t.fnEvidenceOpen}
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() => startEditEvidence(p.id, e)}
+                            >
+                              {t.fnAdminEvidenceEdit}
                             </Button>
-                          ) : null}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={busy}
+                              onClick={() => void removeEvidence(p.id, e.id)}
+                            >
+                              {t.fnAdminEvidenceDelete}
+                            </Button>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -352,13 +442,30 @@ function AdminFuneralPage() {
                       />
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    disabled={busy || !ev.title.trim()}
-                    onClick={() => void submitEvidence(p.id)}
-                  >
-                    {t.fnAdminAddEvidence}
-                  </Button>
+                  {editingEvidence[p.id] ? (
+                    <p className="rounded-lg border border-primary/40 bg-primary/5 px-2 py-1 text-xs text-primary">
+                      {t.fnAdminEvidenceEditing}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={busy || !ev.title.trim()}
+                      onClick={() => void submitEvidence(p.id)}
+                    >
+                      {editingEvidence[p.id] ? t.fnAdminEvidenceSaveEdit : t.fnAdminAddEvidence}
+                    </Button>
+                    {editingEvidence[p.id] ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => cancelEditEvidence(p.id)}
+                      >
+                        {t.cancel}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             );

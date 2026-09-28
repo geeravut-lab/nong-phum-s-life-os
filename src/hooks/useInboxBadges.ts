@@ -19,9 +19,14 @@ export type AppNotification = {
 
 /** Map notification kind → primary nav path for red-dot badges */
 function kindToNav(kind: string, href: string | null): string {
-  if (href?.startsWith("/helpme")) return "/helpme";
+  if (href?.startsWith("/helpme") || href?.startsWith("/helper-dashboard")) return "/helpme";
   if (href?.startsWith("/local")) return "/local";
   if (href?.startsWith("/admin")) return "/admin";
+  // The funeral workflow notifies the plan's owner at /legacy/after, which is a
+  // page inside the legacy section and not a menu entry of its own. Without
+  // this the dot had nowhere to appear, so an admin's decision on somebody's
+  // funeral plan reached their notifications page silently.
+  if (href?.startsWith("/legacy")) return "/legacy";
   if (kind.startsWith("job_") || kind === "payment" || kind === "safety") return "/helpme";
   if (kind === "local") return "/local";
   return href?.split("?")[0] || "/today";
