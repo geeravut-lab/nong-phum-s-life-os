@@ -1105,6 +1105,19 @@ function HelperTab() {
 
   return (
     <div className="space-y-6">
+      {/* Every offer this helper has made, whatever its state. It used to sit
+          inside the "offers still pending" section, so a helper whose offers
+          had all been accepted or withdrawn saw no button at all - which is
+          exactly when a record of them is worth having. */}
+      {(myOffers ?? []).length > 0 ? (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            <Download className="mr-1.5 size-4" />
+            {t.exportCsv}
+          </Button>
+        </div>
+      ) : null}
+
       <section className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-semibold">{t.helperProfile}</h2>
@@ -1221,13 +1234,7 @@ function HelperTab() {
 
       {(myOffers ?? []).filter((o) => o.status === "pending").length > 0 && (
         <section className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold">{t.myPendingOffers}</h2>
-            <Button variant="outline" size="sm" onClick={exportCsv}>
-              <Download className="mr-1.5 size-4" />
-              {t.exportCsv}
-            </Button>
-          </div>
+          <h2 className="font-semibold">{t.myPendingOffers}</h2>
           {(myOffers ?? [])
             .filter((o) => o.status === "pending")
             .map((o) => (
