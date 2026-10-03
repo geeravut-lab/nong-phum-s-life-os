@@ -31,6 +31,10 @@ export const APP_ERROR_CODES = [
   "reminder_not_found",
   "reminder_forbidden",
   "document_duplicate",
+  "funeral_in_review",
+  "funeral_committed",
+  "funeral_no_plan",
+  "funeral_schedule_locked",
 ] as const;
 
 export type AppErrorCode = (typeof APP_ERROR_CODES)[number];

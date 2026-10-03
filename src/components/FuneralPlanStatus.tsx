@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import { useI18n } from "@/lib/i18n";
 import { errorText } from "@/lib/errors";
 import { formatDay } from "@/lib/format";
 import {
+  cancelMyFuneralPlan,
   createFuneralPayment,
   getFuneralEvidenceUrl,
   getMyFuneralPlan,
@@ -76,6 +78,7 @@ export function FuneralPlanStatus() {
   const runStartInstallment = useServerFn(startFuneralInstallmentPayment);
   const runReportInstallment = useServerFn(reportFuneralInstallmentPaid);
   const runSaveRep = useServerFn(setFuneralRepresentative);
+  const runCancel = useServerFn(cancelMyFuneralPlan);
   const runEvidenceUrl = useServerFn(getFuneralEvidenceUrl);
   const [busy, setBusy] = useState(false);
   const [installments, setInstallments] = useState<"1" | "12" | "24" | "36">("1");
@@ -176,6 +179,25 @@ export function FuneralPlanStatus() {
     }
   };
 
+  /**
+   * Withdraw a plan an admin has not acted on.
+   *
+   * Only offered while the plan is still being reviewed. Once it is confirmed
+   * the admin has contacted the providers, and the server refuses it anyway.
+   */
+  const cancelPlan = async () => {
+    setBusy(true);
+    try {
+      await runCancel({ data: { planId: plan.id } });
+      toast.success(t.fnCancelled);
+      refresh();
+    } catch (e) {
+      toast.error(errorText(e, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveRepresentative = async () => {
     setBusy(true);
     try {
@@ -236,6 +258,26 @@ export function FuneralPlanStatus() {
         {t.fnPackage}: {plan.selected_package ?? "—"} · {t.fnTotal}: ฿
         {Number(plan.total_budget ?? 0).toLocaleString()}
       </p>
+
+      {/* Withdrawing is only possible before an admin has acted: after that
+          they have contacted the venue and the insurer on the strength of
+          this plan, and it is theirs to close. */}
+      {plan.admin_status === "reviewing" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <ConfirmDelete
+            size="sm"
+            variant="outline"
+            title={t.fnCancelPlan}
+            detail={t.fnCancelPlanHint}
+            confirmLabel={t.fnCancelPlan}
+            disabled={busy}
+            onConfirm={() => cancelPlan()}
+          >
+            {t.fnCancelPlan}
+          </ConfirmDelete>
+          <span className="text-xs text-muted-foreground">{t.fnCancelPlanHint}</span>
+        </div>
+      ) : null}
 
       {plan.admin_notes ? (
         <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm">

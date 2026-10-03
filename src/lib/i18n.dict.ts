@@ -551,6 +551,10 @@ const th = {
   deleteFamilyLeave: (n: number) => `คุณจะออกจากครอบครัวที่เป็นสมาชิกอยู่ ${n} ครอบครัว`,
   deleteTypeToConfirm: "พิมพ์คำนี้เพื่อยืนยัน",
   deleteConfirmBtn: "ลบถาวร",
+  confirmDeleteTitle: "ยืนยันการลบ",
+  confirmDeleteBody: "รายการนี้จะถูกลบและเรียกคืนไม่ได้ ต้องการลบหรือไม่",
+  confirmDeleteRefs:
+    "เอกสารนี้ถูกอ้างอิงอยู่ {n} รายการ — รายการเหล่านั้นจะยังอยู่ แต่ไฟล์แนบจะหายไป",
   deleting: "กำลังลบ…",
   deleteDone: "ลบบัญชีเรียบร้อยแล้ว",
   deleteFailed: "ลบบัญชีไม่สำเร็จ ยังไม่มีอะไรถูกลบ",
@@ -738,6 +742,8 @@ const th = {
   decideJudgments: "การประเมิน",
   decideJournal: "สมุดบันทึกการตัดสินใจ",
   decideJournalEmpty: "ยังไม่มีรายการ",
+  decideDeleted: "ลบรายการแล้ว",
+  decideGone: "ไม่พบรายการนี้แล้ว",
   decideOutcomeSaved: "บันทึกผลลัพธ์แล้ว",
   decideTplVehicle: "ซื้อรถ",
   decideTplHome: "บ้าน/เช่า",
@@ -994,6 +1000,13 @@ const th = {
   deleteItemMore: (n: number) =>
     `ข้อมูลในมรดกแห่งชีวิต การตัดสินใจ แผนงานศพ ร้าน/กิจกรรมที่คุณลงไว้ และรีวิว ${n} รายการ`,
   err_document_duplicate: "ไฟล์นี้เคยอัปโหลดและบันทึกไว้แล้ว ระบบจึงไม่ลงรายการเงินซ้ำให้",
+  err_funeral_in_review:
+    "คุณมีแผนงานศพที่ส่งให้ผู้ดูแลระบบตรวจอยู่แล้ว ถ้าต้องการวางแผนใหม่ ให้ยกเลิกแผนเดิมก่อน",
+  err_funeral_committed:
+    "แผนงานศพของคุณได้รับการยืนยันแล้ว ผู้ดูแลระบบได้ติดต่อผู้ให้บริการและดำเนินการตามแผนนี้ไปแล้ว จึงสร้างแผนใหม่ทับไม่ได้ — ถ้าต้องการเปลี่ยน กรุณาติดต่อผู้ดูแลระบบ",
+  err_funeral_no_plan: "ไม่พบแผนงานศพที่ยกเลิกได้",
+  err_funeral_schedule_locked:
+    "มีงวดที่แจ้งชำระหรือชำระแล้ว จึงเปลี่ยนจำนวนงวดไม่ได้ — ติดต่อผู้ดูแลระบบถ้าต้องการแก้",
   err_reminder_not_found: "ไม่พบรายการนี้แล้ว อาจถูกลบไปก่อนหน้านี้",
   err_reminder_forbidden: "งานนี้ไม่ใช่ของคุณและไม่ได้มอบหมายให้คุณ จึงปิดงานแทนไม่ได้",
   err_agenda_locked: "รายการนี้แก้ไขไม่ได้แล้ว",
@@ -1485,6 +1498,11 @@ const th = {
   fnInstNotePlaceholder: "หมายเหตุถึงผู้ชำระ (ไม่บังคับ)",
   fnRepTitle: "ตัวแทนรับเงินประกัน",
   fnRepEmpty: "ยังไม่ได้ระบุ",
+  fnCancelPlan: "ยกเลิกแผนนี้",
+  fnCancelPlanHint: "ยกเลิกได้ก่อนผู้ดูแลระบบยืนยัน · แผนจะถูกลบและวางแผนใหม่ได้",
+  fnCancelled: "ยกเลิกแผนแล้ว",
+  fnPlanLiveNotice:
+    "คุณมีแผนงานศพที่กำลังดำเนินการอยู่ (ดูการ์ด “สถานะแผนงานศพ” ด้านล่าง) จึงยังสร้างแผนใหม่ไม่ได้",
   fnRepUse:
     "ผู้ดูแลระบบใช้ข้อมูลนี้ติดต่อเรื่องเคลมประกันและส่งมอบเงินค่าจัดงาน — แก้ไขได้ตลอดจนกว่าจะปิดแผน",
   fnEvidenceTitle: "หลักฐานการติดต่อและประกัน",
@@ -1512,6 +1530,9 @@ const th = {
   fnAdminEvidenceEditing: "กำลังแก้ไขหลักฐานที่เลือก \u2014 ไม่เลือกไฟล์ใหม่ = ใช้ไฟล์เดิม",
   fnAdminEvidenceDeleted: "ลบหลักฐานแล้ว",
   fnAdminEvidenceConfirmDelete: "ลบหลักฐานนี้และไฟล์แนบของมัน?",
+  fnPlanDeleted: "ลบแผนงานศพแล้ว",
+  fnPlanDeletedFiles: "ไฟล์",
+  fnPlanDeleteHint: "งวดผ่อน หลักฐาน และรายการชำระเงินของแผนนี้จะถูกลบไปด้วยทั้งหมด",
   fnFilterAll: "ทั้งหมด",
   fnFilterReviewing: "รอยืนยัน",
   fnFilterConfirmed: "ยืนยันแล้ว",
@@ -2090,6 +2111,10 @@ const en = {
     `You will leave ${n} famil${n === 1 ? "y" : "ies"} you belong to.`,
   deleteTypeToConfirm: "To confirm, type",
   deleteConfirmBtn: "Delete permanently",
+  confirmDeleteTitle: "Confirm delete",
+  confirmDeleteBody: "This will be deleted and cannot be recovered. Delete it?",
+  confirmDeleteRefs:
+    "{n} other entries point at this document - they stay, but their attachment goes",
   deleting: "Deleting…",
   deleteDone: "Your account has been deleted.",
   deleteFailed: "Could not delete the account. Nothing was removed.",
@@ -2277,6 +2302,8 @@ const en = {
   decideJudgments: "Judgments",
   decideJournal: "Decision journal",
   decideJournalEmpty: "No decisions yet",
+  decideDeleted: "Entry deleted",
+  decideGone: "That entry is no longer there",
   decideOutcomeSaved: "Outcome saved",
   decideTplVehicle: "Vehicle",
   decideTplHome: "Home / rent",
@@ -2534,6 +2561,13 @@ const en = {
     `${n} more records: Life Legacy, decisions, funeral plan, your places/events and reviews`,
   err_document_duplicate:
     "This exact file is already in the vault, so its entries were not filed again.",
+  err_funeral_in_review:
+    "You already have a funeral plan with an admin. Cancel it first if you want to plan again.",
+  err_funeral_committed:
+    "Your funeral plan has been confirmed - an admin has contacted the providers and acted on it - so a new plan cannot replace it. Please contact an admin to change it.",
+  err_funeral_no_plan: "There is no funeral plan that can be cancelled.",
+  err_funeral_schedule_locked:
+    "An instalment has been reported or paid, so the number of instalments cannot be changed - contact an admin.",
   err_reminder_not_found: "That entry is gone — it may have been deleted.",
   err_reminder_forbidden: "This task is neither yours nor assigned to you, so you cannot close it.",
   err_agenda_locked: "This item can no longer be edited",
@@ -3025,6 +3059,12 @@ const en = {
   fnInstNotePlaceholder: "Note to the payer (optional)",
   fnRepTitle: "Representative for the insurance",
   fnRepEmpty: "Not set",
+  fnCancelPlan: "Cancel this plan",
+  fnCancelPlanHint:
+    "Possible until an admin confirms it - the plan is deleted and you can plan again",
+  fnCancelled: "Plan cancelled",
+  fnPlanLiveNotice:
+    "You have a funeral plan in progress (see \u201CFuneral plan status\u201D below), so a new one cannot be created yet.",
   fnRepUse:
     "An admin uses this to handle the insurance claim and hand over the money for the funeral - you can change it until the plan closes",
   fnEvidenceTitle: "Contact and insurance evidence",
@@ -3053,6 +3093,9 @@ const en = {
     "Editing the selected evidence \u2014 no new file means the current one stays",
   fnAdminEvidenceDeleted: "Evidence deleted",
   fnAdminEvidenceConfirmDelete: "Delete this evidence and its attached file?",
+  fnPlanDeleted: "Funeral plan deleted",
+  fnPlanDeletedFiles: "files",
+  fnPlanDeleteHint: "Its instalments, evidence and payment records are deleted with it",
   fnFilterAll: "All",
   fnFilterReviewing: "Awaiting confirmation",
   fnFilterConfirmed: "Confirmed",

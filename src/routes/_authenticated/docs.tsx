@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { Bell, Download, ExternalLink, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -193,6 +194,33 @@ function DocsPage() {
     if (path) await supabase.storage.from("documents").remove([path]);
     await supabase.from("documents").delete().eq("id", id);
     qc.invalidateQueries({ queryKey: ["documents"] });
+    // The money / task rows that pointed at it keep their data - the foreign
+    // keys are ON DELETE SET NULL - but they lose the attachment, so their
+    // lists have to be re-read or they keep showing a file that is gone.
+    qc.invalidateQueries({ queryKey: ["expenses"] });
+    qc.invalidateQueries({ queryKey: ["incomes"] });
+    qc.invalidateQueries({ queryKey: ["reminders"] });
+  };
+
+  /**
+   * How many other rows point at this document.
+   *
+   * Deleting it does not delete them - the foreign keys are SET NULL - but it
+   * does take their attachment away, and that is worth knowing before the tap
+   * rather than after.
+   */
+  const countRefs = async (docId: string): Promise<number> => {
+    const tables = ["expenses", "incomes", "reminders"] as const;
+    const counts = await Promise.all(
+      tables.map(async (table) => {
+        const { count } = await supabase
+          .from(table)
+          .select("id", { count: "exact", head: true })
+          .eq("source_document_id", docId);
+        return count ?? 0;
+      }),
+    );
+    return counts.reduce((a, b) => a + b, 0);
   };
 
   const makeReminder = async (doc: { id: string; title: string; due_date: string | null }) => {
@@ -367,15 +395,11 @@ function DocsPage() {
                       {t.createReminderFromDoc}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => remove(d.id, d.storage_path)}
-                  >
-                    <Trash2 className="mr-1.5 size-3.5" />
-                    {t.delete}
-                  </Button>
+                  <DocDeleteButton
+                    title={d.title}
+                    countRefs={() => countRefs(d.id)}
+                    onConfirm={() => remove(d.id, d.storage_path)}
+                  />
                   {family && (
                     <div className="ml-auto flex items-center gap-2">
                       <Label htmlFor={`sh-${d.id}`} className="text-xs text-muted-foreground">
@@ -399,5 +423,44 @@ function DocsPage() {
         </p>
       )}
     </AppShell>
+  );
+}
+
+/**
+ * The bin on a document row.
+ *
+ * The count of rows pointing at the document is read when the dialog opens,
+ * not for every row on the page: the list can be long and the number is only
+ * needed by the person who is about to delete one.
+ */
+function DocDeleteButton({
+  title,
+  countRefs,
+  onConfirm,
+}: {
+  title: string;
+  countRefs: () => Promise<number>;
+  onConfirm: () => void | Promise<void>;
+}) {
+  const { t } = useI18n();
+  const [refs, setRefs] = useState<number | null>(null);
+
+  return (
+    <span onPointerEnter={() => void countRefs().then(setRefs)}>
+      <ConfirmDelete
+        size="sm"
+        variant="ghost"
+        className="text-destructive"
+        title={title}
+        {...(refs && refs > 0 ? { detail: t.confirmDeleteRefs.replace("{n}", String(refs)) } : {})}
+        onConfirm={async () => {
+          await onConfirm();
+          setRefs(null);
+        }}
+      >
+        <Trash2 className="mr-1.5 size-3.5" />
+        {t.delete}
+      </ConfirmDelete>
+    </span>
   );
 }

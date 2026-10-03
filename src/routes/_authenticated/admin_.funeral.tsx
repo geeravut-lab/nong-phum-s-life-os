@@ -9,14 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
 import { errorText } from "@/lib/errors";
 import { formatDay } from "@/lib/format";
 import {
   addFuneralEvidence,
+  adminDeleteFuneralPlan,
   adminListFuneralPlans,
   adminReviewFuneralInstallment,
   adminReviewFuneralPlan,
@@ -78,6 +81,7 @@ function AdminFuneralPage() {
   const runDeleteEvidence = useServerFn(deleteFuneralEvidence);
   const runEvidenceUrl = useServerFn(getFuneralEvidenceUrl);
   const runReviewInstallment = useServerFn(adminReviewFuneralInstallment);
+  const runDeletePlan = useServerFn(adminDeleteFuneralPlan);
   // What the admin wants to say back about one reported instalment.
   const [instNote, setInstNote] = useState<Record<string, string>>({});
 
@@ -227,6 +231,27 @@ function AdminFuneralPage() {
     }
   };
 
+  /**
+   * Remove a plan from the queue entirely.
+   *
+   * For a request that should not be there: a test, a duplicate from before the
+   * planner refused them, or a confirmed plan whose owner has asked to drop it
+   * (they cannot withdraw it themselves once it is confirmed). Instalments,
+   * evidence and payments go with it.
+   */
+  const deletePlan = async (planId: string) => {
+    setBusy(true);
+    try {
+      const res = (await runDeletePlan({ data: { planId } })) as { removedFiles: number };
+      toast.success(`${t.fnPlanDeleted} (${res.removedFiles} ${t.fnPlanDeletedFiles})`);
+      refresh();
+    } catch (err) {
+      toast.error(errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const pickFile = (planId: string, file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
@@ -327,6 +352,17 @@ function AdminFuneralPage() {
                     </Badge>
                     <Badge variant="outline">{p.fulfilment}</Badge>
                     <Badge variant="outline">{p.status}</Badge>
+                    <ConfirmDelete
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      title={`${p.ownerName ?? p.user_id?.slice(0, 8) ?? "—"} · ${p.selected_package ?? "—"}`}
+                      detail={t.fnPlanDeleteHint}
+                      disabled={busy}
+                      onConfirm={() => deletePlan(p.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </ConfirmDelete>
                   </div>
                 </div>
 

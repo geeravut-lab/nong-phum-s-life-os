@@ -125,6 +125,20 @@ const hourOnly = new Intl.DateTimeFormat("en-GB", {
   hourCycle: "h23",
 });
 
+/**
+ * The Bangkok wall-clock time of an instant, as HH:mm.
+ *
+ * For editing a row that already has a timestamp: the clock face it is
+ * carrying, so an edit that changes only the date can put the same time back
+ * instead of letting bangkokDateTime fill it with the current one.
+ */
+export function bangkokTimeOf(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return hm.format(d);
+}
+
 /** 0-23 in Bangkok, or null when the input is not a usable instant. */
 export function bangkokHourOf(value: string | Date | null | undefined): number | null {
   if (!value) return null;
