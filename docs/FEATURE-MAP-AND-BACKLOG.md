@@ -453,7 +453,9 @@ Network access ของ cloud environment — ต้องให้เจ้า
 | คู่มือฉบับปรับปรุงครั้งที่ 4                       | ✅    | บทที่ 2, 3, 5, 6, 8, 9 และตารางแผนผังท้ายเล่ม · ถ่ายภาพใหม่ 9 ภาพจาก production · 35 หน้า                                                                                                                                                                                                             |
 
 **migration 2 ตัวในรอบนี้:** `20260928100000_document_content_hash`, `20260928110000_backfill_money_time`
-— โค้ดมี fallback ทั้งคู่ จึง deploy ก่อน `supabase db push` ได้ โดยสองเรื่องนี้จะยังไม่ทำงานจนกว่าจะ push
+— โค้ดมี fallback ทั้งคู่ จึง deploy ก่อน `supabase db push` ได้
+**apply ขึ้น production แล้ว · ยืนยัน 2026-10-03**: คอลัมน์ `documents.content_hash` มีอยู่ และไม่มีแถว
+`expenses`/`incomes` ที่เวลายังว่างเหลืออยู่
 
 ---
 
@@ -469,7 +471,8 @@ Network access ของ cloud environment — ต้องให้เจ้า
 
 **migration 1 ตัวในรอบนี้:** `20260928120000_one_notice_per_job_event` — ตัด trigger ที่เขียนซ้ำ
 โค้ดฝั่งหน้าเว็บซ่อนแถวสำเนาอยู่แล้ว รายการซ้ำจึงหายทันทีที่ deploy แม้ยังไม่ `supabase db push`
-(แต่ถ้ายังไม่ push ฐานข้อมูลก็ยังเขียนแถวสำเนาทิ้งไว้เรื่อย ๆ)
+**apply ขึ้น production แล้ว · ยืนยัน 2026-10-03**: ส่งข้อความในงาน 1 ครั้ง ได้แถวแจ้งเตือนใหม่
+แถวเดียว (แบบละเอียด `ref_table = jobs`) ไม่มีสำเนาจาก trigger เพิ่มอีกแล้ว
 
 ---
 
@@ -504,6 +507,7 @@ Network access ของ cloud environment — ต้องให้เจ้า
 
 **migration 1 ตัวในรอบนี้:** `20260928130000_funeral_installment_review` — เพิ่มสถานะ `review`/`rejected`
 และคอลัมน์ `reported_at`, `review_note` · โค้ดมี fallback: ถ้ายังไม่ push จะเขียนแถวเป็น `due` ที่มี `payer_ref`
+**apply ขึ้น production แล้ว · ยืนยัน 2026-10-03**: `reported_at` / `review_note` อ่านได้จาก API แล้ว
 ซึ่งทั้งสองฝั่งอ่านว่า "รอตรวจสอบ" เหมือนกัน จึง deploy ก่อน push ได้
 
 **หมายเหตุการทดสอบ:** รอบนี้เจ้าของโปรเจกต์สั่งว่าไม่ต้องทดสอบบน production · ตรวจใน sandbox แล้วด้วย
