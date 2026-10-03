@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { bangkokDateTime, bangkokIsoFromLoose, todayInBangkok } from "@/lib/time";
+import { bangkokDateTime, bangkokIsoFromLoose, bangkokTimeOf, todayInBangkok } from "@/lib/time";
 
 export type PhumActionPayload = {
   type: string;
@@ -268,9 +268,38 @@ export async function applyPhumAction(
     if (action.category) patch.category = action.category;
     if (Object.keys(patch).length === 0 && !day && !action.atTime) return null;
 
-    // A new day or a new clock time both move the timestamp, and each fills
-    // the half the user did not give with the current one.
-    const stamp = day || action.atTime ? bangkokDateTime(day, action.atTime) : null;
+    /**
+     * The timestamp of a row that already has one.
+     *
+     * bangkokDateTime fills whichever half the user left out with *now*, which
+     * is the agreed rule for a new row ("วันอย่างเดียว = วันที่บอก + เวลาปัจจุบัน").
+     * On an edit it is wrong: asked to change 24 Sept's coffee from 60 to 120,
+     * the model also reports the day it matched on, and the row's 15:30 was
+     * being overwritten with the time the user happened to be typing. The time
+     * is only touched when the user actually gave one.
+     *
+     * So each half is taken from the user if given, and from the row otherwise:
+     *   day + time  → both change
+     *   time only   → the clock changes, the date stays
+     *   day only    → the date changes, the clock stays
+     *   neither     → the timestamp is not written at all
+     */
+    const timeCol = isExpense ? "spent_at" : "received_at";
+    let stamp: string | null = null;
+    if (day || action.atTime) {
+      const { data: current } = await supabase
+        .from(isExpense ? "expenses" : "incomes")
+        .select(`${isExpense ? "spent_on" : "received_on"}, ${timeCol}`)
+        .eq("id", action.targetId as string)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const row = (current ?? {}) as Record<string, string | null>;
+      const existing = row[timeCol] ?? null;
+      stamp = bangkokDateTime(
+        day ?? row[isExpense ? "spent_on" : "received_on"] ?? null,
+        action.atTime ?? (existing ? bangkokTimeOf(existing) : null),
+      );
+    }
 
     const run = (withTime: boolean) => {
       const q = isExpense

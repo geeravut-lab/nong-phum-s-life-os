@@ -28,7 +28,7 @@ import {
   listDeathNotifyMessages,
   updateMemorialExtras,
 } from "@/lib/legacy-notify.functions";
-import { planFuneral, selectFuneralPackage } from "@/lib/funeral.functions";
+import { getMyFuneralPlan, planFuneral, selectFuneralPackage } from "@/lib/funeral.functions";
 import { FuneralPlanStatus, RepresentativeFields } from "@/components/FuneralPlanStatus";
 
 export const Route = createFileRoute("/_authenticated/legacy_/after")({
@@ -52,6 +52,7 @@ function LegacyAfterPage() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const runConfirm = useServerFn(confirmDeathCase);
   const runPlan = useServerFn(planFuneral);
+  const runMyPlan = useServerFn(getMyFuneralPlan);
   const runSelect = useServerFn(selectFuneralPackage);
 
   const [busy, setBusy] = useState(false);
@@ -81,6 +82,27 @@ function LegacyAfterPage() {
     notes: string;
   } | null>(null);
   const flags = useFeatureFlags();
+
+  /**
+   * Whether a plan is already in progress.
+   *
+   * The server refuses a second one, and a button that always fails is worse
+   * than no button: the form steps aside and points at the status card, which
+   * is where the plan the user already has actually lives.
+   */
+  const livePlanQ = useQuery({
+    queryKey: ["my-funeral-plan"],
+    enabled: flags.enabled("funeral_planner"),
+    queryFn: () =>
+      runMyPlan({ data: {} }) as Promise<{
+        plan: { id: string; status: string; admin_status: string } | null;
+      }>,
+  });
+  const livePlan = livePlanQ.data?.plan ?? null;
+  const planIsLive =
+    !!livePlan &&
+    ["selected", "confirmed", "paid"].includes(livePlan.status) &&
+    livePlan.admin_status !== "declined";
   const [repName, setRepName] = useState("");
   const [repContact, setRepContact] = useState("");
 
@@ -707,68 +729,82 @@ function LegacyAfterPage() {
       {flags.enabled("funeral_planner") ? (
         <section className="mb-8 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
           <h2 className="font-semibold">{t.p6FuneralTitle}</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div>
-              <Label>{t.p6Budget}</Label>
-              <Input
-                className="mt-1"
-                type="number"
-                value={fBudget}
-                onChange={(e) => setFBudget(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t.p6Religion}</Label>
-              <Input
-                className="mt-1"
-                value={fReligion}
-                onChange={(e) => setFReligion(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t.p6Province}</Label>
-              <Input
-                className="mt-1"
-                value={fProvince}
-                onChange={(e) => setFProvince(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t.p6Days}</Label>
-              <Input
-                className="mt-1"
-                type="number"
-                value={fDays}
-                onChange={(e) => setFDays(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t.p6Guests}</Label>
-              <Input
-                className="mt-1"
-                type="number"
-                value={fGuests}
-                onChange={(e) => setFGuests(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>{t.p6Style}</Label>
-              <Input className="mt-1" value={fStyle} onChange={(e) => setFStyle(e.target.value)} />
-            </div>
-            <div className="sm:col-span-2">
-              <Label>{t.p6Extras}</Label>
-              <Textarea
-                className="mt-1"
-                rows={2}
-                value={fExtras}
-                onChange={(e) => setFExtras(e.target.value)}
-              />
-            </div>
-          </div>
-          <Button disabled={busy} onClick={onPlan}>
-            {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            {t.p6PlanBtn}
-          </Button>
+          {/* A plan in progress is the answer to "สร้างแพ็กเกจ", so the form
+              gives way to it rather than offering a button the server refuses. */}
+          {planIsLive ? (
+            <p className="rounded-xl border border-primary/40 bg-primary/5 p-3 text-sm">
+              {t.fnPlanLiveNotice}
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <Label>{t.p6Budget}</Label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    value={fBudget}
+                    onChange={(e) => setFBudget(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>{t.p6Religion}</Label>
+                  <Input
+                    className="mt-1"
+                    value={fReligion}
+                    onChange={(e) => setFReligion(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>{t.p6Province}</Label>
+                  <Input
+                    className="mt-1"
+                    value={fProvince}
+                    onChange={(e) => setFProvince(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>{t.p6Days}</Label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    value={fDays}
+                    onChange={(e) => setFDays(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>{t.p6Guests}</Label>
+                  <Input
+                    className="mt-1"
+                    type="number"
+                    value={fGuests}
+                    onChange={(e) => setFGuests(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>{t.p6Style}</Label>
+                  <Input
+                    className="mt-1"
+                    value={fStyle}
+                    onChange={(e) => setFStyle(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>{t.p6Extras}</Label>
+                  <Textarea
+                    className="mt-1"
+                    rows={2}
+                    value={fExtras}
+                    onChange={(e) => setFExtras(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button disabled={busy} onClick={onPlan}>
+                {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                {t.p6PlanBtn}
+              </Button>
+            </>
+          )}
 
           {planResult && (
             <div className="space-y-3 border-t border-border pt-3">

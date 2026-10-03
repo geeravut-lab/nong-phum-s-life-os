@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { CopyButton } from "@/components/CopyButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1007,15 +1008,12 @@ function LegacyPage() {
                   >
                     <Pencil className="size-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={t.delete}
-                    title={t.delete}
-                    onClick={() => delRow("legacy_contacts", c.id)}
+                  <ConfirmDelete
+                    title={c.full_name ?? ""}
+                    onConfirm={() => delRow("legacy_contacts", c.id)}
                   >
                     <Trash2 className="size-4" />
-                  </Button>
+                  </ConfirmDelete>
                 </div>
               </li>
             ))}
@@ -1132,15 +1130,12 @@ function LegacyPage() {
                   >
                     <Pencil className="size-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={t.delete}
-                    title={t.delete}
-                    onClick={() => delRow("legacy_assets", a.id)}
+                  <ConfirmDelete
+                    title={a.title ?? ""}
+                    onConfirm={() => delRow("legacy_assets", a.id)}
                   >
                     <Trash2 className="size-4" />
-                  </Button>
+                  </ConfirmDelete>
                 </div>
               </li>
             ))}
@@ -1286,15 +1281,12 @@ function LegacyPage() {
                       >
                         <Pencil className="size-4" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={t.delete}
-                        title={t.delete}
-                        onClick={() => delRow("legacy_wishes", w.id)}
+                      <ConfirmDelete
+                        title={w.title || w.body?.slice(0, 60) || ""}
+                        onConfirm={() => delRow("legacy_wishes", w.id)}
                       >
                         <Trash2 className="size-4" />
-                      </Button>
+                      </ConfirmDelete>
                     </div>
                   </div>
                 </li>
@@ -1329,13 +1321,12 @@ function LegacyPage() {
                   </p>
                   {c.notes ? <p className="text-xs text-muted-foreground">{c.notes}</p> : null}
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => delRow("legacy_checklist", c.id)}
+                <ConfirmDelete
+                  title={c.title ?? ""}
+                  onConfirm={() => delRow("legacy_checklist", c.id)}
                 >
                   <Trash2 className="size-4" />
-                </Button>
+                </ConfirmDelete>
               </li>
             ))}
           </ul>

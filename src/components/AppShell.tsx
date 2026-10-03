@@ -377,7 +377,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="flex flex-col">
             {navGroups.map((group) => (
               <div key={group.label} className="mt-2 first:mt-0">
-                <p className="px-3 pb-0.5 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                <p className="px-3 pb-0.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                   {group.label}
                 </p>
                 {group.items.map((item) => (
@@ -519,7 +519,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="flex flex-col gap-1">
                 {moreGroups.map((group) => (
                   <div key={group.label} className="mb-1">
-                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                    <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                       {group.label}
                     </p>
                     {group.items.map((item) => (

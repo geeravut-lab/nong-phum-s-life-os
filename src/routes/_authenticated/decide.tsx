@@ -4,9 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Loader2, Scale, Sparkles, Archive } from "lucide-react";
+import { Loader2, Scale, Sparkles, Archive, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -189,6 +190,35 @@ function DecidePage() {
     }
     toast.success(t.decideOutcomeSaved);
     qc.invalidateQueries({ queryKey: ["decisions"] });
+  };
+
+  /**
+   * Remove one entry from the journal.
+   *
+   * The row is the whole record - question, options, the board the AI wrote,
+   * the outcome - so there is nothing to keep behind it. If the entry being
+   * removed is the one open on the page, the page has to let go of it too, or
+   * it goes on showing a decision that no longer exists.
+   */
+  const removeDecision = async (id: string) => {
+    const { data, error } = await supabase.from("decisions").delete().eq("id", id).select("id");
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    // PostgREST answers a delete that matched nothing with a success.
+    if (!data || data.length === 0) {
+      toast.error(t.decideGone);
+      return;
+    }
+    if (activeId === id) {
+      setActiveId(null);
+      setBoard(null);
+      setExpandedJournalId(null);
+    }
+    toast.success(t.decideDeleted);
+    void qc.invalidateQueries({ queryKey: ["decisions"] });
+    void qc.invalidateQueries({ queryKey: ["decision-journal"] });
   };
 
   const loadSaved = (d: SavedDecision) => {
@@ -494,6 +524,9 @@ function DecidePage() {
                         </>
                       )}
                       {d.outcome && <Badge variant="secondary">{d.outcome}</Badge>}
+                      <ConfirmDelete title={d.question} onConfirm={() => removeDecision(d.id)}>
+                        <Trash2 className="size-4" />
+                      </ConfirmDelete>
                     </div>
                   </div>
                   {open && (

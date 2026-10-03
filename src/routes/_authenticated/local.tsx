@@ -892,7 +892,13 @@ function LocalPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <span className="font-medium">{g.name}</span>
-                        <p className="text-xs text-muted-foreground">{g.category}</p>
+                        {/* The distance makes the radius checkable: a result
+                            further away than the setting is a bug the reader
+                            can see, not one they have to suspect. */}
+                        <p className="text-xs text-muted-foreground">
+                          {g.category}
+                          {g.distanceKm != null ? ` · ${g.distanceKm.toFixed(1)} km` : ""}
+                        </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         {g.rating != null ? (

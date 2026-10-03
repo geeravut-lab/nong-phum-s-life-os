@@ -15,6 +15,19 @@ export const AI_EVENT_RETENTION_DAYS = 30;
 /** notification_log: must cover at least two LINE billing months so the quota count never runs short. */
 export const NOTIFICATION_LOG_RETENTION_DAYS = 90;
 
+/**
+ * app_notifications the user has already read. Unread rows are left alone
+ * however old: the user has not seen them yet, and there are never many.
+ */
+export const READ_NOTIFICATION_RETENTION_DAYS = 90;
+
+/**
+ * funeral_plans still in 'draft': three generated packages nobody chose.
+ * planFuneral keeps at most one per user, so this only catches rows written
+ * before that rule and any left by a failed select.
+ */
+export const FUNERAL_DRAFT_RETENTION_DAYS = 7;
+
 /** cron_ticks: the tick's own run log. */
 export const CRON_TICK_RETENTION_DAYS = 30;
 

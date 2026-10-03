@@ -52,6 +52,8 @@ import {
   AI_EVENT_RETENTION_DAYS,
   CRON_TICK_RETENTION_DAYS,
   FAILED_DOC_RETENTION_DAYS,
+  FUNERAL_DRAFT_RETENTION_DAYS,
+  READ_NOTIFICATION_RETENTION_DAYS,
   NOTIFICATION_LOG_RETENTION_DAYS,
   PENDING_DOC_RETENTION_HOURS,
 } from "./retention";
@@ -200,6 +202,37 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
             ),
           ),
       ],
+      [
+        // The inbox shows the newest 200 and the table was never pruned, so it
+        // grew without limit. Only rows the user has read are removed: an
+        // unread one is something they have not seen yet.
+        "read_notifications_deleted",
+        () =>
+          deleteReadNotifications(
+            agoIso(
+              now,
+              ruleNumber(
+                rules,
+                "read_notifications_deleted",
+                "days",
+                READ_NOTIFICATION_RETENTION_DAYS,
+              ) * DAY,
+            ),
+          ),
+      ],
+      [
+        // Three packages nobody picked. planFuneral now keeps at most one draft
+        // per user; this clears what earlier versions left behind.
+        "funeral_drafts_deleted",
+        () =>
+          deleteFuneralDrafts(
+            agoIso(
+              now,
+              ruleNumber(rules, "funeral_drafts_deleted", "days", FUNERAL_DRAFT_RETENTION_DAYS) *
+                DAY,
+            ),
+          ),
+      ],
       ["orphan_attachments_deleted", () => deleteOrphanAttachments(now, overBudget, summary)],
       ["escrow_auto_cancelled", () => autoCancelEscrow(now, overBudget, summary)],
       ["expire_pending_offers", () => expireOffersStep(now, overBudget, summary)],
@@ -247,6 +280,34 @@ export async function runTick(now: Date = new Date()): Promise<TickResult> {
   if (doneErr) console.error(`[tick] could not write run log: ${doneErr.message}`);
 
   return { skipped: false, tick, summary, error };
+}
+
+/** Notifications the user has read, past their retention. Unread rows stay. */
+async function deleteReadNotifications(cutoff: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("app_notifications")
+    .delete({ count: "exact" })
+    .not("read_at", "is", null)
+    .lt("read_at", cutoff);
+  if (error) {
+    console.error(`[tick] app_notifications cleanup failed: ${error.message}`);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/** Funeral plans left in draft: packages generated and never chosen. */
+async function deleteFuneralDrafts(cutoff: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("funeral_plans")
+    .delete({ count: "exact" })
+    .eq("status", "draft")
+    .lt("created_at", cutoff);
+  if (error) {
+    console.error(`[tick] funeral draft cleanup failed: ${error.message}`);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 type RetentionTable = "ai_events" | "notification_log" | "cron_ticks" | "line_link_states";

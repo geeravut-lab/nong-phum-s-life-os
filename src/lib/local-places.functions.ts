@@ -35,6 +35,8 @@ export type GooglePlaceItem = {
   hoursToday: string | null;
   mapsUrl: string | null;
   source: "google";
+  /** Distance from the user, when we know where they are. Null otherwise. */
+  distanceKm?: number | null;
 };
 
 /**
@@ -98,6 +100,23 @@ function toItem(p: RawPlace): GooglePlaceItem {
     mapsUrl: p.googleMapsUri ?? null,
     source: "google",
   };
+}
+
+/** Great-circle distance in km, or null when either end has no coordinates. */
+function haversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number | null,
+  lng2: number | null,
+): number | null {
+  if (lat2 == null || lng2 == null) return null;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 /** Nearby / text search via Google Places API (New). Requires GOOGLE_MAPS_API_KEY. */
@@ -186,8 +205,28 @@ export const searchGooglePlaces = createServerFn({ method: "POST" })
           message: json.error?.message ?? res.statusText,
         };
       }
+      /**
+       * The radius has to hold for a text search too.
+       *
+       * searchNearby takes locationRestriction, which Google enforces. For a
+       * query the only thing it accepts is locationBias - a preference it is
+       * free to ignore - so searching "ห้าง" from the suburbs came back with
+       * malls at Siam, 10 km outside the radius the user had set. The circle
+       * is therefore applied here as well, on the coordinates Google returns
+       * with each place.
+       */
+      const items = (json.places ?? []).map(toItem).map((it) => ({
+        ...it,
+        distanceKm: hasCoords ? haversineKm(data.lat!, data.lng!, it.lat, it.lng) : null,
+      }));
+      const within = hasCoords
+        ? // A place with no coordinates cannot be measured; keeping it is
+          // better than silently dropping a result that may well be near.
+          items.filter((it) => it.distanceKm == null || it.distanceKm <= (data.radiusKm ?? 5))
+        : items;
+
       return {
-        places: (json.places ?? []).map(toItem),
+        places: within,
         error: null as null,
         message: null as null,
       };

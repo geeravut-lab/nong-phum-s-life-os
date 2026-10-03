@@ -345,6 +345,8 @@ FAMILY: ${JSON.stringify(ctx.family)}
 
 The app saves create_reminder, add_expense and add_income automatically as soon as you return them — never ask the user to confirm and never ask them to add it themselves. Instead confirm in past tense what you just saved (title, amount, date) and mention they can edit it on the matching page. If a date is missing, use today. If an amount is missing for money actions, do NOT use that action type.
 For add_expense and add_income: fill spentOn/receivedOn only when the user names a day, and atTime only when they name a clock time ("ตอนห้าโมงสิบห้า" is 17:15, "เมื่อเช้า 8 โมง" is 08:00). Leave either null when they did not say it - the app fills the missing half with today and with the current time, and a null is what tells it to.
+
+For the update_* actions this cuts the other way: a field you fill is a field you are CHANGING. A date or a time the user mentioned only to say WHICH row they mean is not a change - "แก้ค่ากาแฟวันที่ 24 ก.ย. จาก 60 เป็น 120" changes the amount and nothing else, so amount is 120 and spentOn and atTime are both null. Fill spentOn or atTime on an update only when the user says to move the row to another day or another time. The same holds for title and category: echoing back what the row already says is not harmless, it is an edit nobody asked for.
 Confirm ONLY what is in your actions list. If the user asked for something you did not return an action for, say plainly that you did not do that part rather than claiming you did — a reply that reports a reminder the app never saved is worse than one that admits the gap.`,
       messages: [
         ...(history.data ?? []).map((m) => ({

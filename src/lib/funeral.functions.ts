@@ -5,8 +5,42 @@ import { requireAdmin, requireSupabaseAuth } from "@/integrations/supabase/auth-
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { notifyAdmins, notifyUsers } from "@/lib/notify.server";
 import { installmentSchedule } from "@/lib/funeral.shared";
+import { appError } from "@/lib/errors";
 import { userLabel } from "./family-labels.server";
 import { bahtTH, dayTH, noticeBody, whenTH } from "./notice-detail";
+
+/**
+ * A plan that is still in play, and must not be shadowed by a second one.
+ *
+ * 'draft'     - packages were generated and nothing was chosen. Not live: it is
+ *               a preview, and a new one replaces it.
+ * 'cancelled' - the user withdrew it before an admin acted. Not live.
+ * 'declined'  - an admin said it cannot be delivered. Not live: planning again
+ *               is exactly what the user should do.
+ * anything else (selected / confirmed / paid, admin reviewing or confirmed) is
+ * live: somebody is working on it, or has already bought against it.
+ */
+const LIVE_STATUSES = ["selected", "confirmed", "paid"] as const;
+
+type PlanRowLite = { id: string; status: string; admin_status: string };
+
+/** The caller's live plan, or null. Draft, cancelled and declined do not count. */
+async function livePlanOf(userId: string): Promise<PlanRowLite | null> {
+  const { data } = await supabaseAdmin
+    .from("funeral_plans")
+    .select("id, status, admin_status")
+    .eq("user_id", userId)
+    .in("status", LIVE_STATUSES as unknown as string[])
+    .neq("admin_status", "declined")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return (data?.[0] as PlanRowLite | undefined) ?? null;
+}
+
+/** An admin has acted on it and may have spent money against it. */
+function isCommitted(plan: PlanRowLite): boolean {
+  return plan.admin_status === "confirmed" || plan.status === "paid";
+}
 
 export const planFuneral = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -38,6 +72,24 @@ export const planFuneral = createServerFn({ method: "POST" })
       extras: data.extras,
       lang: data.lang,
     });
+    // A plan somebody is already working on must not be shadowed by a new one.
+    // Without this, pressing "สร้างแพ็กเกจ" again while an admin was reviewing -
+    // or after they had confirmed it and bought the insurance - wrote a second
+    // plan, put a second request in the admin's queue, and hid the real one
+    // from the owner, who only ever sees their newest.
+    const live = await livePlanOf(context.userId);
+    if (live) throw appError(isCommitted(live) ? "funeral_committed" : "funeral_in_review");
+
+    // At most one draft per user. A draft is a preview of three packages, not a
+    // record of anything: the previous one is of no use to anybody the moment
+    // these replace it on the screen, and leaving it behind was the main source
+    // of dead rows in this table.
+    await supabaseAdmin
+      .from("funeral_plans")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("status", "draft");
+
     const { data: row, error } = await context.supabase
       .from("funeral_plans")
       .insert({
@@ -85,6 +137,14 @@ export const selectFuneralPackage = createServerFn({ method: "POST" })
     const pkgs = (plan.packages as Array<{ id: string; name?: string; totalBudget: number }>) ?? [];
     const selected = pkgs.find((x) => x.id === data.packageId);
     if (!selected) throw new Error("Package not found");
+
+    // The draft could have been generated before another plan went live (two
+    // tabs, or a stale page), so the check is made here as well as in
+    // planFuneral - this is the write that actually commits to it.
+    const live = await livePlanOf(context.userId);
+    if (live && live.id !== data.planId) {
+      throw appError(isCommitted(live) ? "funeral_committed" : "funeral_in_review");
+    }
 
     const { error: upErr } = await context.supabase
       .from("funeral_plans")
@@ -171,16 +231,27 @@ export const getMyFuneralPlan = createServerFn({ method: "POST" })
     z.object({ planId: z.string().uuid().optional() }).parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
+    // Newest is not the same as current. A draft created after a confirmed plan
+    // would otherwise hide it, and the owner would be looking at a preview
+    // while an admin was working on the real thing. The live plan wins; the
+    // newest row is the answer only when nothing is live.
     let q = context.supabase
       .from("funeral_plans")
       .select("*")
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
-      .limit(1);
+      .limit(5);
     if (data.planId) q = context.supabase.from("funeral_plans").select("*").eq("id", data.planId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    const plan = rows?.[0] ?? null;
+    const all = rows ?? [];
+    const plan =
+      all.find(
+        (r) =>
+          (LIVE_STATUSES as readonly string[]).includes(r.status) && r.admin_status !== "declined",
+      ) ??
+      all[0] ??
+      null;
     if (!plan) return { plan: null, installments: [], evidence: [], payments: [] };
 
     const [inst, ev, pays] = await Promise.all([
@@ -203,6 +274,54 @@ export const getMyFuneralPlan = createServerFn({ method: "POST" })
       evidence: ev.data ?? [],
       payments: pays.data ?? [],
     };
+  });
+
+/**
+ * The user withdraws a plan an admin has not acted on yet.
+ *
+ * The row is removed rather than marked cancelled. At this point it holds a
+ * request and nothing else - no instalments, no evidence, no money - and a
+ * withdrawn request that nobody acted on is not a record worth keeping; it is
+ * the kind of row that accumulates until the table is mostly noise. Once an
+ * admin has confirmed the plan this is refused: by then they have contacted
+ * the providers and the plan is theirs to close, not the user's to erase.
+ */
+export const cancelMyFuneralPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ planId: z.string().uuid().optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const live = await livePlanOf(context.userId);
+    const target = data.planId ?? live?.id ?? null;
+    if (!target || (live && live.id !== target)) throw appError("funeral_no_plan");
+    if (live && isCommitted(live)) throw appError("funeral_committed");
+
+    const { data: gone, error } = await supabaseAdmin
+      .from("funeral_plans")
+      .delete()
+      .eq("id", target)
+      .eq("user_id", context.userId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!gone || gone.length === 0) throw appError("funeral_no_plan");
+
+    // The admins were told there was something to review; tell them it is gone
+    // rather than leaving them to find an empty queue entry.
+    await notifyAdmins(
+      {
+        kind: "funeral_selected",
+        title: "ผู้ใช้ยกเลิกแผนงานศพ",
+        body: noticeBody("ผู้ใช้ถอนแผนก่อนการตรวจสอบ ไม่ต้องดำเนินการต่อ", [
+          ["ผู้ยกเลิก", await userLabel(context.userId)],
+        ]),
+        href: "/admin/funeral",
+        refTable: "funeral_plans",
+        refId: target,
+      },
+      context.userId,
+    );
+    return { ok: true as const };
   });
 
 export const createFuneralPayment = createServerFn({ method: "POST" })
@@ -266,6 +385,24 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
     // used to write none, which left that payer with a QR and nowhere to say
     // they had paid it - the row is what carries the reference and the admin's
     // check, so without it a single payment could never be confirmed.
+    // Rebuilding the schedule throws the old rows away, and those rows carry
+    // the payment reports: a reference the payer quoted, an admin's decision,
+    // whether the money arrived. Once any of that exists the term is fixed.
+    const { data: settled } = await supabaseAdmin
+      .from("funeral_installments")
+      .select("id, payment_status, payer_ref")
+      .eq("plan_id", data.planId);
+    if (
+      (settled ?? []).some(
+        (i) =>
+          i.payment_status === "paid" ||
+          i.payment_status === "review" ||
+          (i.payment_status === "due" && !!i.payer_ref),
+      )
+    ) {
+      throw appError("funeral_schedule_locked");
+    }
+
     await supabaseAdmin.from("funeral_installments").delete().eq("plan_id", data.planId);
     const { error: insErr } = await supabaseAdmin.from("funeral_installments").insert(
       schedule.map((row) => ({
@@ -933,6 +1070,44 @@ export const adminReviewFuneralInstallment = createServerFn({ method: "POST" })
       context.userId,
     );
     return { ok: true as const, paid: confirmed };
+  });
+
+/**
+ * An admin removes a plan and everything hanging off it.
+ *
+ * The queue needs a way to clear a request that should not be there - a test,
+ * a duplicate from before planFuneral refused them, a plan whose owner asked
+ * to withdraw it after it was confirmed. Instalments, evidence rows and
+ * payments go with it through ON DELETE CASCADE; the evidence files in storage
+ * do not, so they are removed here, the same way deleteFuneralEvidence does.
+ */
+export const adminDeleteFuneralPlan = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) => z.object({ planId: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: files } = await supabaseAdmin
+      .from("funeral_evidence")
+      .select("file_path")
+      .eq("plan_id", data.planId);
+    const paths = (files ?? [])
+      .map((f) => f.file_path as string | null)
+      .filter((p): p is string => !!p);
+
+    const { data: gone, error } = await supabaseAdmin
+      .from("funeral_plans")
+      .delete()
+      .eq("id", data.planId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!gone || gone.length === 0) throw new Error("plan not found");
+
+    // After the rows, so a failed storage call cannot leave records pointing at
+    // files that are no longer there.
+    if (paths.length > 0) {
+      const { error: rmErr } = await supabaseAdmin.storage.from("documents").remove(paths);
+      if (rmErr) console.error("[funeral] plan files remove failed:", rmErr.message);
+    }
+    return { ok: true as const, removedFiles: paths.length };
   });
 
 /**
