@@ -18,6 +18,7 @@ import { formatDay } from "@/lib/format";
 import {
   addFuneralEvidence,
   adminListFuneralPlans,
+  adminReviewFuneralInstallment,
   adminReviewFuneralPlan,
   deleteFuneralEvidence,
   getFuneralEvidenceUrl,
@@ -55,6 +56,8 @@ type PlanRow = {
     due_on: string;
     amount: number;
     payment_status: string;
+    payer_ref: string | null;
+    reported_at?: string | null;
   }>;
   evidence: Array<{
     id: string;
@@ -74,6 +77,9 @@ function AdminFuneralPage() {
   const runEditEvidence = useServerFn(updateFuneralEvidence);
   const runDeleteEvidence = useServerFn(deleteFuneralEvidence);
   const runEvidenceUrl = useServerFn(getFuneralEvidenceUrl);
+  const runReviewInstallment = useServerFn(adminReviewFuneralInstallment);
+  // What the admin wants to say back about one reported instalment.
+  const [instNote, setInstNote] = useState<Record<string, string>>({});
 
   const [filter, setFilter] = useState<"all" | "reviewing" | "confirmed">("reviewing");
   const [busy, setBusy] = useState(false);
@@ -187,6 +193,32 @@ function AdminFuneralPage() {
       // The form may be holding the row that has just gone.
       if (editingEvidence[planId] === evidenceId) cancelEditEvidence(planId);
       toast.success(t.fnAdminEvidenceDeleted);
+      refresh();
+    } catch (err) {
+      toast.error(errorText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * A reported instalment is one the payer says they paid.
+   *
+   * 'review' after 20260928130000 is pushed; before that the row stays 'due'
+   * carrying the reference, which means the same thing.
+   */
+  const awaitingCheck = (i: { payment_status: string; payer_ref: string | null }) =>
+    i.payment_status === "review" || (i.payment_status === "due" && !!i.payer_ref);
+
+  const decideInstallment = async (id: string, decision: "confirm" | "reject") => {
+    setBusy(true);
+    try {
+      const note = instNote[id]?.trim();
+      await runReviewInstallment({
+        data: { installmentId: id, decision, ...(note ? { note } : {}) },
+      });
+      setInstNote((cur) => ({ ...cur, [id]: "" }));
+      toast.success(t.saved);
       refresh();
     } catch (err) {
       toast.error(errorText(err, t));
@@ -334,12 +366,57 @@ function AdminFuneralPage() {
                 </div>
 
                 {p.installments.length > 0 ? (
-                  <div className="mt-3 border-t border-border pt-2">
+                  <div className="mt-3 space-y-2 border-t border-border pt-2">
                     <h3 className="text-xs font-semibold">{t.fnPayPlanTitle}</h3>
                     <p className="text-xs text-muted-foreground">
                       {p.installments.filter((i) => i.payment_status === "paid").length}/
                       {p.installments.length} {t.fnPaid}
                     </p>
+                    {/* Only the ones somebody is waiting on. A 36-month plan
+                        listed in full would bury the one row that needs an
+                        answer today. */}
+                    {p.installments.filter(awaitingCheck).map((i) => (
+                      <div
+                        key={i.id}
+                        className="space-y-2 rounded-xl border border-primary/40 bg-primary/5 p-2 text-xs"
+                      >
+                        <p className="font-medium">
+                          {t.fnInstallmentSeq} {i.seq} · ฿{Number(i.amount).toLocaleString()} ·{" "}
+                          {t.fnDueOn} {formatDay(new Date(i.due_on), lang)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {t.fnPayerRef}: {i.payer_ref ?? "—"}
+                          {i.reported_at
+                            ? ` · ${formatDay(new Date(i.reported_at), lang, true)}`
+                            : ""}
+                        </p>
+                        <Input
+                          value={instNote[i.id] ?? ""}
+                          placeholder={t.fnInstNotePlaceholder}
+                          maxLength={400}
+                          onChange={(e) =>
+                            setInstNote((cur) => ({ ...cur, [i.id]: e.target.value }))
+                          }
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            disabled={busy}
+                            onClick={() => void decideInstallment(i.id, "confirm")}
+                          >
+                            {t.fnInstConfirm}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => void decideInstallment(i.id, "reject")}
+                          >
+                            {t.fnInstReject}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : null}
 

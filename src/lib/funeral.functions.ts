@@ -261,18 +261,21 @@ export const createFuneralPayment = createServerFn({ method: "POST" })
 
     // One row per instalment, so "what do I owe this month" has an answer.
     // Rebuilt from scratch if the user changes their mind about the term.
+    //
+    // Paying in one go writes a row too, though it is a schedule of one. It
+    // used to write none, which left that payer with a QR and nowhere to say
+    // they had paid it - the row is what carries the reference and the admin's
+    // check, so without it a single payment could never be confirmed.
     await supabaseAdmin.from("funeral_installments").delete().eq("plan_id", data.planId);
-    if (schedule.length > 1) {
-      const { error: insErr } = await supabaseAdmin.from("funeral_installments").insert(
-        schedule.map((row) => ({
-          plan_id: data.planId,
-          seq: row.seq,
-          due_on: row.dueOn,
-          amount: row.amount,
-        })),
-      );
-      if (insErr) throw new Error(insErr.message);
-    }
+    const { error: insErr } = await supabaseAdmin.from("funeral_installments").insert(
+      schedule.map((row) => ({
+        plan_id: data.planId,
+        seq: row.seq,
+        due_on: row.dueOn,
+        amount: row.amount,
+      })),
+    );
+    if (insErr) throw new Error(insErr.message);
 
     const { data: pay, error: payErr } = await context.supabase
       .from("funeral_payments")
@@ -676,18 +679,50 @@ export const deleteFuneralEvidence = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/** Mark one instalment paid. The payer can report it; an admin can confirm it. */
-export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
+/**
+ * Where the money for this plan should be sent.
+ *
+ * The funeral account if one is set, otherwise the same PromptPay id the rest
+ * of the app collects on - a plan that cannot show a QR is a plan nobody can
+ * pay, so falling back beats showing nothing.
+ */
+async function funeralPromptpayId(): Promise<string | null> {
+  const { data: settings } = await supabaseAdmin
+    .from("platform_settings")
+    .select("funeral_promptpay_id, helpme_promptpay_id")
+    .maybeSingle();
+  const s = settings as {
+    funeral_promptpay_id?: string | null;
+    helpme_promptpay_id?: string | null;
+  } | null;
+  return s?.funeral_promptpay_id ?? s?.helpme_promptpay_id ?? null;
+}
+
+/** promptpay.io renders the QR; the amount is baked in so it cannot be mistyped. */
+function promptpayQr(id: string | null, amount: number): string | null {
+  return id ? `https://promptpay.io/${id}/${amount.toFixed(2)}` : null;
+}
+
+/** An instalment is waiting on an admin either way; see the migration. */
+const INSTALLMENT_IN_REVIEW = (row: {
+  payment_status?: string | null;
+  payer_ref?: string | null;
+}) => row.payment_status === "review" || (row.payment_status === "due" && !!row.payer_ref);
+
+/**
+ * The QR for one instalment, so the payer sees the amount they owe this month.
+ *
+ * Separate from createFuneralPayment, which sets the whole schedule up once.
+ * This is the monthly act: open the row, pay it, say you did.
+ */
+export const startFuneralInstallmentPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z
-      .object({ installmentId: z.string().uuid(), payerRef: z.string().max(80).optional() })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ installmentId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
+    await assertFeature("funeral_planner");
     const { data: row } = await supabaseAdmin
       .from("funeral_installments")
-      .select("id, plan_id, seq, amount, due_on")
+      .select("id, plan_id, seq, amount, due_on, payment_status, payer_ref")
       .eq("id", data.installmentId)
       .maybeSingle();
     if (!row) throw new Error("not found");
@@ -697,51 +732,238 @@ export const markFuneralInstallmentPaid = createServerFn({ method: "POST" })
       .select("user_id")
       .eq("id", row.plan_id)
       .maybeSingle();
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (plan?.user_id !== context.userId && isAdmin !== true) throw new Error("Forbidden");
+    if (plan?.user_id !== context.userId) throw new Error("Forbidden");
 
-    const { error } = await supabaseAdmin
-      .from("funeral_installments")
-      .update({
-        payment_status: "paid",
-        paid_at: new Date().toISOString(),
-        payer_ref: data.payerRef ?? null,
+    const amount = Number(row.amount);
+    const promptpayId = await funeralPromptpayId();
+    return {
+      installmentId: row.id as string,
+      seq: row.seq as number,
+      dueOn: row.due_on as string,
+      amount,
+      promptpayId,
+      qrUrl: promptpayQr(promptpayId, amount),
+      alreadyReported: INSTALLMENT_IN_REVIEW(row),
+    };
+  });
+
+/**
+ * "I have transferred it" - which is a claim, not a receipt.
+ *
+ * It used to write 'paid', so the plan counted money nobody had checked for.
+ * Now it parks the row in review with whatever the payer can quote from their
+ * slip, and tells the admins there is something to look at - the same loop
+ * membership payments have always used.
+ */
+export const reportFuneralInstallmentPaid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        installmentId: z.string().uuid(),
+        payerRef: z.string().trim().min(1).max(80),
       })
-      .eq("id", data.installmentId);
-    if (error) throw new Error(error.message);
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row } = await supabaseAdmin
+      .from("funeral_installments")
+      .select("id, plan_id, seq, amount, due_on, payment_status")
+      .eq("id", data.installmentId)
+      .maybeSingle();
+    if (!row) throw new Error("not found");
+    if (row.payment_status === "paid") return { ok: true as const, status: "paid" as const };
 
-    // The whole plan is paid once no instalment is still due.
+    const { data: plan } = await supabaseAdmin
+      .from("funeral_plans")
+      .select("user_id")
+      .eq("id", row.plan_id)
+      .maybeSingle();
+    if (plan?.user_id !== context.userId) throw new Error("Forbidden");
+
+    const reported = {
+      payment_status: "review",
+      payer_ref: data.payerRef,
+      reported_at: new Date().toISOString(),
+      review_note: null as string | null,
+    };
+    // reported_at / review_note are newer than the generated types, which are
+    // built from the database as it was.
+    let { error } = await supabaseAdmin
+      .from("funeral_installments")
+      .update(reported as never)
+      .eq("id", data.installmentId);
+    if (error) {
+      // 23514 = the status CHECK predates 'review'; 42703/PGRST204 = the new
+      // columns are not there yet. Either way 20260928130000 has not been
+      // pushed, so the row stays 'due' carrying the reference - which the app
+      // reads as "waiting on an admin" too.
+      if (error.code === "23514" || error.code === "42703" || error.code === "PGRST204") {
+        ({ error } = await supabaseAdmin
+          .from("funeral_installments")
+          .update({ payer_ref: data.payerRef })
+          .eq("id", data.installmentId));
+      }
+      if (error) throw new Error(error.message);
+    }
+
     const { count } = await supabaseAdmin
       .from("funeral_installments")
       .select("id", { count: "exact", head: true })
       .eq("plan_id", row.plan_id)
-      .eq("payment_status", "due");
+      .in("payment_status", ["due", "review"]);
+
+    await notifyAdmins(
+      {
+        kind: "funeral_installment",
+        params: { seq: row.seq as number },
+        title: "แจ้งชำระงวดค่างานศพ รอตรวจสอบ",
+        body: noticeBody(`งวดที่ ${row.seq} รอผู้ดูแลระบบตรวจสอบ`, [
+          ["ผู้ชำระ", await userLabel(context.userId)],
+          ["ยอดงวดนี้", bahtTH(row.amount as number | null)],
+          ["ครบกำหนด", dayTH(row.due_on as string | null)],
+          ["อ้างอิงการโอน", data.payerRef],
+          ["งวดที่ยังไม่ผ่านการตรวจ", String(count ?? 0)],
+        ]),
+        href: "/admin/funeral",
+        refTable: "funeral_installments",
+        refId: data.installmentId,
+      },
+      context.userId,
+    );
+    return { ok: true as const, status: "review" as const };
+  });
+
+/**
+ * The admin end of that loop: the transfer is there, or it is not.
+ *
+ * Rejecting puts the row back to due rather than leaving it in limbo, with the
+ * reason attached, so the payer can look again and report it properly.
+ */
+export const adminReviewFuneralInstallment = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        installmentId: z.string().uuid(),
+        decision: z.enum(["confirm", "reject"]),
+        note: z.string().max(400).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row } = await supabaseAdmin
+      .from("funeral_installments")
+      .select("id, plan_id, seq, amount, due_on, payer_ref")
+      .eq("id", data.installmentId)
+      .maybeSingle();
+    if (!row) throw new Error("not found");
+
+    const { data: plan } = await supabaseAdmin
+      .from("funeral_plans")
+      .select("id, user_id")
+      .eq("id", row.plan_id)
+      .maybeSingle();
+    if (!plan) throw new Error("plan not found");
+
+    const confirmed = data.decision === "confirm";
+    const patch = confirmed
+      ? {
+          payment_status: "paid",
+          paid_at: new Date().toISOString(),
+          review_note: data.note?.trim() || null,
+        }
+      : {
+          payment_status: "due",
+          payer_ref: null,
+          paid_at: null,
+          review_note: data.note?.trim() || null,
+        };
+    let { data: written, error } = await supabaseAdmin
+      .from("funeral_installments")
+      .update(patch as never)
+      .eq("id", data.installmentId)
+      .select("id");
+    if (error && (error.code === "42703" || error.code === "PGRST204")) {
+      // Same pre-migration database: write it without the review note.
+      const { review_note: _drop, ...rest } = patch;
+      ({ data: written, error } = await supabaseAdmin
+        .from("funeral_installments")
+        .update(rest as never)
+        .eq("id", data.installmentId)
+        .select("id"));
+    }
+    if (error) throw new Error(error.message);
+    // An update that matched nothing reads as a success, so the row count is
+    // what says the decision landed.
+    if (!written || written.length === 0) throw new Error("not found");
+
+    // The plan is paid once nothing is still due or waiting to be checked.
+    const { count } = await supabaseAdmin
+      .from("funeral_installments")
+      .select("id", { count: "exact", head: true })
+      .eq("plan_id", row.plan_id)
+      .in("payment_status", ["due", "review"]);
     if ((count ?? 0) === 0) {
       await supabaseAdmin.from("funeral_plans").update({ status: "paid" }).eq("id", row.plan_id);
     }
 
-    if (isAdmin !== true) {
-      await notifyAdmins(
-        {
-          kind: "funeral_installment",
-          params: { seq: row.seq },
-          title: "แจ้งชำระงวดค่างานศพ",
-          body: noticeBody(`งวดที่ ${row.seq}`, [
-            ["ผู้ชำระ", await userLabel(context.userId)],
+    await notifyUsers(
+      [plan.user_id as string],
+      {
+        kind: "funeral_installment",
+        params: { seq: row.seq as number },
+        title: confirmed ? "ยืนยันการชำระงวดแล้ว" : "ยังตรวจไม่พบการโอนงวดนี้",
+        body: noticeBody(
+          confirmed
+            ? `งวดที่ ${row.seq} ได้รับเงินเรียบร้อย`
+            : `งวดที่ ${row.seq} ตรวจไม่พบรายการโอน กรุณาตรวจสอบและแจ้งใหม่อีกครั้ง`,
+          [
             ["ยอดงวดนี้", bahtTH(row.amount as number | null)],
             ["ครบกำหนด", dayTH(row.due_on as string | null)],
-            ["อ้างอิงการโอน", data.payerRef],
+            ["อ้างอิงที่แจ้งไว้", (row.payer_ref as string | null) ?? ""],
+            ["หมายเหตุจากผู้ดูแลระบบ", data.note?.trim() ?? ""],
             ["งวดที่ยังค้าง", String(count ?? 0)],
-          ]),
-          href: "/admin/funeral",
-          refTable: "funeral_installments",
-          refId: data.installmentId,
-        },
-        context.userId,
-      );
-    }
+          ],
+        ),
+        href: "/legacy/after",
+        refTable: "funeral_installments",
+        refId: data.installmentId,
+      },
+      context.userId,
+    );
+    return { ok: true as const, paid: confirmed };
+  });
+
+/**
+ * Who receives the insurance money, and how to reach them.
+ *
+ * Collected next to the packages, then never shown again - so nobody could
+ * check a wrong number or change their mind. The plan's owner can see and
+ * correct it for as long as the plan is open.
+ */
+export const setFuneralRepresentative = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        planId: z.string().uuid(),
+        name: z.string().trim().max(120),
+        contact: z.string().trim().max(120),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: written, error } = await context.supabase
+      .from("funeral_plans")
+      .update({
+        representative_name: data.name || null,
+        representative_contact: data.contact || null,
+      })
+      .eq("id", data.planId)
+      .eq("user_id", context.userId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!written || written.length === 0) throw new Error("plan not found");
     return { ok: true as const };
   });
